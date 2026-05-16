@@ -53,6 +53,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/9317869a-2a98-4f56-ae36-d822a541fd90';
   static const String treasureChestIcon =
       'https://www.figma.com/api/mcp/asset/6ffe8337-cad6-4012-9285-ac241b3ea726';
+  static const String megaChestIcon = 'assets/images/mega_chest.png';
 
   // Home screen
   static const String rbxLogo =

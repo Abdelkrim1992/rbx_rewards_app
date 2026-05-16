@@ -94,77 +94,9 @@ class _SpinScreenState extends State<SpinScreen>
   void _showWinDialog(String prize) {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('🎉', style: TextStyle(fontSize: 56)),
-              const SizedBox(height: 12),
-              Text(
-                prize == 'JACKPOT' ? 'JACKPOT!!!' : 'You won $prize RBX!',
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF131326),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Coins have been added to your balance.',
-                style: TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              StatefulBuilder(
-                builder: (context, setDialogState) {
-                  double scale = 1.0;
-                  return GestureDetector(
-                    onTapDown: (_) => setDialogState(() => scale = 0.95),
-                    onTapUp: (_) {
-                      setDialogState(() => scale = 1.0);
-                      Navigator.pop(ctx);
-                    },
-                    onTapCancel: () => setDialogState(() => scale = 1.0),
-                    child: AnimatedScale(
-                      scale: scale,
-                      duration: const Duration(milliseconds: 100),
-                      child: Container(
-                        width: double.infinity,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Awesome!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (context) => SpinRewardDialog(prize: prize),
     );
   }
 
@@ -754,6 +686,569 @@ class _TrianglePainter extends CustomPainter {
       ..lineTo(size.width / 2, size.height)
       ..close();
     canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ─── Spin Reward 3D Popup ───────────────────────────────────────────
+
+class SpinRewardDialog extends StatefulWidget {
+  final String prize;
+
+  const SpinRewardDialog({super.key, required this.prize});
+
+  @override
+  State<SpinRewardDialog> createState() => _SpinRewardDialogState();
+}
+
+class _SpinRewardDialogState extends State<SpinRewardDialog>
+    with TickerProviderStateMixin {
+  // Separate controllers: rotation repeats, entrance plays once
+  late AnimationController _burstRotationController;
+  late AnimationController _burstEntranceController;
+  late AnimationController _coinFlipController;
+  late AnimationController _cardController;
+  late AnimationController _particleController;
+  late AnimationController _shimmerController;
+
+  late Animation<double> _burstRotation;
+  late Animation<double> _burstScale;
+  late Animation<double> _burstOpacity;
+  late Animation<double> _coinFlip;
+  late Animation<double> _coinScale;
+  late Animation<double> _cardScale;
+  late Animation<double> _cardOpacity;
+  late Animation<double> _shimmer;
+
+  final List<_ConfettiParticle> _particles = [];
+  bool _disposed = false;
+  bool _animationComplete = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Repeating rotation for light burst rays
+    _burstRotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat();
+
+    _burstRotation = Tween<double>(begin: 0, end: 2 * pi).animate(
+      _burstRotationController,
+    );
+
+    // One-shot entrance for scale/opacity
+    _burstEntranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    _burstScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _burstEntranceController, curve: Curves.easeOutCubic),
+    );
+
+    _burstOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _burstEntranceController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
+    // 3D coin flip — use Curves.easeOut (not easeOutBack which overshoots > 1.0)
+    _coinFlipController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _coinFlip = Tween<double>(begin: 0.0, end: 6 * pi).animate(
+      CurvedAnimation(parent: _coinFlipController, curve: Curves.easeOutCubic),
+    );
+
+    _coinScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 3),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 0.9), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 2),
+    ]).animate(CurvedAnimation(
+      parent: _coinFlipController,
+      curve: Curves.easeOut,
+    ));
+
+    // Card pop-in — use Curves.easeOut (not easeOutBack)
+    _cardController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _cardScale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.08), weight: 6),
+      TweenSequenceItem(tween: Tween(begin: 1.08, end: 0.96), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 2),
+    ]).animate(CurvedAnimation(
+      parent: _cardController,
+      curve: Curves.easeOut,
+    ));
+
+    _cardOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _cardController,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
+      ),
+    );
+
+    // Confetti particles
+    _particleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    );
+
+    final rng = Random();
+    for (int i = 0; i < 20; i++) {
+      _particles.add(_ConfettiParticle(
+        angle: rng.nextDouble() * 2 * pi,
+        speed: 80 + rng.nextDouble() * 160,
+        size: 4 + rng.nextDouble() * 8,
+        color: [
+          const Color(0xFFFFD700),
+          const Color(0xFFFFA500),
+          const Color(0xFF9B5CFF),
+          const Color(0xFF6035EE),
+          const Color(0xFFFF6B9D),
+          Colors.white,
+        ][rng.nextInt(6)],
+        rotationSpeed: (rng.nextDouble() - 0.5) * 8,
+      ));
+    }
+
+    // Shimmer on button
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+
+    _shimmer = Tween<double>(begin: -1.0, end: 2.0).animate(
+      _shimmerController,
+    );
+
+    _startSequence();
+  }
+
+  void _startSequence() async {
+    // Start burst entrance + rotation immediately
+    _burstEntranceController.forward();
+
+    // Coin flip starts after a short delay
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (_disposed) return;
+    _coinFlipController.forward();
+
+    // Confetti particles erupt
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (_disposed) return;
+    _particleController.forward();
+
+    // Wait for coin animation to fully complete
+    await Future.delayed(const Duration(milliseconds: 1800));
+    if (_disposed) return;
+    
+    // Hide coin and burst
+    setState(() {
+      _animationComplete = true;
+    });
+    // Stop repeating controllers
+    _burstRotationController.stop();
+    _shimmerController.stop();
+
+    // Now slide in the reward card
+    _cardController.forward();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _burstRotationController.dispose();
+    _burstEntranceController.dispose();
+    _coinFlipController.dispose();
+    _cardController.dispose();
+    _particleController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isJackpot = widget.prize == 'JACKPOT';
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(20),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([
+            _burstRotationController,
+            _burstEntranceController,
+            _coinFlipController,
+            _cardController,
+            _particleController,
+          ]),
+          builder: (context, _) {
+            return Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                if (!_animationComplete) ...[
+                  // ── Rotating light burst ──
+                  Opacity(
+                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                    child: Transform.rotate(
+                      angle: _burstRotation.value,
+                      child: Transform.scale(
+                        scale: _burstScale.value.clamp(0.0, 2.0),
+                        child: CustomPaint(
+                          size: const Size(320, 320),
+                          painter: _LightRaysPainter(
+                            color: isJackpot
+                                ? const Color(0xFFFFD700)
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ── Circular glow ──
+                  Opacity(
+                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                    child: Container(
+                      width: 280,
+                      height: 280,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            (isJackpot
+                                    ? const Color(0xFFFFD700)
+                                    : AppColors.primary)
+                                .withOpacity(0.4),
+                            (isJackpot
+                                    ? const Color(0xFFFFD700)
+                                    : AppColors.primary)
+                                .withOpacity(0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ── Confetti particles ──
+                  ..._buildParticles(),
+
+                  // ── 3D Flipping Coin ──
+                  Transform.scale(
+                    scale: _coinScale.value.clamp(0.0, 2.0),
+                    child: Transform(
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.002) // perspective
+                        ..rotateY(_coinFlip.value),
+                      alignment: Alignment.center,
+                      child: _buildCoinFace(),
+                    ),
+                  ),
+                ],
+
+                // ── Reward card ──
+                if (_animationComplete)
+                  Center(
+                    child: Opacity(
+                      opacity: _cardOpacity.value.clamp(0.0, 1.0),
+                      child: Transform.scale(
+                        scale: _cardScale.value.clamp(0.0, 2.0),
+                        child: _buildRewardCard(isJackpot),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoinFace() {
+    // Show front face when coin faces camera, back when rotated away
+    final normalizedAngle = (_coinFlip.value % (2 * pi));
+    final showFront =
+        normalizedAngle < pi / 2 || normalizedAngle > 3 * pi / 2;
+
+    return Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: showFront
+              ? [const Color(0xFFFFE066), const Color(0xFFFFB300)]
+              : [const Color(0xFFD4A017), const Color(0xFF9E7700)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFD700).withOpacity(0.5),
+            blurRadius: 24,
+            spreadRadius: 4,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFFFFE599),
+          width: 3,
+        ),
+      ),
+      child: Center(
+        child: showFront
+            ? Image.network(
+                AppAssets.goldRbxCoin,
+                width: 60,
+                height: 60,
+                errorBuilder: (_, __, ___) => const Text(
+                  'R',
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF7A5800),
+                  ),
+                ),
+              )
+            : const Text(
+                '✦',
+                style: TextStyle(
+                  fontSize: 32,
+                  color: Color(0xFFB8860B),
+                ),
+              ),
+      ),
+    );
+  }
+
+  List<Widget> _buildParticles() {
+    final progress = _particleController.value;
+    if (progress == 0) return [];
+
+    return _particles.map((p) {
+      final distance = p.speed * progress;
+      final x = cos(p.angle) * distance;
+      final y = sin(p.angle) * distance - 40 * progress * progress; // gravity
+      final opacity = (1.0 - progress).clamp(0.0, 1.0);
+      final rotation = p.rotationSpeed * progress * pi;
+
+      return Positioned(
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        child: Center(
+          child: Transform.translate(
+            offset: Offset(x, y),
+            child: Opacity(
+              opacity: opacity,
+              child: Transform.rotate(
+                angle: rotation,
+                child: Container(
+                  width: p.size,
+                  height: p.size * 0.6,
+                  decoration: BoxDecoration(
+                    color: p.color,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: p.color.withOpacity(0.5),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildRewardCard(bool isJackpot) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: (isJackpot ? const Color(0xFFFFD700) : AppColors.primary)
+                .withOpacity(0.2),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
+          const BoxShadow(
+            color: Colors.black12,
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title
+          Text(
+            isJackpot ? '🎰  JACKPOT!  🎰' : '🎉  You Won!',
+            style: TextStyle(
+              fontSize: isJackpot ? 22 : 20,
+              fontWeight: FontWeight.w800,
+              color: isJackpot ? const Color(0xFFD4A017) : const Color(0xFF131326),
+              letterSpacing: isJackpot ? 1.5 : 0,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Prize amount
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F9FA),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.network(
+                  AppAssets.goldRbxCoin,
+                  width: 28,
+                  height: 28,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.monetization_on,
+                    color: Color(0xFFFFCC44),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  isJackpot ? '+5,000 RBX' : '+${widget.prize} RBX',
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.primary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          Text(
+            'Coins added to your balance',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[500],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Claim button — solid blue
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 6,
+                shadowColor: AppColors.primary.withOpacity(0.4),
+              ),
+              child: const Text(
+                'Claim Reward',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfettiParticle {
+  final double angle;
+  final double speed;
+  final double size;
+  final Color color;
+  final double rotationSpeed;
+
+  _ConfettiParticle({
+    required this.angle,
+    required this.speed,
+    required this.size,
+    required this.color,
+    required this.rotationSpeed,
+  });
+}
+
+class _LightRaysPainter extends CustomPainter {
+  final Color color;
+
+  _LightRaysPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    const rayCount = 12;
+
+    for (int i = 0; i < rayCount; i++) {
+      final angle = (i * 2 * pi) / rayCount;
+      final nextAngle = ((i + 0.4) * 2 * pi) / rayCount;
+
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(
+          center.dx + radius * cos(angle),
+          center.dy + radius * sin(angle),
+        )
+        ..lineTo(
+          center.dx + radius * cos(nextAngle),
+          center.dy + radius * sin(nextAngle),
+        )
+        ..close();
+
+      final paint = Paint()
+        ..shader = RadialGradient(
+          colors: [
+            color.withOpacity(0.3),
+            color.withOpacity(0.0),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+
+      canvas.drawPath(path, paint);
+    }
   }
 
   @override

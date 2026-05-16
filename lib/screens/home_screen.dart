@@ -1,12 +1,208 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
+import 'chest_screen.dart';
+import 'earn_more_screen.dart';
+import 'tasks_offers_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Function(int) onNavTap;
 
   const HomeScreen({super.key, required this.onNavTap});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _balance = 525;
+  bool _isDailyClaimed = false;
+  DateTime? _lastClaimTime;
+  Timer? _countdownTimer;
+  Duration _timeUntilNextClaim = Duration.zero;
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startCountdown() {
+    _lastClaimTime = DateTime.now();
+    _countdownTimer?.cancel();
+    _updateCountdown();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _updateCountdown();
+    });
+  }
+
+  void _updateCountdown() {
+    if (!mounted) return;
+    if (_lastClaimTime == null) return;
+    final now = DateTime.now();
+    final nextClaimTime = _lastClaimTime!.add(const Duration(hours: 24));
+    
+    if (now.isAfter(nextClaimTime)) {
+      _countdownTimer?.cancel();
+      setState(() {
+        _isDailyClaimed = false;
+        _timeUntilNextClaim = Duration.zero;
+      });
+    } else {
+      setState(() {
+        _timeUntilNextClaim = nextClaimTime.difference(now);
+      });
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String hours = twoDigits(duration.inHours);
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$hours:$minutes:$seconds";
+  }
+
+  void _showRewardPopup() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primarySoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.card_giftcard,
+                    size: 40,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Daily Reward!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF131326),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'You have earned',
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF868A9F),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF1F5F9)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.network(
+                        AppAssets.goldRbxCoin,
+                        width: 28,
+                        height: 28,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.monetization_on,
+                          color: Color(0xFFFFCC44),
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        '+100 RBX',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _completeClaim();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: const Text(
+                      'Awesome!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _completeClaim() {
+    setState(() {
+      _isDailyClaimed = true;
+      _balance += 100;
+    });
+    _startCountdown();
+  }
+
+  void _claimDaily() {
+    if (_isDailyClaimed) return;
+    _showRewardPopup();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,22 +224,16 @@ class HomeScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           const Text(
-                            'Welcome back!',
+                            'Welcome back',
                             style: TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               color: Color(0xFF131326),
                               letterSpacing: -0.55,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Image.network(
-                            AppAssets.wavingHand,
-                            width: 26,
-                            height: 26,
-                            errorBuilder: (_, __, ___) =>
-                                const Text('👋', style: TextStyle(fontSize: 22)),
-                          ),
+                          const Text('👋', style: TextStyle(fontSize: 22)),
                         ],
                       ),
                     ),
@@ -52,94 +242,94 @@ class HomeScreen extends StatelessWidget {
                     // Balance Card
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 2,
-                              spreadRadius: 0,
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Image.network(
-                                  AppAssets.goldRbxCoin,
-                                  width: 52,
-                                  height: 52,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.monetization_on,
-                                    size: 52,
-                                    color: Color(0xFFFFCC44),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'YOUR RBX BALANCE',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF868A9F),
-                                        letterSpacing: 0.3,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.baseline,
-                                      textBaseline: TextBaseline.alphabetic,
-                                      children: const [
-                                        Text(
-                                          '525',
-                                          style: TextStyle(
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF131326),
-                                            letterSpacing: -0.7,
-                                            height: 1.0,
-                                          ),
-                                        ),
-                                        SizedBox(width: 6),
-                                        Text(
-                                          'RBX Coins',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF868A9F),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Opacity(
-                              opacity: 0.5,
-                              child: Image.network(
-                                AppAssets.arrowRight,
-                                width: 14,
-                                height: 14,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.chevron_right,
-                                  color: Color(0xFF868A9F),
-                                ),
+                      child: _InteractiveCard(
+                        onTap: () => widget.onNavTap(2), // Navigate to Rewards
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1A000000),
+                                blurRadius: 10,
+                                spreadRadius: 0,
+                                offset: Offset(0, 4),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Image.network(
+                                    AppAssets.goldRbxCoin,
+                                    width: 52,
+                                    height: 52,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.monetization_on,
+                                      size: 52,
+                                      color: Color(0xFFFFCC44),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'YOUR RBX BALANCE',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF868A9F),
+                                          letterSpacing: 0.8,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.baseline,
+                                        textBaseline: TextBaseline.alphabetic,
+                                        children: [
+                                          Text(
+                                            '$_balance',
+                                            style: const TextStyle(
+                                              fontSize: 30,
+                                              fontWeight: FontWeight.w800,
+                                              color: Color(0xFF131326),
+                                              letterSpacing: -0.7,
+                                              height: 1.0,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          const Text(
+                                            'RBX Coins',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF868A9F),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Color(0xFFD1D5DB),
+                                size: 24,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
+
+
 
                     // Daily Reward Card
                     Padding(
@@ -147,70 +337,84 @@ class HomeScreen extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: AppColors.dailyCardGradient,
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: const [
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
                             BoxShadow(
-                              color: Color(0x33664DFF),
-                              blurRadius: 4,
-                              spreadRadius: 0,
+                              color: AppColors.primary.withOpacity(0.15),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
                             ),
                           ],
                         ),
                         child: Row(
                           children: [
                             Expanded(
-                              flex: 6,
+                              flex: 4,
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(20, 22, 4, 22),
+                                padding: const EdgeInsets.fromLTRB(16, 20, 0, 20),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text(
-                                      'Daily RBX\nReward is ready!',
-                                      style: TextStyle(
+                                    Text(
+                                      _isDailyClaimed 
+                                        ? 'Reward Claimed! See you tomorrow'
+                                        : 'Daily Reward',
+                                      style: const TextStyle(
                                         fontSize: 18,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight: FontWeight.w800,
                                         color: Color(0xFF131326),
                                         letterSpacing: -0.5,
-                                        height: 1.1,
+                                        height: 1.2,
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    const Text(
-                                      'Come back every day and\nclaim awesome rewards.',
-                                      style: TextStyle(
-                                        fontSize: 11,
+                                    Text(
+                                      _isDailyClaimed
+                                        ? 'You earned 100 coins today.'
+                                        : 'Come back every day and\nclaim awesome rewards.',
+                                      style: const TextStyle(
+                                        fontSize: 12,
                                         color: Color(0xFF4A4B60),
-                                        height: 1.3,
+                                        height: 1.4,
                                       ),
                                     ),
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      height: 34,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8),
-                                          width: 100,
-                                      decoration: BoxDecoration(
-                                        gradient: AppColors.primaryGradient,
-                                        borderRadius: BorderRadius.circular(14),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Color(0x736035EE),
-                                            blurRadius: 16,
-                                            offset: Offset(0, 8),
-                                            spreadRadius: -4,
-                                          )
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: Text(
-                                          'Claim Now',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: Colors.white,
-                                            letterSpacing: 0.3,
-                                          ),
+                                    const SizedBox(height: 14),
+                                    _InteractiveCard(
+                                      onTap: _isDailyClaimed ? null : _claimDaily,
+                                      child: Container(
+                                        height: 38,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        decoration: BoxDecoration(
+                                          gradient: _isDailyClaimed 
+                                            ? null 
+                                            : AppColors.primaryGradient,
+                                          color: _isDailyClaimed ? Colors.white.withOpacity(0.5) : null,
+                                          borderRadius: BorderRadius.circular(14),
+                                          boxShadow: _isDailyClaimed ? null : [
+                                            BoxShadow(
+                                              color: AppColors.primary.withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 6),
+                                            )
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            if (_isDailyClaimed)
+                                              const Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
+                                            if (_isDailyClaimed) const SizedBox(width: 6),
+                                            Text(
+                                              _isDailyClaimed ? _formatDuration(_timeUntilNextClaim) : 'Claim Now',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                color: _isDailyClaimed ? AppColors.primary : Colors.white,
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
@@ -219,16 +423,21 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
                             Expanded(
-                              flex: 6,
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 12, top: 12, bottom: 12),
-                                child: Image.network(
-                                  AppAssets.purpleGiftBox,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.card_giftcard,
-                                    size: 60,
-                                    color: AppColors.primary,
+                              flex: 5,
+                              child: Container(
+                                height: 160,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 12),
+                                child: Opacity(
+                                  opacity: _isDailyClaimed ? 0.7 : 1.0,
+                                  child: Image.network(
+                                    AppAssets.purpleGiftBox,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.card_giftcard,
+                                      size: 100,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -242,10 +451,8 @@ class HomeScreen extends StatelessWidget {
                     // Quick Actions header
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: _SectionHeader(
+                      child: const _SectionHeader(
                         title: 'Quick Actions',
-                        linkText: 'Show all actions',
-                        onTap: () {},
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
@@ -259,19 +466,24 @@ class HomeScreen extends StatelessWidget {
                             iconUrl: AppAssets.chestIcon,
                             title: 'Chest',
                             badge: 'Ready',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ChestScreen()),
+                            ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           _QuickActionCard(
                             iconUrl: AppAssets.spinWheelIcon,
                             title: 'Spin & Win',
                             badge: 'Ready',
-                            onTap: () => onNavTap(1),
+                            onTap: () => widget.onNavTap(1),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           _QuickActionCard(
                             iconUrl: AppAssets.missionsIcon,
                             title: 'Missions',
                             badge: '3/6',
+                            onTap: () {},
                           ),
                         ],
                       ),
@@ -283,8 +495,8 @@ class HomeScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Play to Earn',
-                        linkText: 'Show all games',
-                        onTap: () => onNavTap(1),
+                        linkText: 'View All',
+                        onTap: () => widget.onNavTap(1),
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
@@ -300,24 +512,27 @@ class HomeScreen extends StatelessWidget {
                               title: 'Tap Tap',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFEAF3FF),
+                              onTap: () => widget.onNavTap(1),
                             ),
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _GameCard(
                               imageUrl: AppAssets.quizMasterGame,
                               title: 'Quiz Master',
                               coins: '+150 RBX',
                               bgColor: const Color(0xFFE3F8EB),
+                              onTap: () => widget.onNavTap(1),
                             ),
                           ),
-                          const SizedBox(width: 7),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _GameCard(
                               imageUrl: AppAssets.memoryMatchGame,
                               title: 'Memory Match',
                               coins: '+250 RBX',
                               bgColor: const Color(0xFFEBE7FF),
+                              onTap: () => widget.onNavTap(1),
                             ),
                           ),
                         ],
@@ -325,108 +540,68 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Tasks & Offers header
+                    // Earn More header
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
-                        title: 'Task & Offers',
-                        linkText: 'Show all offers',
-                        onTap: () {},
+                        title: 'Earn More',
+                        linkText: 'View All',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EarnMoreScreen(onNavTap: widget.onNavTap),
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
 
-                    // Task banner
+                    // Earn More list
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3EAFD),
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x0D6235F6),
-                              blurRadius: 12,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(16),
+                      child: IntrinsicHeight(
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
-                              flex: 3,
-                              child: Image.network(
-                                AppAssets.clipboardIcon,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.assignment,
-                                  size: 50,
-                                  color: AppColors.primary,
-                                ),
+                              child: _EarnMoreVerticalCard(
+                                iconUrl: AppAssets.memoryMatchGame,
+                                title: 'Flip Card',
+                                subtitle: 'Flip & match',
+                                badge: 'Up to 300',
+                                onTap: () {},
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: 10),
                             Expanded(
-                              flex: 5,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Complete tasks & earn RBX Coins!',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0A0F2C),
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Finish offers and daily tasks to get amazing rewards.',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: Color(0xFF475569),
-                                      height: 1.38,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 14),
-                                  Container(
-                                    height: 34,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                        width: 110,
-                                    decoration: BoxDecoration(
-                                      gradient: AppColors.primaryGradient,
-                                      borderRadius: BorderRadius.circular(14),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Color(0x736035EE),
-                                          blurRadius: 16,
-                                          offset: Offset(0, 8),
-                                          spreadRadius: -4,
-                                        )
-                                      ],
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        'Start Earning',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              child: _EarnMoreVerticalCard(
+                                iconUrl: AppAssets.quizMasterGame,
+                                title: 'Quizzes',
+                                subtitle: 'Answer & earn',
+                                badge: 'Up to 400',
+                                onTap: () {},
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _EarnMoreVerticalCard(
+                                iconUrl: AppAssets.tapTapGame,
+                                title: 'Scratch',
+                                subtitle: 'Reveal rewards',
+                                badge: 'Up to 350',
+                                onTap: () {},
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
+
+                    // Mega Chest Card
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      child: _MegaChestCard(),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
                   ],
@@ -435,7 +610,7 @@ class HomeScreen extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: RbxBottomNav(currentIndex: 0, onTap: onNavTap),
+              child: RbxBottomNav(currentIndex: 0, onTap: widget.onNavTap),
             ),
           ],
         ),
@@ -444,15 +619,46 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+class _InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _InteractiveCard({required this.child, this.onTap});
+
+  @override
+  State<_InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<_InteractiveCard> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.97),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        if (widget.onTap != null) widget.onTap!();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final String linkText;
-  final VoidCallback onTap;
+  final String? linkText;
+  final VoidCallback? onTap;
 
   const _SectionHeader({
     required this.title,
-    required this.linkText,
-    required this.onTap,
+    this.linkText,
+    this.onTap,
   });
 
   @override
@@ -463,28 +669,30 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
             color: Color(0xFF131326),
           ),
         ),
-        GestureDetector(
-          onTap: onTap,
-          child: Row(
-            children: [
-              Text(
-                linkText,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.purple,
+        if (linkText != null && onTap != null)
+          GestureDetector(
+            onTap: onTap,
+            child: Row(
+              children: [
+                Text(
+                  linkText!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.purple,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right,
-                  size: 16, color: AppColors.purple),
-            ],
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right,
+                    size: 16, color: AppColors.purple),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -506,17 +714,18 @@ class _QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
+      child: _InteractiveCard(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(10, 10, 10, 14),
+          padding: const EdgeInsets.fromLTRB(10, 12, 10, 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 2,
+                color: Color(0x14000000),
+                blurRadius: 10,
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -538,12 +747,13 @@ class _QuickActionCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 13,
+                  fontWeight: FontWeight.w700,
                   color: Color(0xFF131326),
                 ),
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(10),
@@ -552,8 +762,8 @@ class _QuickActionCard extends StatelessWidget {
                   badge,
                   style: const TextStyle(
                     fontSize: 11,
+                    fontWeight: FontWeight.w800,
                     color: AppColors.purple,
-                    letterSpacing: 0.275,
                   ),
                 ),
               ),
@@ -565,83 +775,199 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-class _GameCard extends StatelessWidget {
-  final String imageUrl;
-  final String title;
-  final String coins;
-  final Color bgColor;
 
-  const _GameCard({
-    required this.imageUrl,
+class _EarnMoreVerticalCard extends StatelessWidget {
+  final String iconUrl;
+  final String title;
+  final String subtitle;
+  final String badge;
+  final VoidCallback onTap;
+
+  const _EarnMoreVerticalCard({
+    required this.iconUrl,
     required this.title,
-    required this.coins,
-    required this.bgColor,
+    required this.subtitle,
+    required this.badge,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 2,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Column(
-          children: [
-            Container(
-              height: 76,
-              color: bgColor,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.sports_esports,
-                  size: 50,
-                  color: bgColor == const Color(0xFFEAF3FF)
-                      ? Colors.blue
-                      : bgColor == const Color(0xFFE3F8EB)
-                          ? Colors.green
-                          : AppColors.primary,
+    return _InteractiveCard(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 15,
+              offset: Offset(0, 8),
+            ),
+          ],
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Image container at the top
+              Container(
+                height: 76,
+                width: double.infinity,
+                color: AppColors.primarySoft,
+                child: Image.network(
+                  iconUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.star,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    // Title
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF131326),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Subtitle
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF868A9F),
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    // Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              badge,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.purple,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Image.network(
+                            AppAssets.goldCoin,
+                            width: 10,
+                            height: 10,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.monetization_on,
+                              size: 10,
+                              color: Color(0xFFFFCC44),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _MegaChestCard extends StatelessWidget {
+  const _MegaChestCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return _InteractiveCard(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 15,
+              offset: Offset(0, 8),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          ],
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF131326),
+                  RichText(
+                    text: const TextSpan(
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF131326),
+                      ),
+                      children: [
+                        TextSpan(text: 'Earn more coins to unlock Mega Chest'),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 14),
                   Row(
                     children: [
-                      Image.network(
-                        AppAssets.goldCoin,
-                        width: 13,
-                        height: 13,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.monetization_on,
-                                size: 13, color: Color(0xFFFFCC44)),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: 1450 / 2000,
+                            minHeight: 8,
+                            backgroundColor: AppColors.primarySoft,
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.purple),
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        coins,
-                        style: const TextStyle(
-                          fontSize: 11,
+                      const SizedBox(width: 12),
+                      const Text(
+                        '1,450 / 2,000',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFF868A9F),
                         ),
                       ),
@@ -650,7 +976,105 @@ class _GameCard extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 20),
+            Image.asset(
+              AppAssets.megaChestIcon,
+              width: 60,
+              height: 60,
+              errorBuilder: (_, __, ___) => const Icon(Icons.inventory, size: 56, color: AppColors.purple),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GameCard extends StatelessWidget {
+  final String imageUrl;
+  final String title;
+  final String coins;
+  final Color bgColor;
+  final VoidCallback? onTap;
+
+  const _GameCard({
+    required this.imageUrl,
+    required this.title,
+    required this.coins,
+    required this.bgColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _InteractiveCard(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Column(
+            children: [
+              Container(
+                height: 76,
+                width: double.infinity,
+                color: bgColor,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.sports_esports,
+                    size: 40,
+                    color: AppColors.primary.withOpacity(0.5),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF131326),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(Icons.monetization_on,
+                                  size: 14, color: Color(0xFFFFCC44)),
+                        const SizedBox(width: 4),
+                        Text(
+                          coins,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF868A9F),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

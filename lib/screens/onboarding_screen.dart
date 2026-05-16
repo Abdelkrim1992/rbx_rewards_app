@@ -58,10 +58,10 @@ class OnboardingScreen extends StatelessWidget {
                           children: [
                             TextSpan(text: 'Earn '),
                             TextSpan(
-                              text: 'RBX Rewards',
+                              text: 'RBX Rewards ',
                               style: TextStyle(color: Color(0xFF5637E6)),
                             ),
-                            TextSpan(text: '\nDaily'),
+                            TextSpan(text: 'Daily'),
                           ],
                         ),
                       ),
