@@ -42,19 +42,16 @@ class GamesScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: const RbxAppHeader(),
-            ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const RbxAppHeader(),
                     // Section heading
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: const [
@@ -81,11 +78,11 @@ class GamesScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Game cards grid
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -100,11 +97,11 @@ class GamesScreen extends StatelessWidget {
                         itemBuilder: (ctx, i) => _GameCard(data: games[i]),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Coming soon banner
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Container(
                         height: 64,
                         decoration: BoxDecoration(
@@ -150,7 +147,7 @@ class GamesScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
                   ],
                 ),
               ),

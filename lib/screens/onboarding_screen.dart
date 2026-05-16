@@ -14,37 +14,42 @@ class OnboardingScreen extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    // Hero Illustration
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Column(
+                children: [
+                  const Spacer(flex: 1),
+                  // Hero Illustration
+                  Flexible(
+                    flex: 20,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20)
+                          .copyWith(top: 40),
                       child: Image.network(
                         AppAssets.heroIllustration,
-                        height: 311,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Container(
-                          height: 311,
                           decoration: BoxDecoration(
                             gradient: AppColors.dailyCardGradient,
                             borderRadius: BorderRadius.circular(24),
                           ),
-                          child: const Icon(Icons.celebration,
-                              size: 120, color: AppColors.primary),
+                          child: const Center(
+                            child: Icon(Icons.celebration,
+                                size: 100, color: AppColors.primary),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 34),
-                    // Title
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                  ),
+                  const Spacer(flex: 1),
+                  // Title
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
                       child: RichText(
                         textAlign: TextAlign.center,
                         text: const TextSpan(
                           style: TextStyle(
-                            fontSize: 28,
+                            fontSize: 35,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF141620),
                             letterSpacing: -0.7,
@@ -61,60 +66,66 @@ class OnboardingScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    // Subtitle
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24),
-                      child: Text(
+                  ),
+                  const Spacer(flex: 1),
+                  // Subtitle
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: const Text(
                         'Play mini games, spin the wheel,\nand collect reward coins.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 14.5,
+                          fontSize: 16,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF717688),
                           height: 1.45,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    // Feature cards
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                  ),
+                  const Spacer(flex: 2),
+                  // Feature cards
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                    child: IntrinsicHeight(
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _FeatureCard(
                             iconUrl: AppAssets.gamepadIcon,
                             title: 'Play Games',
-                            subtitle: 'Fun mini games\nto earn coins',
+                            subtitle: 'Fun mini games to earn coins',
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           _FeatureCard(
                             iconUrl: AppAssets.prizeWheelIcon,
                             title: 'Spin & Win',
-                            subtitle: 'Spin the wheel\nfor big prizes',
+                            subtitle: 'Spin the wheel for big prizes',
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           _FeatureCard(
                             iconUrl: AppAssets.treasureChestIcon,
                             title: 'Unlock Rewards',
-                            subtitle: 'Redeem coins\nfor amazing\nrewards',
+                            subtitle: 'Redeem coins for amazing rewards',
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
+                  ),
+                  const Spacer(flex: 2),
+                ],
               ),
             ),
             // CTA Button
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              padding: const EdgeInsets.fromLTRB(AppLayout.screenPadding, 0, AppLayout.screenPadding, 30),
               child: GestureDetector(
                 onTap: onGetStarted,
                 child: Container(
                   width: double.infinity,
-                  height: 58,
+                  height: 55,
                   decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(18),
@@ -163,10 +174,10 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(7, 19, 7, 17),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.cardBorder),
           boxShadow: const [
             BoxShadow(
@@ -178,50 +189,61 @@ class _FeatureCard extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 1,
-                    offset: Offset(0, 1),
-                  )
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.network(
-                  iconUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.star, color: AppColors.primary, size: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0D000000),
+                        blurRadius: 1,
+                        offset: Offset(0, 1),
+                      )
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.network(
+                      iconUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.star, color: AppColors.primary, size: 24),
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w400,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
                 color: Color(0xFF181A24),
-                letterSpacing: -0.125,
+                letterSpacing: -0.1,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 5),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF8E93A2),
-                height: 1.3,
+            const SizedBox(height: 4),
+            Expanded(
+              child: Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF8E93A2),
+                  height: 1.3,
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

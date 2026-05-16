@@ -15,72 +15,72 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: const RbxAppHeader(),
-            ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
                   children: [
+                    const RbxAppHeader(),
                     // Profile card
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              // Avatar with rings
-                              Container(
-                                width: 107,
-                                height: 105,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: const Color(0xFFE1E2FC), width: 1),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(3),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                          color: const Color(0xFFD5D7FB),
-                                          width: 1),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(3),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                              color: const Color(0xFFC6C9FA),
-                                              width: 1),
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(4),
-                                          child: ClipOval(
-                                            child: Image.network(
-                                              AppAssets.profileAvatar,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  Container(
-                                                color: const Color(0xFFEEEEEF),
-                                                child: const Icon(
-                                                  Icons.person,
-                                                  size: 50,
-                                                  color: AppColors.purple,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                // Avatar with rings
+                                Container(
+                                  width: 107,
+                                  height: 105,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: const Color(0xFFE1E2FC), width: 1),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(3),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: const Color(0xFFD5D7FB),
+                                            width: 1),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(3),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: const Color(0xFFC6C9FA),
+                                                width: 1),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(4),
+                                            child: ClipOval(
+                                              child: Image.network(
+                                                AppAssets.profileAvatar,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    Container(
+                                                  color: const Color(0xFFEEEEEF),
+                                                  child: const Icon(
+                                                    Icons.person,
+                                                    size: 50,
+                                                    color: AppColors.purple,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -90,187 +90,193 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 20),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Player',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0F172A),
+                                const SizedBox(width: 20),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Player',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0F172A),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        6, 4, 12, 4),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF3F4FE),
-                                      borderRadius:
-                                          BorderRadius.circular(999),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Image.network(
-                                          AppAssets.levelBadge,
-                                          width: 21,
-                                          height: 21,
-                                          errorBuilder: (_, __, ___) =>
-                                              const Icon(Icons.military_tech,
-                                                  size: 21,
-                                                  color:
-                                                      Color(0xFF5C3EF0)),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        const Text(
-                                          'Level 2',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF5C3EF0),
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          // XP bar
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Stack(
-                                children: [
-                                  Container(
-                                    height: 8,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F2F8),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                  ),
-                                  FractionallySizedBox(
-                                    widthFactor: 350 / 800,
-                                    child: Container(
-                                      height: 8,
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          6, 4, 12, 4),
                                       decoration: BoxDecoration(
-                                        gradient: AppColors.xpBarGradient,
+                                        color: const Color(0xFFF3F4FE),
                                         borderRadius:
                                             BorderRadius.circular(999),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Color(0x806B4BF4),
-                                            blurRadius: 8,
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Image.network(
+                                            AppAssets.levelBadge,
+                                            width: 21,
+                                            height: 21,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(Icons.military_tech,
+                                                    size: 21,
+                                                    color:
+                                                        Color(0xFF5C3EF0)),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          const Text(
+                                            'Level 2',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Color(0xFF5C3EF0),
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              RichText(
-                                text: const TextSpan(
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            // XP bar
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Stack(
                                   children: [
-                                    TextSpan(
-                                      text: '350',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF334155),
+                                    Container(
+                                      height: 8,
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F2F8),
+                                        borderRadius: BorderRadius.circular(999),
                                       ),
                                     ),
-                                    TextSpan(
-                                      text: ' / 800 XP',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF64748B),
+                                    FractionallySizedBox(
+                                      widthFactor: 350 / 800,
+                                      child: Container(
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          gradient: AppColors.xpBarGradient,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Color(0x806B4BF4),
+                                              blurRadius: 8,
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(height: 6),
+                                RichText(
+                                  text: const TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: '350',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF334155),
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: ' / 800 XP',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Stats grid
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 2.0,
-                      children: [
-                        _StatCard(
-                          iconUrl: AppAssets.fireStreak,
-                          value: '7',
-                          label: 'Daily Streak',
-                        ),
-                        _StatCard(
-                          iconUrl: AppAssets.rbxCoinIcon,
-                          value: '12,450',
-                          label: 'Total RBX\nCoins',
-                        ),
-                        _StatCard(
-                          iconUrl: AppAssets.gamepadStat,
-                          value: '18',
-                          label: 'Games Played',
-                        ),
-                        _StatCard(
-                          iconUrl: AppAssets.adsWatched,
-                          value: '56',
-                          label: 'Ads Watched',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Settings & Support
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x33000000),
-                            blurRadius: 2,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      child: GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 2.0,
+                        children: [
+                          _StatCard(
+                            iconUrl: AppAssets.fireStreak,
+                            value: '7',
+                            label: 'Daily Streak',
+                          ),
+                          _StatCard(
+                            iconUrl: AppAssets.rbxCoinIcon,
+                            value: '12,450',
+                            label: 'Total RBX\nCoins',
+                          ),
+                          _StatCard(
+                            iconUrl: AppAssets.gamepadStat,
+                            value: '18',
+                            label: 'Games Played',
+                          ),
+                          _StatCard(
+                            iconUrl: AppAssets.adsWatched,
+                            value: '56',
+                            label: 'Ads Watched',
                           ),
                         ],
                       ),
-                      child: Column(
-                        children: [
-                          _SettingsLink(
-                            iconUrl: AppAssets.helpIcon,
-                            title: 'Help & Support',
-                            hasDivider: true,
-                          ),
-                          _SettingsLink(
-                            iconUrl: AppAssets.privacyIcon,
-                            title: 'Privacy Policy',
-                            hasDivider: true,
-                          ),
-                          _SettingsLink(
-                            iconUrl: AppAssets.termsIcon,
-                            title: 'Terms',
-                            hasDivider: true,
-                          ),
-                          _SettingsLink(
-                            iconUrl: AppAssets.contactIcon,
-                            title: 'Contact Support',
-                            hasDivider: false,
-                          ),
-                        ],
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
+
+                    // Settings & Support
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _SettingsLink(
+                              iconUrl: AppAssets.helpIcon,
+                              title: 'Help & Support',
+                              hasDivider: true,
+                            ),
+                            _SettingsLink(
+                              iconUrl: AppAssets.privacyIcon,
+                              title: 'Privacy Policy',
+                              hasDivider: true,
+                            ),
+                            _SettingsLink(
+                              iconUrl: AppAssets.termsIcon,
+                              title: 'Terms',
+                              hasDivider: true,
+                            ),
+                            _SettingsLink(
+                              iconUrl: AppAssets.contactIcon,
+                              title: 'Contact Support',
+                              hasDivider: false,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

@@ -50,25 +50,22 @@ class RewardsScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: const RbxAppHeader(),
-            ),
             Expanded(
               child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
                   children: [
-                    const SizedBox(height: 16),
+                    const RbxAppHeader(),
                     // Balance widget
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _BalanceWidget(),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Redeem Rewards header
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -95,12 +92,12 @@ class RewardsScreen extends StatelessWidget {
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       itemCount: rewards.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (ctx, i) => _RewardItem(data: rewards[i]),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppLayout.sectionSpacing),
                   ],
                 ),
               ),

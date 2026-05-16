@@ -15,19 +15,16 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: const RbxAppHeader(),
-            ),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(0, 16, 0, 12),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const RbxAppHeader(),
                     // Welcome greeting
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           const Text(
@@ -50,11 +47,11 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Balance Card
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -142,11 +139,11 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Daily Reward Card
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: AppColors.dailyCardGradient,
@@ -191,7 +188,8 @@ class HomeScreen extends StatelessWidget {
                                     Container(
                                       height: 34,
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 14),
+                                          horizontal: 8),
+                                          width: 100,
                                       decoration: BoxDecoration(
                                         gradient: AppColors.primaryGradient,
                                         borderRadius: BorderRadius.circular(14),
@@ -221,7 +219,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ),
                             Expanded(
-                              flex: 4,
+                              flex: 6,
                               child: Padding(
                                 padding: const EdgeInsets.only(right: 12, top: 12, bottom: 12),
                                 child: Image.network(
@@ -239,22 +237,22 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Quick Actions header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Quick Actions',
                         linkText: 'Show all actions',
                         onTap: () {},
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppLayout.elementSpacing),
 
                     // Quick Actions grid
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           _QuickActionCard(
@@ -278,22 +276,22 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Play to Earn header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Play to Earn',
                         linkText: 'Show all games',
                         onTap: () => onNavTap(1),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppLayout.elementSpacing),
 
                     // Games row
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           Expanded(
@@ -325,22 +323,22 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Tasks & Offers header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Task & Offers',
                         linkText: 'Show all offers',
                         onTap: () {},
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppLayout.elementSpacing),
 
                     // Task banner
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF3EAFD),
@@ -354,74 +352,83 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
                         padding: const EdgeInsets.all(16),
-                        child: Stack(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Image.network(
-                                  AppAssets.clipboardIcon,
-                                  width: 60,
-                                  height: 60,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.assignment,
-                                    size: 50,
-                                    color: AppColors.primary,
-                                  ),
+                            Expanded(
+                              flex: 3,
+                              child: Image.network(
+                                AppAssets.clipboardIcon,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.assignment,
+                                  size: 50,
+                                  color: AppColors.primary,
                                 ),
-                                const SizedBox(width: 12),
-                                const Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Complete tasks & earn\nRBX Coins!',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF0A0F2C),
-                                          height: 1.38,
-                                        ),
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Finish offers and daily tasks to\nget amazing rewards.',
-                                        style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: Color(0xFF475569),
-                                          height: 1.38,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF6235F6),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Text(
-                                  'Start Earning',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 5,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Complete tasks & earn RBX Coins!',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF0A0F2C),
+                                      height: 1.3,
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Finish offers and daily tasks to get amazing rewards.',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Color(0xFF475569),
+                                      height: 1.38,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Container(
+                                    height: 34,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                        width: 110,
+                                    decoration: BoxDecoration(
+                                      gradient: AppColors.primaryGradient,
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x736035EE),
+                                          blurRadius: 16,
+                                          offset: Offset(0, 8),
+                                          spreadRadius: -4,
+                                        )
+                                      ],
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Start Earning',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppLayout.sectionSpacing),
                   ],
                 ),
               ),

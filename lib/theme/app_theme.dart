@@ -122,3 +122,10 @@ class AppAssets {
   static const String flappyJumpGame =
       'https://www.figma.com/api/mcp/asset/71b59327-cae4-4c8c-9183-792d2d287c55';
 }
+
+class AppLayout {
+  static const double screenPadding = 24.0;
+  static const double sectionSpacing = 24.0;
+  static const double elementSpacing = 12.0;
+}
+
