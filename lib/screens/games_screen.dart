@@ -296,7 +296,7 @@ class _GameCard extends StatelessWidget {
                       Expanded(
                         child: Row(
                           children: [
-                            Image.network(
+                            Image.asset(
                               AppAssets.goldCoin,
                               width: 13,
                               height: 13,

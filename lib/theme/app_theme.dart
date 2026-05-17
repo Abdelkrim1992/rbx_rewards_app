@@ -62,8 +62,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/d61aa950-a3dd-42d9-a9a1-0cc4aed49d80';
   static const String wavingHand =
       'https://www.figma.com/api/mcp/asset/e32c7142-4714-4ff9-adef-c64da6cb1c12';
-  static const String goldRbxCoin =
-      'https://www.figma.com/api/mcp/asset/6e94d2d6-91dd-4ebc-bf8c-8767fc66b392';
+  static const String goldRbxCoin = 'assets/images/robux_coins.png';
   static const String arrowRight =
       'https://www.figma.com/api/mcp/asset/ea4bc6b7-3caa-4c49-9268-b6b6a4edf5d1';
   static const String purpleGiftBox =
@@ -82,11 +81,10 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/cedd548f-dcba-48f4-9499-359f1cbcea15';
   static const String memoryMatchGame =
       'https://www.figma.com/api/mcp/asset/71b59327-cae4-4c8c-9183-792d2d287c55';
-  static const String goldCoin =
-      'https://www.figma.com/api/mcp/asset/a06d6636-99e2-480f-b5c6-fef2646cf3ee';
+  static const String goldCoin = 'assets/images/robux_coins.png';
   static const String chevronRight =
       'https://www.figma.com/api/mcp/asset/916d584b-02ff-4889-9930-e32e15172357';
-
+  
   // Nav icons
   static const String navHome =
       'https://www.figma.com/api/mcp/asset/d38cd333-4ae6-4ee4-b55b-0a03213a164b';
@@ -96,14 +94,13 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/4e879785-63b3-48dc-9f5f-8c6550dc4fb8';
   static const String navProfile =
       'https://www.figma.com/api/mcp/asset/459482cf-86a7-4e07-bb3b-09ecf20414df';
-
+  
   // Profile screen
   static const String profileAvatar =
       'https://www.figma.com/api/mcp/asset/4f8e6556-cadb-4412-9bf7-205c4dabf108';
   static const String fireStreak =
       'https://www.figma.com/api/mcp/asset/e37e3720-4a49-4671-a975-d17d9310d228';
-  static const String rbxCoinIcon =
-      'https://www.figma.com/api/mcp/asset/6921107d-4c98-4ee6-9a99-da1d24d54104';
+  static const String rbxCoinIcon = 'assets/images/robux_coins.png';
   static const String gamepadStat =
       'https://www.figma.com/api/mcp/asset/cca1114d-4f18-4f05-8da3-e8beacb8f47e';
   static const String adsWatched =

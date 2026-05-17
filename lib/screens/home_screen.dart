@@ -154,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.network(
+                      Image.asset(
                         AppAssets.goldRbxCoin,
                         width: 28,
                         height: 28,
@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Image.network(
+                                  Image.asset(
                                     AppAssets.goldRbxCoin,
                                     width: 52,
                                     height: 52,
@@ -616,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onTap: () {},
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: _EarnMoreVerticalCard(
                                 iconUrl: AppAssets.tapTapGame,
@@ -921,7 +921,7 @@ class _EarnMoreVerticalCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 2),
-                          Image.network(
+                          Image.asset(
                             AppAssets.goldCoin,
                             width: 10,
                             height: 10,
@@ -1053,8 +1053,8 @@ class _GameCard extends StatelessWidget {
           boxShadow: const [
             BoxShadow(
               color: Color(0x14000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              blurRadius: 12,
+              offset: Offset(0, 6),
             ),
           ],
         ),
@@ -1063,7 +1063,7 @@ class _GameCard extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                height: 76,
+                height: 76, // Matched with _EarnMoreVerticalCard image height
                 width: double.infinity,
                 color: bgColor,
                 child: Image.network(
@@ -1071,21 +1071,21 @@ class _GameCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Icon(
                     Icons.sports_esports,
-                    size: 40,
+                    size: 44,
                     color: AppColors.primary.withOpacity(0.5),
                   ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16), // Increased padding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15, // Increased from 13
+                        fontWeight: FontWeight.w800, // Bolder
                         color: Color(0xFF131326),
                       ),
                       maxLines: 1,
@@ -1095,13 +1095,13 @@ class _GameCard extends StatelessWidget {
                     Row(
                       children: [
                         const Icon(Icons.monetization_on,
-                                  size: 14, color: Color(0xFFFFCC44)),
+                                  size: 16, color: Color(0xFFFFCC44)), // Increased from 14
                         const SizedBox(width: 4),
                         Text(
                           coins,
                           style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 13, // Increased from 11
+                            fontWeight: FontWeight.w700, // Bolder
                             color: Color(0xFF868A9F),
                           ),
                         ),

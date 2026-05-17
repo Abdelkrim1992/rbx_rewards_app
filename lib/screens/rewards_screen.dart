@@ -157,7 +157,7 @@ class _BalanceWidget extends StatelessWidget {
           ),
           Row(
             children: [
-              Image.network(
+              Image.asset(
                 AppAssets.goldRbxCoin,
                 width: 48,
                 height: 52,
@@ -330,7 +330,7 @@ class _RewardItem extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Image.network(
+                    Image.asset(
                       AppAssets.goldCoin,
                       width: 23,
                       height: 23,

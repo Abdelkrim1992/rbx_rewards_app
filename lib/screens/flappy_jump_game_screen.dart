@@ -1357,7 +1357,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
             ),
             child: Row(
               children: [
-                Image.network(
+                Image.asset(
                   AppAssets.goldRbxCoin,
                   width: 18,
                   height: 18,
@@ -1431,7 +1431,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                     ),
                     child: Row(
                       children: [
-                        Image.network(
+                        Image.asset(
                           AppAssets.goldRbxCoin,
                           width: 20,
                           height: 20,
@@ -1787,7 +1787,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                       ),
                       Row(
                         children: [
-                          Image.network(
+                          Image.asset(
                             AppAssets.goldRbxCoin,
                             width: 22,
                             height: 22,

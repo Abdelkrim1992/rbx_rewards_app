@@ -150,7 +150,7 @@ class _SpinScreenState extends State<SpinScreen>
                     ),
                     child: Row(
                       children: [
-                        Image.network(
+                        Image.asset(
                           AppAssets.goldCoin,
                           width: 20,
                           height: 20,
@@ -1013,7 +1013,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
       ),
       child: Center(
         child: showFront
-            ? Image.network(
+            ? Image.asset(
                 AppAssets.goldRbxCoin,
                 width: 60,
                 height: 60,
@@ -1130,7 +1130,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.network(
+                Image.asset(
                   AppAssets.goldRbxCoin,
                   width: 28,
                   height: 28,

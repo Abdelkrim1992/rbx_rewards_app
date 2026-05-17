@@ -783,7 +783,7 @@ class _EarnRowCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Image.network(
+                        Image.asset(
                           AppAssets.goldRbxCoin,
                           width: 12,
                           height: 12,

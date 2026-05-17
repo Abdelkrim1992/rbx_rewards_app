@@ -799,7 +799,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
               right: -20,
               child: Transform.rotate(
                 angle: 0.4,
-                child: Image.network(AppAssets.goldCoin, width: 80, height: 80),
+                child: Image.asset(AppAssets.goldCoin, width: 80, height: 80),
               ),
             ),
             Positioned(
@@ -807,7 +807,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
               left: -20,
               child: Transform.rotate(
                 angle: -0.3,
-                child: Image.network(AppAssets.goldCoin, width: 70, height: 70),
+                child: Image.asset(AppAssets.goldCoin, width: 70, height: 70),
               ),
             ),
             Positioned(
@@ -815,7 +815,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
               right: -10,
               child: Transform.rotate(
                 angle: 0.25,
-                child: Image.network(AppAssets.goldCoin, width: 85, height: 85),
+                child: Image.asset(AppAssets.goldCoin, width: 85, height: 85),
               ),
             ),
           ],

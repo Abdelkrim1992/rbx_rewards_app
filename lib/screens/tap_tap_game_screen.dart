@@ -1013,7 +1013,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.network(
+                      Image.asset(
                         AppAssets.goldCoin,
                         width: 32,
                         height: 32,

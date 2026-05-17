@@ -525,7 +525,7 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Image.network(
+                                    Image.asset(
                                       AppAssets.goldRbxCoin,
                                       width: 28,
                                       height: 28,

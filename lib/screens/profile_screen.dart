@@ -342,14 +342,23 @@ class _StatCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Image.network(
-            iconUrl,
-            width: 32,
-            height: 32,
-            fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) =>
-                const Icon(Icons.star, size: 32, color: AppColors.primary),
-          ),
+          iconUrl.startsWith('assets/')
+              ? Image.asset(
+                  iconUrl,
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.star,
+                      size: 32, color: AppColors.primary),
+                )
+              : Image.network(
+                  iconUrl,
+                  width: 32,
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.star,
+                      size: 32, color: AppColors.primary),
+                ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
