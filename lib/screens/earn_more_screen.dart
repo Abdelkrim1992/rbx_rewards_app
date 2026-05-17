@@ -1,11 +1,62 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../widgets/game_prefs.dart';
 import 'chest_screen.dart';
 
 class EarnMoreScreen extends StatelessWidget {
   final Function(int)? onNavTap;
 
   const EarnMoreScreen({super.key, this.onNavTap});
+
+  void _showWatchAdDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const WatchAdDialog(),
+    ).then((coinsEarned) {
+      if (coinsEarned != null && coinsEarned > 0) {
+        _showSuccessSnackbar(context, 'Successfully claimed +100 RBX Coins! 📺');
+      }
+    });
+  }
+
+  void _showSurveyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const SurveyDialog(),
+    ).then((coinsEarned) {
+      if (coinsEarned != null && coinsEarned > 0) {
+        _showSuccessSnackbar(context, 'Successfully claimed +250 RBX Coins! 📋');
+      }
+    });
+  }
+
+  void _showSuccessSnackbar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Color(0xFF00FFCC), size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1E1B4B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +85,12 @@ class EarnMoreScreen extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        title: const Text(
+        title: Text(
           'Earn More',
-          style: TextStyle(
-            color: Color(0xFF131326),
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
+          style: GoogleFonts.outfit(
+            color: const Color(0xFF131326),
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
             letterSpacing: -0.5,
           ),
         ),
@@ -48,11 +99,11 @@ class EarnMoreScreen extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'More ways to earn points every day!',
-              style: TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Color(0xFF868A9F),
+                color: const Color(0xFF868A9F),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -61,13 +112,14 @@ class EarnMoreScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                 children: [
+                  // 1. Spin
                   _EarnRowCard(
                     iconUrl: AppAssets.spinWheelIcon,
                     fallbackIcon: Icons.track_changes,
                     iconBgColor: const Color(0xFFF3EAFD),
                     iconColor: AppColors.primary,
                     title: 'Spin',
-                    subtitle: 'Spin the wheel and\nwin points!',
+                    subtitle: 'Spin the wheel and win points!',
                     badgeText: 'Up to 1,000',
                     onTap: () {
                       if (onNavTap != null) {
@@ -77,13 +129,15 @@ class EarnMoreScreen extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 16),
+
+                  // 2. Treasure Chest
                   _EarnRowCard(
                     iconUrl: AppAssets.chestIcon,
                     fallbackIcon: Icons.work,
                     iconBgColor: const Color(0xFFF3EEFD),
                     iconColor: const Color(0xFF8B5CF6),
                     title: 'Treasure Chest',
-                    subtitle: 'Open chests and get\namazing rewards!',
+                    subtitle: 'Open chests and get amazing rewards!',
                     badgeText: 'Up to 500',
                     onTap: () => Navigator.push(
                       context,
@@ -91,47 +145,55 @@ class EarnMoreScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // 3. Watch Ads (New Simulator feature)
+                  _EarnRowCard(
+                    iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/play-button-6841793-5608670.png',
+                    fallbackIcon: Icons.video_library,
+                    iconBgColor: const Color(0xFFFFF3E3),
+                    iconColor: const Color(0xFFFF9800),
+                    title: 'Watch Ads',
+                    subtitle: 'Watch quick videos to claim bonus points!',
+                    badgeText: '+100 Coins',
+                    onTap: () => _showWatchAdDialog(context),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 4. Surveys (New Simulator feature)
+                  _EarnRowCard(
+                    iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
+                    fallbackIcon: Icons.poll,
+                    iconBgColor: const Color(0xFFE3F8EB),
+                    iconColor: const Color(0xFF00C853),
+                    title: 'Surveys',
+                    subtitle: 'Answer quick polls & share opinions!',
+                    badgeText: '+250 Coins',
+                    onTap: () => _showSurveyDialog(context),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 5. Missions
                   _EarnRowCard(
                     iconUrl: AppAssets.missionsIcon,
                     fallbackIcon: Icons.assignment_turned_in,
                     iconBgColor: const Color(0xFFF3EEFD),
                     iconColor: const Color(0xFF8B5CF6),
                     title: 'Missions',
-                    subtitle: 'Complete tasks and\nearn big!',
+                    subtitle: 'Complete tasks and earn big!',
                     badgeText: 'Up to 300',
                     onTap: () {},
                   ),
                   const SizedBox(height: 16),
-                  _EarnRowCard(
-                    iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/calculator-5591322-4652971.png',
-                    fallbackIcon: Icons.calculate,
-                    iconBgColor: const Color(0xFFF3EEFD),
-                    iconColor: const Color(0xFF8B5CF6),
-                    title: 'Calculator',
-                    subtitle: 'Solve simple calculations\nand earn rewards!',
-                    badgeText: 'Up to 250',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 16),
+
+                  // 6. Quizzes
                   _EarnRowCard(
                     iconUrl: AppAssets.quizMasterGame,
                     fallbackIcon: Icons.school,
                     iconBgColor: const Color(0xFFF3EEFD),
                     iconColor: const Color(0xFF8B5CF6),
                     title: 'Quizzes',
-                    subtitle: 'Answer quizzes and\nearn smart!',
+                    subtitle: 'Answer quizzes and earn smart!',
                     badgeText: 'Up to 400',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 16),
-                  _EarnRowCard(
-                    iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/scratch-card-9477045-7687848.png', // Temporary placeholder for Scratch Cards
-                    fallbackIcon: Icons.local_play,
-                    iconBgColor: const Color(0xFFF3EEFD),
-                    iconColor: const Color(0xFF8B5CF6),
-                    title: 'Scratch Cards',
-                    subtitle: 'Scratch and reveal\nexciting rewards!',
-                    badgeText: 'Up to 350',
                     onTap: () {},
                   ),
                   const SizedBox(height: 32),
@@ -145,6 +207,455 @@ class EarnMoreScreen extends StatelessWidget {
   }
 }
 
+// --- Watch Ad Simulated Dialog ---
+class WatchAdDialog extends StatefulWidget {
+  const WatchAdDialog({super.key});
+
+  @override
+  State<WatchAdDialog> createState() => _WatchAdDialogState();
+}
+
+class _WatchAdDialogState extends State<WatchAdDialog> {
+  int _secondsLeft = 5;
+  Timer? _timer;
+  bool _adFinished = false;
+  double _progress = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAdTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startAdTimer() {
+    const totalMs = 5000;
+    const intervalMs = 50;
+    int elapsedMs = 0;
+
+    _timer = Timer.periodic(const Duration(milliseconds: intervalMs), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      elapsedMs += intervalMs;
+      setState(() {
+        _progress = (elapsedMs / totalMs).clamp(0.0, 1.0);
+        _secondsLeft = (5 - (elapsedMs ~/ 1000)).clamp(0, 5);
+      });
+
+      if (elapsedMs >= totalMs) {
+        timer.cancel();
+        setState(() {
+          _adFinished = true;
+        });
+        HapticFeedback.heavyImpact();
+      }
+    });
+  }
+
+  void _claimAdReward() async {
+    final currentCoins = await GamePrefs.getCoins();
+    await GamePrefs.saveCoins(currentCoins + 100);
+    if (mounted) {
+      Navigator.of(context).pop(100);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      backgroundColor: const Color(0xFF0F172A), // Premium dark mode ad style
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Ad header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'SPONSORED AD',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white.withOpacity(0.8),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _adFinished ? 'Finished' : 'Rewards in ${_secondsLeft}s...',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFFFB000),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Video player simulation screen
+            Container(
+              width: double.infinity,
+              height: 180,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF312E81), Color(0xFF4F46E5)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.1), width: 1.5),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Animated lines simulating video graphics
+                  Positioned(
+                    bottom: 20,
+                    child: Text(
+                      _adFinished ? 'Video Completed! 🎉' : 'Amazing Robux Rewards 3D...',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  
+                  // Big Play or Gift Icon Pulsing
+                  Icon(
+                    _adFinished ? Icons.card_giftcard_rounded : Icons.play_circle_filled,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Visual Progress indicator
+            Container(
+              height: 6,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: _progress,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Claim action button
+            GestureDetector(
+              onTap: _adFinished ? _claimAdReward : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: double.infinity,
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: _adFinished
+                      ? const LinearGradient(
+                          colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                        )
+                      : LinearGradient(
+                          colors: [Colors.grey.shade800, Colors.grey.shade700],
+                        ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _adFinished ? 'CLAIM +100 COINS 🪙' : 'WATCHING VIDEO...',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: _adFinished ? Colors.white : Colors.white60,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- Survey Simulated Dialog Flow ---
+class SurveyDialog extends StatefulWidget {
+  const SurveyDialog({super.key});
+
+  @override
+  State<SurveyDialog> createState() => _SurveyDialogState();
+}
+
+class _SurveyDialogState extends State<SurveyDialog> {
+  int _step = 1;
+  int? _selectedOption;
+
+  final Map<int, _SurveyQuestion> _questions = {
+    1: _SurveyQuestion(
+      q: 'Which mini-game is your favorite?',
+      opts: ['Tap Tap ⚡', 'Flappy Jump 🐦', 'Math Quiz 🧠', 'Treasure Chest 📦'],
+    ),
+    2: _SurveyQuestion(
+      q: 'How satisfied are you with reward earnings?',
+      opts: ['Very Satisfied 😊', 'Satisfied 🙂', 'Neutral 😐', 'Needs more coins 🪙'],
+    ),
+    3: _SurveyQuestion(
+      q: 'Would you recommend this app to friends?',
+      opts: ['Yes, definitely! 🚀', 'Probably', 'Maybe later', 'No'],
+    ),
+  };
+
+  void _nextStep() {
+    if (_selectedOption == null) return;
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (_step < 3) {
+        _step++;
+        _selectedOption = null;
+      } else {
+        _step = 4; // Complete state
+      }
+    });
+  }
+
+  void _claimSurveyReward() async {
+    final currentCoins = await GamePrefs.getCoins();
+    await GamePrefs.saveCoins(currentCoins + 250);
+    if (mounted) {
+      Navigator.of(context).pop(250);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFinished = _step == 4;
+    final currentQ = _questions[_step];
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      backgroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header Progress
+            Row(
+              children: [
+                Text(
+                  'QUICK POLL',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.primary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const Spacer(),
+                if (!isFinished)
+                  Text(
+                    'Step $_step of 3',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF868A9F),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            if (!isFinished && currentQ != null) ...[
+              // Question text
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  currentQ.q,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF131326),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Options
+              Column(
+                children: List.generate(currentQ.opts.length, (idx) {
+                  final isSel = _selectedOption == idx;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedOption = idx;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isSel ? const Color(0xFFF3EAFD) : const Color(0xFFFAFAFE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSel ? AppColors.primary : const Color(0xFFECEBFC),
+                          width: 2.0,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              currentQ.opts[idx],
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: isSel ? AppColors.primary : const Color(0xFF131326),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSel ? AppColors.primary : const Color(0xFFDCDAF0),
+                                width: 2,
+                              ),
+                              color: isSel ? AppColors.primary : Colors.transparent,
+                            ),
+                            child: isSel
+                                ? const Icon(Icons.check, color: Colors.white, size: 12)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+
+              // Action button
+              GestureDetector(
+                onTap: _selectedOption != null ? _nextStep : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: _selectedOption != null ? AppColors.primary : const Color(0xFFE2E2F5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _step == 3 ? 'FINISH' : 'NEXT STEP',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: _selectedOption != null ? Colors.white : const Color(0xFF868A9F),
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Complete card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE3F8EB),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.stars,
+                  color: Color(0xFF00C853),
+                  size: 64,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Poll Complete! 🌟',
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF131326),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Thank you for your valuable feedback!',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: const Color(0xFF868A9F),
+                ),
+              ),
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: _claimSurveyReward,
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00C853), Color(0xFF4CAF50)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'CLAIM +250 COINS 🪙',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SurveyQuestion {
+  final String q;
+  final List<String> opts;
+
+  _SurveyQuestion({required this.q, required this.opts});
+}
+
+// --- Earn Row Card Component ---
 class _EarnRowCard extends StatelessWidget {
   final String iconUrl;
   final IconData fallbackIcon;
@@ -209,7 +720,7 @@ class _EarnRowCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            
+
             // Middle Content
             Expanded(
               child: Column(
@@ -238,7 +749,7 @@ class _EarnRowCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Right Elements (Arrow + Badge)
             SizedBox(
               height: 72,
@@ -251,7 +762,7 @@ class _EarnRowCard extends StatelessWidget {
                     child: Icon(
                       Icons.arrow_forward_ios_rounded,
                       size: 16,
-                      color: Color(0xFF9CA3AF), 
+                      color: Color(0xFF9CA3AF),
                     ),
                   ),
                   Container(
@@ -268,7 +779,7 @@ class _EarnRowCard extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.primary, 
+                            color: AppColors.primary,
                           ),
                         ),
                         const SizedBox(width: 4),

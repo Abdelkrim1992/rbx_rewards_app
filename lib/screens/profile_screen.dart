@@ -11,8 +11,10 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFE),
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
@@ -28,11 +30,13 @@ class ProfileScreen extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF3F4F6)),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 2,
+                              color: Color(0x0A000000),
+                              blurRadius: 15,
+                              offset: Offset(0, 8),
                             ),
                           ],
                         ),
@@ -42,8 +46,8 @@ class ProfileScreen extends StatelessWidget {
                               children: [
                                 // Avatar with rings
                                 Container(
-                                  width: 107,
-                                  height: 105,
+                                  width: 90,
+                                  height: 90,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
@@ -78,7 +82,7 @@ class ProfileScreen extends StatelessWidget {
                                                   color: const Color(0xFFEEEEEF),
                                                   child: const Icon(
                                                     Icons.person,
-                                                    size: 50,
+                                                    size: 40,
                                                     color: AppColors.purple,
                                                   ),
                                                 ),
@@ -90,53 +94,61 @@ class ProfileScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 20),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Player',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0F172A),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Player',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0F172A),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.fromLTRB(
-                                          6, 4, 12, 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF3F4FE),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Image.network(
-                                            AppAssets.levelBadge,
-                                            width: 21,
-                                            height: 21,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Icon(Icons.military_tech,
-                                                    size: 21,
-                                                    color:
-                                                        Color(0xFF5C3EF0)),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          const Text(
-                                            'Level 2',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF5C3EF0),
-                                              fontWeight: FontWeight.w500,
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            6, 4, 12, 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF3F4FE),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Image.network(
+                                              AppAssets.levelBadge,
+                                              width: 21,
+                                              height: 21,
+                                              errorBuilder: (_, __, ___) =>
+                                                  const Icon(Icons.military_tech,
+                                                      size: 21,
+                                                      color:
+                                                          Color(0xFF5C3EF0)),
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 6),
+                                            const Flexible(
+                                              child: Text(
+                                                'Level 2',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: Color(0xFF5C3EF0),
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -189,7 +201,7 @@ class ProfileScreen extends StatelessWidget {
                                         text: ' / 800 XP',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: Color(0xFF64748B),
+                                          color: Color(0xFF334155),
                                         ),
                                       ),
                                     ],
@@ -209,10 +221,11 @@ class ProfileScreen extends StatelessWidget {
                       child: GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
-                        childAspectRatio: 2.0,
+                        childAspectRatio: 1.8,
                         children: [
                           _StatCard(
                             iconUrl: AppAssets.fireStreak,
@@ -222,7 +235,7 @@ class ProfileScreen extends StatelessWidget {
                           _StatCard(
                             iconUrl: AppAssets.rbxCoinIcon,
                             value: '12,450',
-                            label: 'Total RBX\nCoins',
+                            label: 'Total RBX Coins',
                           ),
                           _StatCard(
                             iconUrl: AppAssets.gamepadStat,
@@ -245,11 +258,13 @@ class ProfileScreen extends StatelessWidget {
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFF3F4F6)),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x33000000),
-                              blurRadius: 2,
+                              color: Color(0x0A000000),
+                              blurRadius: 15,
+                              offset: Offset(0, 8),
                             ),
                           ],
                         ),
@@ -279,15 +294,19 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: RbxBottomNav(currentIndex: 3, onTap: onNavTap),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: RbxBottomNav(currentIndex: 3, onTap: onNavTap),
         ),
       ),
     );
@@ -308,15 +327,16 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Color(0x0A000000),
+            blurRadius: 15,
+            offset: Offset(0, 8),
           ),
         ],
       ),
@@ -324,33 +344,42 @@ class _StatCard extends StatelessWidget {
         children: [
           Image.network(
             iconUrl,
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) =>
-                const Icon(Icons.star, size: 36, color: AppColors.primary),
+                const Icon(Icons.star, size: 32, color: AppColors.primary),
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F172A),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
                 ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF64748B),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF64748B),
+                    height: 1.1,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -376,31 +405,30 @@ class _SettingsLink extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 36,
-                    height: 24,
-                    child: Image.network(
-                      iconUrl,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.info_outline,
-                              size: 22, color: AppColors.purple),
-                    ),
+              SizedBox(
+                width: 36,
+                height: 24,
+                child: Image.network(
+                  iconUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.info_outline,
+                          size: 22, color: AppColors.purple),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF0F172A),
+                    fontWeight: FontWeight.w400,
                   ),
-                  const SizedBox(width: 16),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF0F172A),
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+                ),
               ),
               const Icon(Icons.chevron_right,
                   size: 18, color: Color(0xFF94A3B8)),

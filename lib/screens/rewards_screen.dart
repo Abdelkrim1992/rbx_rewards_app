@@ -46,8 +46,10 @@ class RewardsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFE),
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
@@ -87,7 +89,7 @@ class RewardsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
+                    const SizedBox(height: AppLayout.sectionSpacing),
                     // Reward list
                     ListView.separated(
                       shrinkWrap: true,
@@ -97,16 +99,19 @@ class RewardsScreen extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (ctx, i) => _RewardItem(data: rewards[i]),
                     ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: RbxBottomNav(currentIndex: 2, onTap: onNavTap),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: RbxBottomNav(currentIndex: 2, onTap: onNavTap),
         ),
       ),
     );
@@ -117,7 +122,7 @@ class _BalanceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 136,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -127,78 +132,66 @@ class _BalanceWidget extends StatelessWidget {
             AppColors.primaryLight,
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x336035EE),
-            blurRadius: 16,
+            color: Color(0x226035EE),
+            blurRadius: 15,
             offset: Offset(0, 8),
           ),
         ],
       ),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           // Decorative sparkles
           Positioned(
-            right: 12,
-            top: 8,
+            right: 0,
+            top: -5,
             child: const Text('✨', style: TextStyle(fontSize: 18)),
           ),
           Positioned(
-            right: 60,
-            bottom: 12,
+            right: 40,
+            bottom: -5,
             child: const Text('✨', style: TextStyle(fontSize: 12)),
           ),
-          // Wallet image placeholder
-          Positioned(
-            right: 20,
-            top: 9,
-            child: Container(
-              width: 100,
-              height: 118,
-              child: Image.network(
-                AppAssets.purpleGiftBox,
+          Row(
+            children: [
+              Image.network(
+                AppAssets.goldRbxCoin,
+                width: 48,
+                height: 52,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.account_balance_wallet,
-                        size: 80, color: Colors.white54),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Image.network(
-                  AppAssets.goldRbxCoin,
-                  width: 55,
-                  height: 60,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.monetization_on,
-                    size: 55,
-                    color: Color(0xFFFFCC44),
-                  ),
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.monetization_on,
+                  size: 48,
+                  color: Color(0xFFFFCC44),
                 ),
-                const SizedBox(width: 20),
-                Column(
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: const [
                     Text(
                       '12,450',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: -0.8,
+                        height: 1.1,
                       ),
                     ),
+                    SizedBox(height: 2),
                     Text(
                       'Your RBX Balance',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.white70,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     Text(
@@ -210,8 +203,20 @@ class _BalanceWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 80,
+                height: 90,
+                child: Image.network(
+                  AppAssets.purpleGiftBox,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) =>
+                      const Icon(Icons.account_balance_wallet,
+                          size: 60, color: Colors.white54),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -247,11 +252,12 @@ class _RewardItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Color(0x0A000000),
+            blurRadius: 15,
+            offset: Offset(0, 8),
           ),
         ],
       ),
@@ -261,8 +267,8 @@ class _RewardItem extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8),
             child: Container(
-              width: 72,
-              height: 72,
+              width: 70,
+              height: 70,
               decoration: BoxDecoration(
                 color: data.bgColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(14),
@@ -286,13 +292,15 @@ class _RewardItem extends StatelessWidget {
           // Info
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 0, 8),
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     data.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -302,6 +310,8 @@ class _RewardItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     data.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.secondaryText,
@@ -313,20 +323,20 @@ class _RewardItem extends StatelessWidget {
           ),
           // Cost & Redeem
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 6, 12, 6),
+            padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+              // crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Row(
                   children: [
                     Image.network(
                       AppAssets.goldCoin,
-                      width: 16,
-                      height: 16,
+                      width: 23,
+                      height: 23,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.monetization_on,
-                        size: 16,
+                        size: 23,
                         color: Color(0xFFFFCC44),
                       ),
                     ),
@@ -341,8 +351,9 @@ class _RewardItem extends StatelessWidget {
                     ),
                   ],
                 ),
+                
                 Container(
-                  width: 81,
+                  width: 75,
                   height: 30,
                   decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
@@ -359,7 +370,7 @@ class _RewardItem extends StatelessWidget {
                     child: Text(
                       'Redeem',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),

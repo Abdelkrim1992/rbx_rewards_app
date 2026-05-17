@@ -4,13 +4,21 @@ import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
 import 'chest_screen.dart';
+import 'tap_tap_game_screen.dart';
 import 'earn_more_screen.dart';
 import 'tasks_offers_screen.dart';
+import '../widgets/game_prefs.dart';
+
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onNavTap;
+  final VoidCallback onSpinTap;
 
-  const HomeScreen({super.key, required this.onNavTap});
+  const HomeScreen({
+    super.key,
+    required this.onNavTap,
+    required this.onSpinTap,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -22,6 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _lastClaimTime;
   Timer? _countdownTimer;
   Duration _timeUntilNextClaim = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    final coins = await GamePrefs.getCoins();
+    setState(() {
+      _balance = coins;
+    });
+  }
 
   @override
   void dispose() {
@@ -196,6 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isDailyClaimed = true;
       _balance += 100;
     });
+    GamePrefs.saveCoins(_balance);
     _startCountdown();
   }
 
@@ -208,12 +230,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.only(top: 20, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -295,7 +319,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           Text(
                                             '$_balance',
                                             style: const TextStyle(
-                                              fontSize: 30,
+                                              fontSize: 25,
                                               fontWeight: FontWeight.w800,
                                               color: Color(0xFF131326),
                                               letterSpacing: -0.7,
@@ -328,8 +352,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
-
-
 
                     // Daily Reward Card
                     Padding(
@@ -476,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             iconUrl: AppAssets.spinWheelIcon,
                             title: 'Spin & Win',
                             badge: 'Ready',
-                            onTap: () => widget.onNavTap(1),
+                            onTap: widget.onSpinTap,
                           ),
                           const SizedBox(width: 12),
                           _QuickActionCard(
@@ -512,7 +534,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               title: 'Tap Tap',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFEAF3FF),
-                              onTap: () => widget.onNavTap(1),
+                              onTap: () async {
+                                final earned = await Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) => const TapTapGameScreen(),
+                                  ),
+                                );
+                                if (earned != null && earned > 0) {
+                                  setState(() {
+                                    _balance += earned;
+                                  });
+                                  GamePrefs.saveCoins(_balance);
+                                }
+                              },
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -603,16 +637,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: _MegaChestCard(),
                     ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: RbxBottomNav(currentIndex: 0, onTap: widget.onNavTap),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: RbxBottomNav(currentIndex: 0, onTap: widget.onNavTap),
         ),
       ),
     );

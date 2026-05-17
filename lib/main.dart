@@ -10,6 +10,19 @@ import 'screens/profile_screen.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   runApp(const RbxRewardsApp());
 }
 
@@ -85,14 +98,10 @@ class _AppNavigatorState extends State<AppNavigator> {
 
     switch (_currentTab) {
       case 0:
-        return HomeScreen(onNavTap: (i) {
-          if (i == 1) {
-            // Spin & Win quick action -> show spin screen
-            _goToSpin();
-          } else {
-            _onNavTap(i);
-          }
-        });
+        return HomeScreen(
+          onNavTap: _onNavTap,
+          onSpinTap: _goToSpin,
+        );
       case 1:
         return GamesScreen(onNavTap: _onNavTap);
       case 2:
@@ -100,7 +109,10 @@ class _AppNavigatorState extends State<AppNavigator> {
       case 3:
         return ProfileScreen(onNavTap: _onNavTap);
       default:
-        return HomeScreen(onNavTap: _onNavTap);
+        return HomeScreen(
+          onNavTap: _onNavTap,
+          onSpinTap: _goToSpin,
+        );
     }
   }
 }

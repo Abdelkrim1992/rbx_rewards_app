@@ -11,20 +11,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rbx_rewards_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App onboarding and navigator smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const RbxRewardsApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that onboarding screen is displayed with the 'Get Started' button.
+    expect(find.text('Get Started'), findsOneWidget);
+    expect(find.text('Play Games'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Tap the 'Get Started' button and trigger a frame.
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that we navigated to the home screen dashboard or another screen.
+    expect(find.text('Get Started'), findsNothing);
   });
 }

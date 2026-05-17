@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
+import 'tap_tap_game_screen.dart';
+import 'flappy_jump_game_screen.dart';
+import 'math_quiz_screen.dart';
+
 
 class GamesScreen extends StatelessWidget {
   final Function(int) onNavTap;
@@ -25,7 +29,7 @@ class GamesScreen extends StatelessWidget {
       ),
       _GameData(
         imageUrl: AppAssets.quizMasterGame,
-        title: 'Quiz Master',
+        title: 'Math Quiz',
         coins: '+200',
         bgColor: const Color(0xFFE3F8EB),
       ),
@@ -38,8 +42,10 @@ class GamesScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFE),
+      extendBody: true,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             Expanded(
@@ -52,27 +58,23 @@ class GamesScreen extends StatelessWidget {
                     // Section heading
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Expanded(
-                            child: Text(
-                              'Play & Earn',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF131326),
-                              ),
+                          Text(
+                            'Play & Earn',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF131326),
                             ),
                           ),
-                          Expanded(
-                            child: Text(
-                              'Complete mini games to collect RBX coins',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF868A9F),
-                              ),
-                              textAlign: TextAlign.right,
+                          SizedBox(height: 4),
+                          Text(
+                            'Complete mini games to collect RBX coins',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF868A9F),
                             ),
                           ),
                         ],
@@ -85,16 +87,63 @@ class GamesScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                       child: GridView.builder(
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           mainAxisSpacing: 14,
                           crossAxisSpacing: 14,
-                          childAspectRatio: 0.95,
+                          childAspectRatio: 0.82,
                         ),
                         itemCount: games.length,
-                        itemBuilder: (ctx, i) => _GameCard(data: games[i]),
+                        itemBuilder: (ctx, i) {
+                          final game = games[i];
+                          return GestureDetector(
+                            onTap: () {
+                              if (game.title == 'Tap Tap') {
+                                Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) => const TapTapGameScreen(),
+                                  ),
+                                ).then((coinsEarned) {
+                                  if (coinsEarned != null) {
+                                    onNavTap(0);
+                                  }
+                                });
+                                } else if (game.title == 'Flappy Jump') {
+                                Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) => const FlappyJumpGameScreen(),
+                                  ),
+                                ).then((coinsEarned) {
+                                  if (coinsEarned != null) {
+                                    onNavTap(0);
+                                  }
+                                });
+                              } else if (game.title == 'Math Quiz') {
+                                Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) => const MathQuizScreen(),
+                                  ),
+                                ).then((coinsEarned) {
+                                  if (coinsEarned != null) {
+                                    onNavTap(0);
+                                  }
+                                });
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${game.title} is coming soon! ✨'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                            child: _GameCard(data: game),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
@@ -148,15 +197,19 @@ class GamesScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
+                    const SizedBox(height: 120),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: RbxBottomNav(currentIndex: 1, onTap: onNavTap),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: RbxBottomNav(currentIndex: 1, onTap: onNavTap),
         ),
       ),
     );
@@ -188,11 +241,12 @@ class _GameCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Color(0x0A000000),
+            blurRadius: 15,
+            offset: Offset(0, 8),
           ),
         ],
       ),
@@ -202,67 +256,77 @@ class _GameCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Game image
-            Container(
-              height: 110,
-              width: double.infinity,
-              color: data.bgColor,
-              child: Image.network(
-                data.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.sports_esports,
-                  size: 60,
-                  color: data.bgColor == const Color(0xFFEAF3FF)
-                      ? Colors.blue
-                      : AppColors.primary,
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                color: data.bgColor,
+                child: Image.network(
+                  data.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.sports_esports,
+                    size: 48,
+                    color: data.bgColor == const Color(0xFFEAF3FF)
+                        ? Colors.blue
+                        : AppColors.primary,
+                  ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     data.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryText,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Image.network(
-                            AppAssets.goldCoin,
-                            width: 13,
-                            height: 13,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.monetization_on,
-                                size: 13,
-                                color: Color(0xFFFFCC44)),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            data.coins,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.purple,
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Image.network(
+                              AppAssets.goldCoin,
+                              width: 13,
+                              height: 13,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.monetization_on,
+                                  size: 13,
+                                  color: Color(0xFFFFCC44)),
                             ),
-                          ),
-                          const Text(
-                            ' RBX',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.secondaryText,
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                data.coins,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.purple,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                            const Text(
+                              ' RBX',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       Container(
                         width: 28,

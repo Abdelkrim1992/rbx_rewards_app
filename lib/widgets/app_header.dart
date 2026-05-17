@@ -7,7 +7,7 @@ class RbxAppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -72,7 +72,7 @@ class RbxAppHeader extends StatelessWidget {
             ),
             child: ClipOval(
               child: Image.network(
-                AppAssets.userAvatar,
+                AppAssets.profileAvatar,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) =>
                     const Icon(Icons.person, color: AppColors.purple),
