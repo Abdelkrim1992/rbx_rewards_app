@@ -7,7 +7,7 @@ class RbxAppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
+      padding: const EdgeInsets.fromLTRB(24, 6, 24, 30),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
