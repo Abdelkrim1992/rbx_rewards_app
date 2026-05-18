@@ -5,7 +5,8 @@ import '../widgets/bottom_nav.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
 import 'math_quiz_screen.dart';
-
+import 'flip_card_game_screen.dart';
+import 'quizzes_screen.dart';
 
 class GamesScreen extends StatelessWidget {
   final Function(int) onNavTap;
@@ -22,12 +23,6 @@ class GamesScreen extends StatelessWidget {
         bgColor: const Color(0xFFEAF3FF),
       ),
       _GameData(
-        imageUrl: AppAssets.memoryMatchGame,
-        title: 'Memory Match',
-        coins: '+200',
-        bgColor: const Color(0xFFEBE7FF),
-      ),
-      _GameData(
         imageUrl: AppAssets.quizMasterGame,
         title: 'Math Quiz',
         coins: '+200',
@@ -39,10 +34,22 @@ class GamesScreen extends StatelessWidget {
         coins: '+200',
         bgColor: const Color(0xFFFFF3E3),
       ),
+      _GameData(
+        imageUrl: AppAssets.memoryMatchGame,
+        title: 'Flip Cards',
+        coins: '+200',
+        bgColor: const Color(0xFFFFE8F0),
+      ),
+      _GameData(
+        imageUrl: AppAssets.quizMasterGame,
+        title: 'Quizzes',
+        coins: '+400',
+        bgColor: const Color(0xFFE0F4FF),
+      ),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFE),
+      backgroundColor: Colors.white,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -54,10 +61,11 @@ class GamesScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const RbxAppHeader(),
+                    RbxAppHeader(onNavTap: onNavTap),
                     // Section heading
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
@@ -84,7 +92,8 @@ class GamesScreen extends StatelessWidget {
 
                     // Game cards grid
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: GridView.builder(
                         shrinkWrap: true,
                         padding: EdgeInsets.zero,
@@ -102,31 +111,66 @@ class GamesScreen extends StatelessWidget {
                           return GestureDetector(
                             onTap: () {
                               if (game.title == 'Tap Tap') {
-                                Navigator.of(context).push<int>(
+                                Navigator.of(context)
+                                    .push<int>(
                                   MaterialPageRoute(
-                                    builder: (context) => const TapTapGameScreen(),
+                                    builder: (context) =>
+                                        const TapTapGameScreen(),
                                   ),
-                                ).then((coinsEarned) {
+                                )
+                                    .then((coinsEarned) {
                                   if (coinsEarned != null) {
                                     onNavTap(0);
                                   }
                                 });
-                                } else if (game.title == 'Flappy Jump') {
-                                Navigator.of(context).push<int>(
+                              } else if (game.title == 'Flappy Jump') {
+                                Navigator.of(context)
+                                    .push<int>(
                                   MaterialPageRoute(
-                                    builder: (context) => const FlappyJumpGameScreen(),
+                                    builder: (context) =>
+                                        const FlappyJumpGameScreen(),
                                   ),
-                                ).then((coinsEarned) {
+                                )
+                                    .then((coinsEarned) {
                                   if (coinsEarned != null) {
                                     onNavTap(0);
                                   }
                                 });
                               } else if (game.title == 'Math Quiz') {
-                                Navigator.of(context).push<int>(
+                                Navigator.of(context)
+                                    .push<int>(
                                   MaterialPageRoute(
-                                    builder: (context) => const MathQuizScreen(),
+                                    builder: (context) =>
+                                        const MathQuizScreen(),
                                   ),
-                                ).then((coinsEarned) {
+                                )
+                                    .then((coinsEarned) {
+                                  if (coinsEarned != null) {
+                                    onNavTap(0);
+                                  }
+                                });
+                              } else if (game.title == 'Flip Cards') {
+                                Navigator.of(context)
+                                    .push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const FlipCardGameScreen(),
+                                  ),
+                                )
+                                    .then((coinsEarned) {
+                                  if (coinsEarned != null) {
+                                    onNavTap(0);
+                                  }
+                                });
+                              } else if (game.title == 'Quizzes') {
+                                Navigator.of(context)
+                                    .push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const QuizzesScreen(),
+                                  ),
+                                )
+                                    .then((coinsEarned) {
                                   if (coinsEarned != null) {
                                     onNavTap(0);
                                   }
@@ -134,7 +178,8 @@ class GamesScreen extends StatelessWidget {
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('${game.title} is coming soon! ✨'),
+                                    content:
+                                        Text('${game.title} is coming soon! ✨'),
                                     behavior: SnackBarBehavior.floating,
                                     duration: const Duration(seconds: 2),
                                   ),
@@ -150,7 +195,8 @@ class GamesScreen extends StatelessWidget {
 
                     // Coming soon banner
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Container(
                         height: 64,
                         decoration: BoxDecoration(
@@ -260,21 +306,33 @@ class _GameCard extends StatelessWidget {
               child: Container(
                 width: double.infinity,
                 color: data.bgColor,
-                child: Image.network(
-                  data.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.sports_esports,
-                    size: 48,
-                    color: data.bgColor == const Color(0xFFEAF3FF)
-                        ? Colors.blue
-                        : AppColors.primary,
-                  ),
-                ),
+                child: data.imageUrl.startsWith('http')
+                    ? Image.network(
+                        data.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.sports_esports,
+                          size: 48,
+                          color: data.bgColor == const Color(0xFFEAF3FF)
+                              ? Colors.blue
+                              : AppColors.primary,
+                        ),
+                      )
+                    : Image.asset(
+                        data.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.sports_esports,
+                          size: 48,
+                          color: data.bgColor == const Color(0xFFEAF3FF)
+                              ? Colors.blue
+                              : AppColors.primary,
+                        ),
+                      ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -289,7 +347,7 @@ class _GameCard extends StatelessWidget {
                       color: AppColors.primaryText,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -298,11 +356,11 @@ class _GameCard extends StatelessWidget {
                           children: [
                             Image.asset(
                               AppAssets.goldCoin,
-                              width: 13,
-                              height: 13,
+                              width: 20,
+                              height: 20,
                               errorBuilder: (_, __, ___) => const Icon(
                                   Icons.monetization_on,
-                                  size: 13,
+                                  size: 20,
                                   color: Color(0xFFFFCC44)),
                             ),
                             const SizedBox(width: 4),
@@ -321,7 +379,7 @@ class _GameCard extends StatelessWidget {
                             const Text(
                               ' RBX',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 color: AppColors.secondaryText,
                               ),
                             ),

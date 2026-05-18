@@ -11,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFE),
+      backgroundColor: Colors.white,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -25,7 +25,8 @@ class ProfileScreen extends StatelessWidget {
                     const RbxAppHeader(),
                     // Profile card
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                         decoration: BoxDecoration(
@@ -51,7 +52,8 @@ class ProfileScreen extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                        color: const Color(0xFFE1E2FC), width: 1),
+                                        color: const Color(0xFFE1E2FC),
+                                        width: 1),
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(3),
@@ -79,7 +81,8 @@ class ProfileScreen extends StatelessWidget {
                                                 fit: BoxFit.cover,
                                                 errorBuilder: (_, __, ___) =>
                                                     Container(
-                                                  color: const Color(0xFFEEEEEF),
+                                                  color:
+                                                      const Color(0xFFEEEEEF),
                                                   child: const Icon(
                                                     Icons.person,
                                                     size: 40,
@@ -97,7 +100,8 @@ class ProfileScreen extends StatelessWidget {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Player',
@@ -126,10 +130,10 @@ class ProfileScreen extends StatelessWidget {
                                               width: 21,
                                               height: 21,
                                               errorBuilder: (_, __, ___) =>
-                                                  const Icon(Icons.military_tech,
+                                                  const Icon(
+                                                      Icons.military_tech,
                                                       size: 21,
-                                                      color:
-                                                          Color(0xFF5C3EF0)),
+                                                      color: Color(0xFF5C3EF0)),
                                             ),
                                             const SizedBox(width: 6),
                                             const Flexible(
@@ -164,7 +168,8 @@ class ProfileScreen extends StatelessWidget {
                                       width: double.infinity,
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFF1F2F8),
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                       ),
                                     ),
                                     FractionallySizedBox(
@@ -217,7 +222,8 @@ class ProfileScreen extends StatelessWidget {
 
                     // Stats grid
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: GridView.count(
                         crossAxisCount: 2,
                         shrinkWrap: true,
@@ -254,7 +260,8 @@ class ProfileScreen extends StatelessWidget {
 
                     // Settings & Support
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -342,8 +349,8 @@ class _StatCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          iconUrl.startsWith('assets/')
-              ? Image.asset(
+          iconUrl.startsWith('http')
+              ? Image.network(
                   iconUrl,
                   width: 32,
                   height: 32,
@@ -351,7 +358,7 @@ class _StatCard extends StatelessWidget {
                   errorBuilder: (_, __, ___) => const Icon(Icons.star,
                       size: 32, color: AppColors.primary),
                 )
-              : Image.network(
+              : Image.asset(
                   iconUrl,
                   width: 32,
                   height: 32,
@@ -421,9 +428,8 @@ class _SettingsLink extends StatelessWidget {
                 child: Image.network(
                   iconUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.info_outline,
-                          size: 22, color: AppColors.purple),
+                  errorBuilder: (_, __, ___) => const Icon(Icons.info_outline,
+                      size: 22, color: AppColors.purple),
                 ),
               ),
               const SizedBox(width: 16),

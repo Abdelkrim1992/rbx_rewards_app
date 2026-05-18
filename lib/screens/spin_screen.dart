@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/game_prefs.dart';
 
 class SpinScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -11,22 +13,26 @@ class SpinScreen extends StatefulWidget {
   State<SpinScreen> createState() => _SpinScreenState();
 }
 
-class _SpinScreenState extends State<SpinScreen>
-    with TickerProviderStateMixin {
+class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   late AnimationController _controller;
   late AnimationController _pulseController;
   late Animation<double> _animation;
   late Animation<double> _pulseAnimation;
   bool _isSpinning = false;
   int _freeSpins = 1;
+  int _balance = 525;
   double _adButtonScale = 1.0;
+  
+  Timer? _timer;
+  int _secondsRemaining = 0;
 
   final List<_WheelSegment> segments = const [
     _WheelSegment(label: '100', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
     _WheelSegment(label: '300', sublabel: 'RBX', color: Color(0xFF7B3FE4)),
     _WheelSegment(label: '500', sublabel: 'RBX', color: Color(0xFFB370FF)),
     _WheelSegment(label: '2K', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
-    _WheelSegment(label: 'JACKPOT', sublabel: 'Huge!', color: Color(0xFFFFCC44)),
+    _WheelSegment(
+        label: 'JACKPOT', sublabel: 'Huge!', color: Color(0xFFFFCC44)),
     _WheelSegment(label: '1K', sublabel: 'RBX', color: Color(0xFF8847F5)),
   ];
 
@@ -48,13 +54,51 @@ class _SpinScreenState extends State<SpinScreen>
     );
 
     _animation = AlwaysStoppedAnimation(0.0);
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    final coins = await GamePrefs.getCoins();
+    if (!mounted) return;
+    setState(() {
+      _balance = coins;
+    });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _controller.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    setState(() {
+      _secondsRemaining = 86400; // 24 hours
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String _formatTime(int seconds) {
+    int h = seconds ~/ 3600;
+    int m = (seconds % 3600) ~/ 60;
+    int s = seconds % 60;
+    if (h > 0) {
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _spin() {
@@ -63,8 +107,9 @@ class _SpinScreenState extends State<SpinScreen>
     final targetSegment = random.nextInt(6);
     final baseRotations = 5 + random.nextInt(3);
     final segmentAngle = (2 * pi) / 6;
-    final targetAngle =
-        baseRotations * 2 * pi + targetSegment * segmentAngle + segmentAngle / 2;
+    final targetAngle = baseRotations * 2 * pi +
+        targetSegment * segmentAngle +
+        segmentAngle / 2;
 
     _animation = Tween<double>(
       begin: _animation.value ?? 0,
@@ -82,13 +127,34 @@ class _SpinScreenState extends State<SpinScreen>
     _pulseController.stop();
 
     _controller.reset();
-    _controller.forward().then((_) {
+    _controller.forward().then((_) async {
+      final prize = segments[targetSegment].label;
+      final reward = _prizeToCoins(prize);
+      final newBalance = _balance + reward;
+
+      await GamePrefs.saveCoins(newBalance);
+      if (!mounted) return;
+
       setState(() {
         _isSpinning = false;
+        _balance = newBalance;
       });
       _pulseController.repeat(reverse: true);
-      _showWinDialog(segments[targetSegment].label);
+      _showWinDialog(prize);
     });
+  }
+
+  int _prizeToCoins(String prize) {
+    switch (prize) {
+      case '1K':
+        return 1000;
+      case '2K':
+        return 2000;
+      case 'JACKPOT':
+        return 5000;
+      default:
+        return int.tryParse(prize) ?? 0;
+    }
   }
 
   void _showWinDialog(String prize) {
@@ -97,7 +163,11 @@ class _SpinScreenState extends State<SpinScreen>
       barrierDismissible: false,
       barrierColor: Colors.black87,
       builder: (context) => SpinRewardDialog(prize: prize),
-    );
+    ).then((_) {
+      if (_freeSpins == 0) {
+        _startTimer();
+      }
+    });
   }
 
   @override
@@ -113,73 +183,49 @@ class _SpinScreenState extends State<SpinScreen>
             // Nav bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: widget.onBack,
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: AppColors.purple,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Spin & Win',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF131326),
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          AppAssets.goldCoin,
-                          width: 20,
-                          height: 20,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.monetization_on,
-                            size: 20,
-                            color: Color(0xFFFFCC44),
+              child: SizedBox(
+                height: 44,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: widget.onBack,
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: AppColors.purple,
+                            size: 18,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          '525',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF131326),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    const Text(
+                      'Spin & Win',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF131326),
+                      ),
+                    ),
+
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 10),
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppLayout.screenPadding),
                 child: Column(
                   children: [
                     // 3D Wheel Container
@@ -212,7 +258,7 @@ class _SpinScreenState extends State<SpinScreen>
                               ),
                             ),
                           ),
-                          
+
                           // The Main Wheel with 3D Tilt
                           Positioned(
                             top: 30,
@@ -240,14 +286,15 @@ class _SpinScreenState extends State<SpinScreen>
                                       ),
                                     ),
                                   ),
-                                  
+
                                   // Rotating Part
                                   AnimatedBuilder(
                                     animation: _controller,
                                     builder: (context, child) {
-                                      final value = _isSpinning || _controller.value > 0
-                                          ? _animation.value
-                                          : 0.0;
+                                      final value =
+                                          _isSpinning || _controller.value > 0
+                                              ? _animation.value
+                                              : 0.0;
                                       return Transform.rotate(
                                         angle: value,
                                         child: child,
@@ -256,9 +303,37 @@ class _SpinScreenState extends State<SpinScreen>
                                     child: SizedBox(
                                       width: wheelSize,
                                       height: wheelSize,
-                                      child: CustomPaint(
-                                        size: Size(wheelSize, wheelSize),
-                                        painter: _WheelPainter(segments),
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: CustomPaint(
+                                              painter: _WheelPainter(segments),
+                                            ),
+                                          ),
+                                          ...List.generate(segments.length, (i) {
+                                            final segmentAngle = (2 * pi) / segments.length;
+                                            final startAngle = i * segmentAngle - pi / 2;
+                                            final textAngle = startAngle + segmentAngle / 2;
+                                            
+                                            final center = wheelSize / 2;
+                                            final imgRadius = center * 0.42;
+                                            final imgX = center + imgRadius * cos(textAngle);
+                                            final imgY = center + imgRadius * sin(textAngle);
+                                            
+                                            return Positioned(
+                                              left: imgX - 10,
+                                              top: imgY - 10,
+                                              child: Transform.rotate(
+                                                angle: textAngle + pi / 2,
+                                                child: Image.asset(
+                                                  AppAssets.goldRbxCoin,
+                                                  width: 20,
+                                                  height: 20,
+                                                ),
+                                              ),
+                                            );
+                                          }),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -270,7 +345,9 @@ class _SpinScreenState extends State<SpinScreen>
                                       animation: _pulseAnimation,
                                       builder: (context, child) {
                                         return Transform.scale(
-                                          scale: _isSpinning ? 1.0 : _pulseAnimation.value,
+                                          scale: _isSpinning || (_secondsRemaining > 0 && _freeSpins == 0)
+                                              ? 1.0
+                                              : _pulseAnimation.value,
                                           child: child,
                                         );
                                       },
@@ -281,16 +358,21 @@ class _SpinScreenState extends State<SpinScreen>
                                           color: Colors.white,
                                           shape: BoxShape.circle,
                                           gradient: const RadialGradient(
-                                            colors: [Colors.white, Color(0xFFF8F9FF)],
+                                            colors: [
+                                              Colors.white,
+                                              Color(0xFFF8F9FF)
+                                            ],
                                           ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.2),
+                                              color:
+                                                  Colors.black.withOpacity(0.2),
                                               blurRadius: 15,
                                               offset: const Offset(0, 8),
                                             ),
                                             BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.3),
+                                              color: AppColors.primary
+                                                  .withOpacity(0.3),
                                               blurRadius: 2,
                                               spreadRadius: 1,
                                             ),
@@ -298,19 +380,34 @@ class _SpinScreenState extends State<SpinScreen>
                                         ),
                                         child: Center(
                                           child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Text(
-                                                _isSpinning ? '...' : 'SPIN',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
+                                                _isSpinning
+                                                    ? '...'
+                                                    : (_secondsRemaining > 0 && _freeSpins == 0)
+                                                        ? _formatTime(_secondsRemaining)
+                                                        : 'SPIN',
+                                                style: TextStyle(
+                                                  fontSize: (_secondsRemaining > 0 && _freeSpins == 0) ? 14 : 16,
                                                   fontWeight: FontWeight.w900,
-                                                  color: AppColors.primary,
+                                                  color: (_secondsRemaining > 0 && _freeSpins == 0)
+                                                      ? Colors.grey
+                                                      : AppColors.primary,
                                                   letterSpacing: 1,
                                                 ),
                                               ),
-                                              if (!_isSpinning)
-                                                const Icon(Icons.touch_app, size: 14, color: AppColors.primaryText),
+                                              if (!_isSpinning && !(_secondsRemaining > 0 && _freeSpins == 0))
+                                                const Icon(Icons.touch_app,
+                                                    size: 14,
+                                                    color:
+                                                        AppColors.primaryText),
+                                              if (!_isSpinning && (_secondsRemaining > 0 && _freeSpins == 0))
+                                                const Icon(Icons.lock_clock,
+                                                    size: 14,
+                                                    color:
+                                                        Colors.grey),
                                             ],
                                           ),
                                         ),
@@ -341,7 +438,8 @@ class _SpinScreenState extends State<SpinScreen>
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
-                                  Icon(Icons.location_on, color: AppColors.primary, size: 44),
+                                  Icon(Icons.location_on,
+                                      color: AppColors.primary, size: 44),
                                   Positioned(
                                     top: 8,
                                     child: Container(
@@ -401,7 +499,8 @@ class _SpinScreenState extends State<SpinScreen>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.play_circle_fill, color: Colors.white, size: 22),
+                              const Icon(Icons.play_circle_fill,
+                                  color: Colors.white, size: 22),
                               const SizedBox(width: 8),
                               const Text(
                                 'Watch Ad for Extra Spin',
@@ -442,7 +541,8 @@ class _SpinScreenState extends State<SpinScreen>
                         _HowToStep(
                           icon: Icons.play_circle_outline,
                           title: 'Get More Spins',
-                          description: 'Watch a short video to get another chance.',
+                          description:
+                              'Watch a short video to get another chance.',
                           color: const Color(0xFF6B4BF4),
                         ),
                         const SizedBox(height: 8),
@@ -568,7 +668,7 @@ class _WheelPainter extends CustomPainter {
 
     for (int i = 0; i < segments.length; i++) {
       final startAngle = i * segmentAngle - pi / 2;
-      
+
       // Gradient for segment
       final segmentGradient = RadialGradient(
         center: Alignment.center,
@@ -580,7 +680,8 @@ class _WheelPainter extends CustomPainter {
       );
 
       final paint = Paint()
-        ..shader = segmentGradient.createShader(Rect.fromCircle(center: center, radius: radius))
+        ..shader = segmentGradient
+            .createShader(Rect.fromCircle(center: center, radius: radius))
         ..style = PaintingStyle.fill;
 
       canvas.drawArc(
@@ -606,7 +707,7 @@ class _WheelPainter extends CustomPainter {
 
       // Label
       final textAngle = startAngle + segmentAngle / 2;
-      final textRadius = radius * 0.65;
+      final textRadius = radius * 0.72; // Moved slightly outward to give space for the coin
       final textX = center.dx + textRadius * cos(textAngle);
       final textY = center.dy + textRadius * sin(textAngle);
 
@@ -659,7 +760,7 @@ class _WheelPainter extends CustomPainter {
       final dotX = center.dx + (radius - 5) * cos(angle);
       final dotY = center.dy + (radius - 5) * sin(angle);
       canvas.drawCircle(Offset(dotX, dotY), 2.5, dotPaint);
-      
+
       // Add a glow to dots
       final glowPaint = Paint()
         ..color = Colors.white.withOpacity(0.4)
@@ -671,7 +772,6 @@ class _WheelPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
 
 class _TrianglePainter extends CustomPainter {
   final Color color;
@@ -747,7 +847,8 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
     );
 
     _burstScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _burstEntranceController, curve: Curves.easeOutCubic),
+      CurvedAnimation(
+          parent: _burstEntranceController, curve: Curves.easeOutCubic),
     );
 
     _burstOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -852,7 +953,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
     // Wait for coin animation to fully complete
     await Future.delayed(const Duration(milliseconds: 1800));
     if (_disposed) return;
-    
+
     // Hide coin and burst
     setState(() {
       _animationComplete = true;
@@ -981,8 +1082,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
   Widget _buildCoinFace() {
     // Show front face when coin faces camera, back when rotated away
     final normalizedAngle = (_coinFlip.value % (2 * pi));
-    final showFront =
-        normalizedAngle < pi / 2 || normalizedAngle > 3 * pi / 2;
+    final showFront = normalizedAngle < pi / 2 || normalizedAngle > 3 * pi / 2;
 
     return Container(
       width: 100,
@@ -1112,7 +1212,8 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
             style: TextStyle(
               fontSize: isJackpot ? 22 : 20,
               fontWeight: FontWeight.w800,
-              color: isJackpot ? const Color(0xFFD4A017) : const Color(0xFF131326),
+              color:
+                  isJackpot ? const Color(0xFFD4A017) : const Color(0xFF131326),
               letterSpacing: isJackpot ? 1.5 : 0,
             ),
           ),
@@ -1165,27 +1266,31 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
           ),
           const SizedBox(height: 20),
 
-          // Claim button — solid blue
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 6,
-                shadowColor: AppColors.primary.withOpacity(0.4),
+          // Claim button — premium styled
+          _InteractiveCard(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: double.infinity,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
+              alignment: Alignment.center,
               child: const Text(
                 'Claim Reward',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
-                  letterSpacing: 0.5,
+                  color: Colors.white,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -1253,4 +1358,35 @@ class _LightRaysPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _InteractiveCard({required this.child, this.onTap});
+
+  @override
+  State<_InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<_InteractiveCard> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.97),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        if (widget.onTap != null) widget.onTap!();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: widget.child,
+      ),
+    );
+  }
 }

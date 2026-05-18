@@ -11,7 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rbx_rewards_app/main.dart';
 
 void main() {
-  testWidgets('App onboarding and navigator smoke test', (WidgetTester tester) async {
+  testWidgets('App onboarding and navigator smoke test',
+      (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const RbxRewardsApp());
 

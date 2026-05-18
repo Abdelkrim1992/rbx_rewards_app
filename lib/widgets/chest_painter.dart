@@ -41,7 +41,8 @@ class ChestPainter extends CustomPainter {
     // ═══ SHADOW ═══
     // ════════════════════════════════
     canvas.drawOval(
-      Rect.fromCenter(center: Offset(cx, bodyBottom + 6), width: bodyW * 1.05, height: 20),
+      Rect.fromCenter(
+          center: Offset(cx, bodyBottom + 6), width: bodyW * 1.05, height: 20),
       Paint()
         ..color = const Color(0x30000000)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
@@ -56,11 +57,15 @@ class ChestPainter extends CustomPainter {
       Rect.fromLTRB(bodyLeft, bodyTopY, bodyRight, bodyBottom),
       const Radius.circular(6),
     );
-    canvas.drawRRect(bodyRect, Paint()..shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [purpleLight, purpleMid, purpleDark],
-    ).createShader(Rect.fromLTRB(bodyLeft, bodyTopY, bodyRight, bodyBottom)));
+    canvas.drawRRect(
+        bodyRect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [purpleLight, purpleMid, purpleDark],
+          ).createShader(
+              Rect.fromLTRB(bodyLeft, bodyTopY, bodyRight, bodyBottom)));
 
     // Wood grain texture lines (subtle)
     final grainPaint = Paint()
@@ -78,18 +83,43 @@ class ChestPainter extends CustomPainter {
 
     // ── Gold frame bands (vertical) ──
     // Left vertical band
-    _drawGoldBand(canvas, Rect.fromLTRB(bodyLeft, bodyTopY, bodyLeft + bandW, bodyBottom), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(bodyLeft, bodyTopY, bodyLeft + bandW, bodyBottom),
+        goldDark,
+        goldMid,
+        goldLight);
     // Right vertical band
-    _drawGoldBand(canvas, Rect.fromLTRB(bodyRight - bandW, bodyTopY, bodyRight, bodyBottom), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(bodyRight - bandW, bodyTopY, bodyRight, bodyBottom),
+        goldDark,
+        goldMid,
+        goldLight);
     // Center vertical band
-    _drawGoldBand(canvas, Rect.fromLTRB(cx - bandW * 0.5, bodyTopY, cx + bandW * 0.5, bodyBottom), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(cx - bandW * 0.5, bodyTopY, cx + bandW * 0.5, bodyBottom),
+        goldDark,
+        goldMid,
+        goldLight);
 
     // ── Gold frame bands (horizontal) ──
     final hBandH = bandW * 0.7;
     // Top horizontal band
-    _drawGoldBand(canvas, Rect.fromLTRB(bodyLeft, bodyTopY, bodyRight, bodyTopY + hBandH), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(bodyLeft, bodyTopY, bodyRight, bodyTopY + hBandH),
+        goldDark,
+        goldMid,
+        goldLight);
     // Bottom horizontal band
-    _drawGoldBand(canvas, Rect.fromLTRB(bodyLeft, bodyBottom - hBandH, bodyRight, bodyBottom), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(bodyLeft, bodyBottom - hBandH, bodyRight, bodyBottom),
+        goldDark,
+        goldMid,
+        goldLight);
 
     // ── Corner rivets on body ──
     final rivetR = bodyW * 0.025;
@@ -112,9 +142,11 @@ class ChestPainter extends CustomPainter {
     final ringCx = bodyRight - bandW * 0.3;
     final ringCy = bodyTopY + bodyH * 0.5;
     final ringR = bodyW * 0.05;
-    canvas.drawCircle(Offset(ringCx, ringCy), ringR + 2, Paint()..color = goldDark);
+    canvas.drawCircle(
+        Offset(ringCx, ringCy), ringR + 2, Paint()..color = goldDark);
     canvas.drawCircle(Offset(ringCx, ringCy), ringR, Paint()..color = goldMid);
-    canvas.drawCircle(Offset(ringCx, ringCy), ringR * 0.55, Paint()..color = purpleMid);
+    canvas.drawCircle(
+        Offset(ringCx, ringCy), ringR * 0.55, Paint()..color = purpleMid);
 
     // ════════════════════════════════
     // ═══ LID (Dome Top) ═══
@@ -143,11 +175,14 @@ class ChestPainter extends CustomPainter {
     lidPath.lineTo(lRight, 0);
     lidPath.close();
 
-    canvas.drawPath(lidPath, Paint()..shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [purpleLight, purpleMid, purpleDark],
-    ).createShader(Rect.fromLTRB(lLeft, -lidH * 1.15, lRight, 0)));
+    canvas.drawPath(
+        lidPath,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [purpleLight, purpleMid, purpleDark],
+          ).createShader(Rect.fromLTRB(lLeft, -lidH * 1.15, lRight, 0)));
 
     // Lid grain texture
     for (int i = 0; i < 3; i++) {
@@ -161,14 +196,22 @@ class ChestPainter extends CustomPainter {
 
     // ── Lid gold bands (arching over dome) ──
     // Left arch band
-    _drawLidArch(canvas, lLeft, lRight, lidH, bandW, -bodyW * 0.5, goldDark, goldMid, goldLight);
+    _drawLidArch(canvas, lLeft, lRight, lidH, bandW, -bodyW * 0.5, goldDark,
+        goldMid, goldLight);
     // Center arch band
-    _drawLidArch(canvas, lLeft, lRight, lidH, bandW, 0, goldDark, goldMid, goldLight);
+    _drawLidArch(
+        canvas, lLeft, lRight, lidH, bandW, 0, goldDark, goldMid, goldLight);
     // Right arch band
-    _drawLidArch(canvas, lLeft, lRight, lidH, bandW, bodyW * 0.5, goldDark, goldMid, goldLight);
+    _drawLidArch(canvas, lLeft, lRight, lidH, bandW, bodyW * 0.5, goldDark,
+        goldMid, goldLight);
 
     // Lid base horizontal band
-    _drawGoldBand(canvas, Rect.fromLTRB(lLeft, -hBandH * 0.5, lRight, hBandH * 0.5), goldDark, goldMid, goldLight);
+    _drawGoldBand(
+        canvas,
+        Rect.fromLTRB(lLeft, -hBandH * 0.5, lRight, hBandH * 0.5),
+        goldDark,
+        goldMid,
+        goldLight);
 
     // Lid rivets along base
     for (final rx in [lLeft + bandW / 2, lRight - bandW / 2, 0.0]) {
@@ -187,7 +230,12 @@ class ChestPainter extends CustomPainter {
     gemBg.lineTo(-gemSize * 1.3, gemCy);
     gemBg.close();
     canvas.drawPath(gemBg, Paint()..color = goldMid);
-    canvas.drawPath(gemBg, Paint()..color = goldDark..style = PaintingStyle.stroke..strokeWidth = 2);
+    canvas.drawPath(
+        gemBg,
+        Paint()
+          ..color = goldDark
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2);
 
     // Gem crystal
     final gemPath = Path();
@@ -196,17 +244,26 @@ class ChestPainter extends CustomPainter {
     gemPath.lineTo(0, gemCy + gemSize);
     gemPath.lineTo(-gemSize, gemCy);
     gemPath.close();
-    canvas.drawPath(gemPath, Paint()..shader = const LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [gemLight, gemPurple],
-    ).createShader(Rect.fromCenter(center: Offset(0, gemCy), width: gemSize * 2, height: gemSize * 2)));
+    canvas.drawPath(
+        gemPath,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [gemLight, gemPurple],
+          ).createShader(Rect.fromCenter(
+              center: Offset(0, gemCy),
+              width: gemSize * 2,
+              height: gemSize * 2)));
 
     // Gem highlight
     canvas.drawLine(
       Offset(-gemSize * 0.3, gemCy - gemSize * 0.4),
       Offset(gemSize * 0.1, gemCy - gemSize * 0.1),
-      Paint()..color = Colors.white.withOpacity(0.5)..strokeWidth = 1.5..strokeCap = StrokeCap.round,
+      Paint()
+        ..color = Colors.white.withOpacity(0.5)
+        ..strokeWidth = 1.5
+        ..strokeCap = StrokeCap.round,
     );
 
     canvas.restore();
@@ -222,21 +279,34 @@ class ChestPainter extends CustomPainter {
       // Shield shape
       final shieldPath = Path();
       shieldPath.moveTo(cx - lockW, lockCy - lockH2 * 0.6);
-      shieldPath.quadraticBezierTo(cx - lockW, lockCy - lockH2, cx, lockCy - lockH2);
-      shieldPath.quadraticBezierTo(cx + lockW, lockCy - lockH2, cx + lockW, lockCy - lockH2 * 0.6);
+      shieldPath.quadraticBezierTo(
+          cx - lockW, lockCy - lockH2, cx, lockCy - lockH2);
+      shieldPath.quadraticBezierTo(
+          cx + lockW, lockCy - lockH2, cx + lockW, lockCy - lockH2 * 0.6);
       shieldPath.lineTo(cx + lockW, lockCy + lockH2 * 0.3);
-      shieldPath.quadraticBezierTo(cx + lockW, lockCy + lockH2, cx, lockCy + lockH2 * 1.2);
-      shieldPath.quadraticBezierTo(cx - lockW, lockCy + lockH2, cx - lockW, lockCy + lockH2 * 0.3);
+      shieldPath.quadraticBezierTo(
+          cx + lockW, lockCy + lockH2, cx, lockCy + lockH2 * 1.2);
+      shieldPath.quadraticBezierTo(
+          cx - lockW, lockCy + lockH2, cx - lockW, lockCy + lockH2 * 0.3);
       shieldPath.close();
 
       canvas.drawPath(shieldPath, Paint()..color = goldMid);
-      canvas.drawPath(shieldPath, Paint()..color = goldDark..style = PaintingStyle.stroke..strokeWidth = 2);
+      canvas.drawPath(
+          shieldPath,
+          Paint()
+            ..color = goldDark
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2);
 
       // Keyhole
-      canvas.drawCircle(Offset(cx, lockCy - lockH2 * 0.1), lockW * 0.25, Paint()..color = keyholeColor);
+      canvas.drawCircle(Offset(cx, lockCy - lockH2 * 0.1), lockW * 0.25,
+          Paint()..color = keyholeColor);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset(cx, lockCy + lockH2 * 0.25), width: lockW * 0.2, height: lockH2 * 0.5),
+          Rect.fromCenter(
+              center: Offset(cx, lockCy + lockH2 * 0.25),
+              width: lockW * 0.2,
+              height: lockH2 * 0.5),
           const Radius.circular(2),
         ),
         Paint()..color = keyholeColor,
@@ -248,7 +318,8 @@ class ChestPainter extends CustomPainter {
     // ════════════════════════════════
     if (openAmount > 0.2) {
       final sparkAlpha = ((openAmount - 0.2) / 0.8).clamp(0.0, 1.0);
-      final sparkPaint = Paint()..color = goldHighlight.withOpacity(sparkAlpha * 0.9);
+      final sparkPaint = Paint()
+        ..color = goldHighlight.withOpacity(sparkAlpha * 0.9);
 
       final sparkles = [
         Offset(cx - bodyW * 0.35, bodyTopY - lidH * openAmount * 0.4),
@@ -263,7 +334,10 @@ class ChestPainter extends CustomPainter {
 
       // Inner glow
       canvas.drawOval(
-        Rect.fromCenter(center: Offset(cx, bodyTopY), width: bodyW * 0.5, height: 14 * openAmount),
+        Rect.fromCenter(
+            center: Offset(cx, bodyTopY),
+            width: bodyW * 0.5,
+            height: 14 * openAmount),
         Paint()
           ..color = goldHighlight.withOpacity(sparkAlpha * 0.5)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
@@ -271,18 +345,24 @@ class ChestPainter extends CustomPainter {
     }
   }
 
-  void _drawGoldBand(Canvas canvas, Rect rect, Color dark, Color mid, Color light) {
+  void _drawGoldBand(
+      Canvas canvas, Rect rect, Color dark, Color mid, Color light) {
     final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(3));
-    canvas.drawRRect(rrect, Paint()..shader = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [light, mid, dark],
-    ).createShader(rect));
+    canvas.drawRRect(
+        rrect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [light, mid, dark],
+          ).createShader(rect));
     // Top highlight
     canvas.drawLine(
       Offset(rect.left + 3, rect.top + 1.5),
       Offset(rect.right - 3, rect.top + 1.5),
-      Paint()..color = light.withOpacity(0.5)..strokeWidth = 1,
+      Paint()
+        ..color = light.withOpacity(0.5)
+        ..strokeWidth = 1,
     );
   }
 
@@ -297,23 +377,33 @@ class ChestPainter extends CustomPainter {
 
     archPath.moveTo(xOff - halfBand, 0);
     archPath.lineTo(xOff - halfBand, -archHeight * 0.8);
-    archPath.quadraticBezierTo(xOff, -archHeight * 1.1, xOff + halfBand, -archHeight * 0.8);
+    archPath.quadraticBezierTo(
+        xOff, -archHeight * 1.1, xOff + halfBand, -archHeight * 0.8);
     archPath.lineTo(xOff + halfBand, 0);
     archPath.close();
 
-    canvas.drawPath(archPath, Paint()..shader = LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      colors: [dark, mid, light, mid, dark],
-    ).createShader(Rect.fromLTRB(xOff - halfBand, -archHeight, xOff + halfBand, 0)));
+    canvas.drawPath(
+        archPath,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [dark, mid, light, mid, dark],
+          ).createShader(
+              Rect.fromLTRB(xOff - halfBand, -archHeight, xOff + halfBand, 0)));
   }
 
-  void _drawRivet(Canvas canvas, Offset center, double r, Color light, Color dark) {
+  void _drawRivet(
+      Canvas canvas, Offset center, double r, Color light, Color dark) {
     canvas.drawCircle(center, r + 1, Paint()..color = dark);
-    canvas.drawCircle(center, r, Paint()..shader = RadialGradient(
-      colors: [light, dark],
-      center: const Alignment(-0.3, -0.3),
-    ).createShader(Rect.fromCircle(center: center, radius: r)));
+    canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [light, dark],
+            center: const Alignment(-0.3, -0.3),
+          ).createShader(Rect.fromCircle(center: center, radius: r)));
   }
 
   void _drawStar(Canvas canvas, Offset center, double radius, Paint paint) {
@@ -321,9 +411,14 @@ class ChestPainter extends CustomPainter {
     for (int i = 0; i < 4; i++) {
       final angle = i * math.pi / 2;
       path.moveTo(center.dx, center.dy);
-      path.lineTo(center.dx + math.cos(angle) * radius, center.dy + math.sin(angle) * radius);
+      path.lineTo(center.dx + math.cos(angle) * radius,
+          center.dy + math.sin(angle) * radius);
     }
-    canvas.drawPath(path, paint..strokeWidth = 1.5..style = PaintingStyle.stroke);
+    canvas.drawPath(
+        path,
+        paint
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke);
     canvas.drawCircle(center, 1.5, Paint()..color = paint.color);
   }
 

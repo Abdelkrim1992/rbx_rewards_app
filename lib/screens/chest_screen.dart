@@ -3,6 +3,7 @@ import 'dart:async';
 import '../theme/app_theme.dart';
 import '../widgets/chest_painter.dart';
 import '../widgets/coin_burst.dart';
+import '../widgets/game_prefs.dart';
 
 class ChestScreen extends StatefulWidget {
   const ChestScreen({super.key});
@@ -14,7 +15,9 @@ class ChestScreen extends StatefulWidget {
 class _ChestScreenState extends State<ChestScreen>
     with SingleTickerProviderStateMixin {
   Timer? _timer;
-  int _secondsRemaining = 10787; // 02:59:47
+  int _secondsRemaining = 0; // Active/Openable by default
+
+  int _balance = 0;
 
   // Idle floating animation
   late AnimationController _floatController;
@@ -23,7 +26,8 @@ class _ChestScreenState extends State<ChestScreen>
   @override
   void initState() {
     super.initState();
-    _startTimer();
+    _loadChestStatus();
+    _loadBalance();
 
     _floatController = AnimationController(
       vsync: this,
@@ -33,6 +37,26 @@ class _ChestScreenState extends State<ChestScreen>
     _floatAnimation = Tween<double>(begin: -6, end: 6).animate(
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
     );
+  }
+
+  Future<void> _loadChestStatus() async {
+    final remaining = await GamePrefs.getChestSecondsRemaining();
+    if (!mounted) return;
+    setState(() {
+      _secondsRemaining = remaining;
+    });
+    if (remaining > 0) {
+      _timer?.cancel();
+      _startTimer();
+    }
+  }
+
+  Future<void> _loadBalance() async {
+    final coins = await GamePrefs.getCoins();
+    if (!mounted) return;
+    setState(() {
+      _balance = coins;
+    });
   }
 
   void _startTimer() {
@@ -53,12 +77,23 @@ class _ChestScreenState extends State<ChestScreen>
   }
 
   void _openChest() {
-    showDialog(
+    showDialog<int>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
       builder: (context) => const ChestOpeningDialog(),
-    );
+    ).then((coinsEarned) async {
+      if (coinsEarned != null) {
+        await GamePrefs.setChestUnlockTime(10800); // Reset to 3 hours
+        if (!mounted) return;
+        setState(() {
+          _secondsRemaining = 10800;
+        });
+        _timer?.cancel();
+        _startTimer();
+      }
+      _loadBalance();
+    });
   }
 
   @override
@@ -68,29 +103,51 @@ class _ChestScreenState extends State<ChestScreen>
     int s = _secondsRemaining % 60;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFE),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF131326)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Treasure Chest',
-          style: TextStyle(
-            color: Color(0xFF131326),
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 8),
+            // Nav bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: SizedBox(
+                height: 44,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: AppColors.purple,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Treasure Chest',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF131326),
+                      ),
+                    ),
+
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             const Text(
               'Open chests and get amazing rewards!',
               style: TextStyle(
@@ -145,66 +202,70 @@ class _ChestScreenState extends State<ChestScreen>
               ),
             ),
 
-            // Timer Card
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 20,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                  border: Border.all(color: const Color(0xFFF3F4F6)),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Next chest unlocks in',
-                      style: TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+            if (_secondsRemaining > 0) ...[
+              // Timer Card
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildTimeUnit(
-                            h.toString().padLeft(2, '0'), 'Hours'),
-                        const _TimeSeparator(),
-                        _buildTimeUnit(
-                            m.toString().padLeft(2, '0'), 'Minutes'),
-                        const _TimeSeparator(),
-                        _buildTimeUnit(
-                            s.toString().padLeft(2, '0'), 'Seconds'),
-                      ],
-                    ),
-                  ],
+                    ],
+                    border: Border.all(color: const Color(0xFFF3F4F6)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Next chest unlocks in',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildTimeUnit(h.toString().padLeft(2, '0'), 'Hours'),
+                          const _TimeSeparator(),
+                          _buildTimeUnit(m.toString().padLeft(2, '0'), 'Minutes'),
+                          const _TimeSeparator(),
+                          _buildTimeUnit(s.toString().padLeft(2, '0'), 'Seconds'),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             // Buttons
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  _PrimaryButton(text: 'Open', onTap: _openChest),
-                  const SizedBox(height: 16),
-                  _SecondaryButton(
-                    text: 'Open Instantly — Watch Ad',
-                    icon: Icons.ondemand_video,
-                    onTap: _openChest,
+                  _PrimaryButton(
+                    text: 'Open Chest',
+                    onTap: _secondsRemaining == 0 ? _openChest : null,
                   ),
+                  if (_secondsRemaining > 0) ...[
+                    const SizedBox(height: 16),
+                    _SecondaryButton(
+                      text: 'Open Instantly — Watch Ad',
+                      icon: Icons.ondemand_video,
+                      onTap: _openChest,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -261,8 +322,8 @@ class _TimeSeparator extends StatelessWidget {
 // ─── Primary Button ───
 class _PrimaryButton extends StatefulWidget {
   final String text;
-  final VoidCallback onTap;
-  const _PrimaryButton({required this.text, required this.onTap});
+  final VoidCallback? onTap;
+  const _PrimaryButton({required this.text, this.onTap});
   @override
   State<_PrimaryButton> createState() => _PrimaryButtonState();
 }
@@ -271,13 +332,16 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
   double _scale = 1.0;
   @override
   Widget build(BuildContext context) {
+    final bool isEnabled = widget.onTap != null;
     return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.96),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
+      onTapDown: isEnabled ? (_) => setState(() => _scale = 0.96) : null,
+      onTapUp: isEnabled
+          ? (_) {
+              setState(() => _scale = 1.0);
+              widget.onTap!();
+            }
+          : null,
+      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 100),
@@ -285,22 +349,28 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
           width: double.infinity,
           height: 56,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            gradient: isEnabled ? AppColors.primaryGradient : null,
+            color: isEnabled ? null : const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            boxShadow: isEnabled
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
           alignment: Alignment.center,
-          child: Text(widget.text,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold)),
+          child: Text(
+            widget.text,
+            style: TextStyle(
+              color: isEnabled ? Colors.white : const Color(0xFF94A3B8),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ),
     );
@@ -311,9 +381,9 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
 class _SecondaryButton extends StatefulWidget {
   final String text;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _SecondaryButton(
-      {required this.text, required this.icon, required this.onTap});
+      {required this.text, required this.icon, this.onTap});
   @override
   State<_SecondaryButton> createState() => _SecondaryButtonState();
 }
@@ -322,13 +392,16 @@ class _SecondaryButtonState extends State<_SecondaryButton> {
   double _scale = 1.0;
   @override
   Widget build(BuildContext context) {
+    final bool isEnabled = widget.onTap != null;
     return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.96),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
+      onTapDown: isEnabled ? (_) => setState(() => _scale = 0.96) : null,
+      onTapUp: isEnabled
+          ? (_) {
+              setState(() => _scale = 1.0);
+              widget.onTap!();
+            }
+          : null,
+      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 100),
@@ -339,19 +412,29 @@ class _SecondaryButtonState extends State<_SecondaryButton> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-                color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                color: isEnabled
+                    ? AppColors.primary.withOpacity(0.3)
+                    : const Color(0xFFE2E8F0),
+                width: 1.5),
           ),
           alignment: Alignment.center,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(widget.text,
-                  style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold)),
+              Text(
+                widget.text,
+                style: TextStyle(
+                  color: isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(width: 8),
-              Icon(widget.icon, color: AppColors.primary, size: 20),
+              Icon(
+                widget.icon,
+                color: isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -381,6 +464,7 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
   int _earnedCoins = 0;
   bool _showReward = false;
   bool _burstCoins = false;
+  bool _isClaiming = false;
 
   @override
   void initState() {
@@ -515,11 +599,13 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
                               ),
                               const SizedBox(height: 12),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8F9FA),
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                                  border: Border.all(
+                                      color: const Color(0xFFF1F5F9)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -549,26 +635,51 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    Navigator.of(context).pop();
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(16)),
+                              _InteractiveCard(
+                                onTap: _isClaiming
+                                    ? null
+                                    : () async {
+                                        setState(() {
+                                          _isClaiming = true;
+                                        });
+                                        await GamePrefs.addCoins(_earnedCoins);
+                                        if (!context.mounted) return;
+                                        Navigator.of(context).pop(_earnedCoins);
+                                      },
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    gradient: _isClaiming
+                                        ? null
+                                        : AppColors.primaryGradient,
+                                    color: _isClaiming
+                                        ? Colors.white.withOpacity(0.5)
+                                        : null,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: _isClaiming
+                                        ? null
+                                        : [
+                                            BoxShadow(
+                                              color: AppColors.primary
+                                                  .withOpacity(0.3),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 6),
+                                            ),
+                                          ],
                                   ),
-                                  child: const Text('Claim Reward',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white)),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    _isClaiming
+                                        ? 'Claiming...'
+                                        : 'Claim Reward',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -581,6 +692,37 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _InteractiveCard({required this.child, this.onTap});
+
+  @override
+  State<_InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<_InteractiveCard> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.97),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        if (widget.onTap != null) widget.onTap!();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: widget.child,
       ),
     );
   }

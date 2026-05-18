@@ -29,17 +29,17 @@ class ParallaxIsland {
     required this.color,
   }) {
     pos = Vector3D(x, y, z);
-    
+
     // Generate a simple crystalline 3D polyhedral floating rock shape
     final rnd = math.Random((x + y + z).toInt());
     vertices = [];
-    
+
     // Top face vertices
     vertices.add(Vector3D(-size * 0.6, -size * 0.3, -size * 0.5));
     vertices.add(Vector3D(size * 0.6, -size * 0.3, -size * 0.5));
     vertices.add(Vector3D(size * 0.8, -size * 0.2, size * 0.5));
     vertices.add(Vector3D(-size * 0.8, -size * 0.2, size * 0.5));
-    
+
     // Bottom point
     vertices.add(Vector3D(rnd.nextDouble() * 20 - 10, size * 0.8, 0));
   }
@@ -69,7 +69,7 @@ class Coin3D {
   double worldY;
   double rotY = 0.0;
   bool collected = false;
-  
+
   Coin3D({
     required this.worldX,
     required this.worldY,
@@ -126,13 +126,13 @@ class FlappyJumpGame extends FlameGame {
   int coinsEarned = 0;
   int combo = 0;
   int maxCombo = 0;
-  
+
   // Game settings & metrics
   double gameSpeed = 220.0;
   double targetSpeed = 220.0;
   double maxSpeed = 380.0;
   double elapsedSecs = 0.0;
-  
+
   // Player 3D properties
   late Vector3D playerPos;
   double playerRadius = 18.0;
@@ -142,27 +142,27 @@ class FlappyJumpGame extends FlameGame {
   double wingFlapAngle = 0.0;
   double wingFlapSpeed = 0.0;
   double playerTilt = 0.0;
-  
+
   // Camera properties
   late Vector3D cameraPos;
   double cameraFov = 260.0;
   double cameraShake = 0.0;
-  
+
   // Entity Collections
   final List<Pillar3D> pillars = [];
   final List<Coin3D> coins = [];
   final List<ParallaxIsland> islands = [];
   final List<FlameParticle> particles = [];
   final List<GameFloatingText> floatingTexts = [];
-  
+
   // State variables for generating terrain
   double nextPillarX = 400.0;
   final double pillarSpacing = 320.0;
   final math.Random random = math.Random();
-  
+
   // Haptic feedback & sound toggle (visual toggle, sounds synthetic)
   bool isMuted = false;
-  
+
   // Callbacks to UI
   VoidCallback? onStateChanged;
 
@@ -185,24 +185,24 @@ class FlappyJumpGame extends FlameGame {
     gameSpeed = 220.0;
     targetSpeed = 220.0;
     elapsedSecs = 0.0;
-    
+
     // Player starts at middle-left of the screen
     playerPos = Vector3D(-90.0, 0.0, 0.0);
     velocityY = 0.0;
     playerTilt = 0.0;
-    
+
     // Camera center tracking
     cameraPos = Vector3D(0.0, 0.0, -250.0);
     cameraShake = 0.0;
-    
+
     pillars.clear();
     coins.clear();
     islands.clear();
     particles.clear();
     floatingTexts.clear();
-    
+
     nextPillarX = 300.0;
-    
+
     // Generate background floating islands at multiple depths
     for (int i = 0; i < 7; i++) {
       islands.add(ParallaxIsland(
@@ -210,12 +210,12 @@ class FlappyJumpGame extends FlameGame {
         y: random.nextDouble() * 200 - 150,
         z: random.nextDouble() * 400 + 300,
         size: random.nextDouble() * 40 + 35,
-        color: random.nextBool() 
-            ? const Color(0xFF6E3AFF).withOpacity(0.18) 
+        color: random.nextBool()
+            ? const Color(0xFF6E3AFF).withOpacity(0.18)
             : const Color(0xFFFF52A2).withOpacity(0.15),
       ));
     }
-    
+
     // Pre-generate initial pillars
     for (int i = 0; i < 4; i++) {
       _spawnPillar();
@@ -227,17 +227,17 @@ class FlappyJumpGame extends FlameGame {
     double minGap = 135.0;
     double maxGap = 180.0;
     double gapHeight = (maxGap - (score * 1.5)).clamp(minGap, maxGap);
-    
+
     // Random height centered around middle screen
     double maxVerticalRange = 140.0;
     double gapCenterY = (random.nextDouble() - 0.5) * maxVerticalRange;
-    
+
     pillars.add(Pillar3D(
       worldX: nextPillarX,
       gapCenterY: gapCenterY,
       gapHeight: gapHeight,
     ));
-    
+
     // 60% chance to spawn a coin in the center of the gap
     if (random.nextDouble() < 0.6) {
       coins.add(Coin3D(
@@ -245,7 +245,7 @@ class FlappyJumpGame extends FlameGame {
         worldY: gapCenterY,
       ));
     }
-    
+
     nextPillarX += pillarSpacing;
   }
 
@@ -255,7 +255,7 @@ class FlappyJumpGame extends FlameGame {
     isGameOver = false;
     paused = false;
     onStateChanged?.call();
-    
+
     if (!isMuted) {
       HapticFeedback.mediumImpact();
     }
@@ -281,14 +281,14 @@ class FlappyJumpGame extends FlameGame {
       return;
     }
     if (isGameOver || paused) return;
-    
+
     velocityY = jumpVelocity;
     wingFlapSpeed = 12.0; // Trigger rapid flapping
-    
+
     if (!isMuted) {
       HapticFeedback.lightImpact();
     }
-    
+
     // Spawn jump puff particles behind player
     final screenPos = _projectPoint(playerPos);
     for (int i = 0; i < 4; i++) {
@@ -309,17 +309,17 @@ class FlappyJumpGame extends FlameGame {
   void _triggerGameOver() {
     isGameOver = true;
     cameraShake = 15.0; // Big screen shake
-    velocityY = 0.0;     // Stop player immediately
-    gameSpeed = 0.0;     // Stop background speed immediately
-    
+    velocityY = 0.0; // Stop player immediately
+    gameSpeed = 0.0; // Stop background speed immediately
+
     if (!isMuted) {
       HapticFeedback.vibrate();
     }
-    
+
     // Save High Score
     GamePrefs.saveFlappyHighScore(score);
     GamePrefs.incrementFlappyPlayed();
-    
+
     // Spawn explosion particles
     final screenPos = _projectPoint(playerPos);
     for (int i = 0; i < 20; i++) {
@@ -332,10 +332,12 @@ class FlappyJumpGame extends FlameGame {
         vy: math.sin(angle) * speed,
         size: random.nextDouble() * 8 + 4,
         lifeTime: 0.8,
-        color: random.nextBool() ? const Color(0xFFFF52A2) : const Color(0xFFFFCC44),
+        color: random.nextBool()
+            ? const Color(0xFFFF52A2)
+            : const Color(0xFFFFCC44),
       ));
     }
-    
+
     onStateChanged?.call();
   }
 
@@ -343,7 +345,7 @@ class FlappyJumpGame extends FlameGame {
   void update(double dt) {
     super.update(dt);
     elapsedSecs += dt;
-    
+
     // Always update explosion particles and camera shake decay even if the game is over
     for (int i = particles.length - 1; i >= 0; i--) {
       final p = particles[i];
@@ -354,7 +356,7 @@ class FlappyJumpGame extends FlameGame {
         particles.removeAt(i);
       }
     }
-    
+
     for (int i = floatingTexts.length - 1; i >= 0; i--) {
       final ft = floatingTexts[i];
       ft.age += dt;
@@ -363,22 +365,22 @@ class FlappyJumpGame extends FlameGame {
         floatingTexts.removeAt(i);
       }
     }
-    
+
     if (cameraShake > 0) {
       cameraShake -= dt * 35.0;
       if (cameraShake < 0) cameraShake = 0.0;
     }
-    
+
     if (!hasStarted || isGameOver || paused) return;
-    
+
     // 1. Difficulty progression
     targetSpeed = (220.0 + (score * 4.0)).clamp(220.0, maxSpeed);
     gameSpeed += (targetSpeed - gameSpeed) * 0.05;
-    
+
     // 2. Physics of player
     velocityY += gravity * dt;
     playerPos.y += velocityY * dt;
-    
+
     // Limit bounds - ceiling and floor collision
     double ceilingY = -280.0;
     double floorY = 280.0;
@@ -387,14 +389,15 @@ class FlappyJumpGame extends FlameGame {
       velocityY = 0.0;
     }
     if (playerPos.y + playerRadius > floorY) {
-      playerPos.y = floorY - playerRadius; // Make sure the bird stops precisely at the floor!
+      playerPos.y = floorY -
+          playerRadius; // Make sure the bird stops precisely at the floor!
       _triggerGameOver();
       return;
     }
-    
+
     // Calculate player tilt based on velocity
     playerTilt = (velocityY * 0.0018).clamp(-0.4, 0.4);
-    
+
     // Wing flapping
     if (wingFlapSpeed > 0) {
       wingFlapAngle = math.sin(elapsedSecs * 35) * 0.6;
@@ -402,40 +405,42 @@ class FlappyJumpGame extends FlameGame {
     } else {
       wingFlapAngle += (0.0 - wingFlapAngle) * 0.1;
     }
-    
+
     // 3. Move obstacles & coins
     // Continuous Collision Detection & Score Check
     for (int i = pillars.length - 1; i >= 0; i--) {
       final pillar = pillars[i];
       pillar.worldX -= gameSpeed * dt;
-      
+
       // Continuous Collision check
       double halfW = pillar.width / 2;
-      bool horizontalHit = (playerPos.x + playerRadius > pillar.worldX - halfW) &&
-                           (playerPos.x - playerRadius < pillar.worldX + halfW);
+      bool horizontalHit =
+          (playerPos.x + playerRadius > pillar.worldX - halfW) &&
+              (playerPos.x - playerRadius < pillar.worldX + halfW);
       if (horizontalHit) {
         double gapHalfH = pillar.gapHeight / 2;
-        bool verticalHit = (playerPos.y - playerRadius < pillar.gapCenterY - gapHalfH) ||
-                           (playerPos.y + playerRadius > pillar.gapCenterY + gapHalfH);
+        bool verticalHit =
+            (playerPos.y - playerRadius < pillar.gapCenterY - gapHalfH) ||
+                (playerPos.y + playerRadius > pillar.gapCenterY + gapHalfH);
         if (verticalHit) {
           _triggerGameOver();
           return;
         }
       }
-      
+
       // Check pass / score
       if (!pillar.passed && pillar.worldX < playerPos.x) {
         pillar.passed = true;
-        
+
         // Success! Passed successfully
         score++;
         combo++;
         if (combo > maxCombo) maxCombo = combo;
-        
+
         int coinReward = 1;
         String multiplierMsg = "";
         Color scoreColor = Colors.white;
-        
+
         if (combo >= 20) {
           coinReward = 3;
           multiplierMsg = "⚡ CRITICAL x3!";
@@ -449,9 +454,9 @@ class FlappyJumpGame extends FlameGame {
         } else {
           if (!isMuted) HapticFeedback.selectionClick();
         }
-        
+
         coinsEarned += coinReward;
-        
+
         // Display floating texts
         final playerScreen = _projectPoint(playerPos);
         floatingTexts.add(GameFloatingText(
@@ -463,7 +468,7 @@ class FlappyJumpGame extends FlameGame {
           fontSize: 22,
           lifeTime: 0.7,
         ));
-        
+
         if (multiplierMsg.isNotEmpty) {
           floatingTexts.add(GameFloatingText(
             x: playerScreen.dx - 20,
@@ -476,38 +481,39 @@ class FlappyJumpGame extends FlameGame {
           ));
         }
       }
-      
+
       // Delete old pillars
       if (pillar.worldX < -350.0) {
         pillars.removeAt(i);
         _spawnPillar();
       }
     }
-    
+
     // 4. Update and check coin collections
     for (int i = coins.length - 1; i >= 0; i--) {
       final coin = coins[i];
       coin.worldX -= gameSpeed * dt;
       coin.rotY += dt * 3.2; // spin 3D coin
-      
+
       // Check collision with player
       double dx = coin.worldX - playerPos.x;
       double dy = coin.worldY - playerPos.y;
       double dist = math.sqrt(dx * dx + dy * dy);
-      
+
       if (!coin.collected && dist < playerRadius + 14.0) {
         coin.collected = true;
         coinsEarned += 2; // Each coin item rewards +2 coins
-        score += 2;       // Increases score too!
+        score += 2; // Increases score too!
         combo++;
         if (combo > maxCombo) maxCombo = combo;
-        
+
         if (!isMuted) {
           HapticFeedback.lightImpact();
         }
-        
-        final screenPos = _projectPoint(Vector3D(coin.worldX, coin.worldY, 0.0));
-        
+
+        final screenPos =
+            _projectPoint(Vector3D(coin.worldX, coin.worldY, 0.0));
+
         // Spawn shiny coins particles
         for (int k = 0; k < 8; k++) {
           final angle = random.nextDouble() * 2 * math.pi;
@@ -523,7 +529,7 @@ class FlappyJumpGame extends FlameGame {
             isStar: true,
           ));
         }
-        
+
         // Floating coin text
         floatingTexts.add(GameFloatingText(
           x: screenPos.dx,
@@ -534,23 +540,23 @@ class FlappyJumpGame extends FlameGame {
           fontSize: 18,
           lifeTime: 0.8,
         ));
-        
+
         coins.removeAt(i);
       } else if (coin.worldX < -300.0) {
         coins.removeAt(i);
       }
     }
-    
+
     // 5. Parallax islands drifting scrolling
     for (final island in islands) {
       island.pos.x -= gameSpeed * dt;
-      
+
       if (island.pos.x < -400.0) {
         island.pos.x = 600.0 + random.nextDouble() * 150.0;
         island.pos.y = random.nextDouble() * 200 - 150;
       }
     }
-    
+
     // 9. Trail particles behind player
     if (random.nextDouble() < 0.35) {
       final pScreen = _projectPoint(playerPos);
@@ -561,8 +567,8 @@ class FlappyJumpGame extends FlameGame {
         vy: (random.nextDouble() - 0.5) * 20,
         size: random.nextDouble() * 5 + 2.5,
         lifeTime: 0.6,
-        color: combo >= 20 
-            ? const Color(0xFFFFCC44) 
+        color: combo >= 20
+            ? const Color(0xFFFFCC44)
             : (combo >= 10 ? const Color(0xFF00FFCC) : const Color(0xFF8C62F8)),
       ));
     }
@@ -573,19 +579,19 @@ class FlappyJumpGame extends FlameGame {
     // Perspective projection formula
     final cx = size.x / 2;
     final cy = size.y / 2;
-    
+
     // Transform coordinate relative to camera
     double rx = point.x - cameraPos.x;
     double ry = point.y - cameraPos.y;
     double rz = point.z - cameraPos.z;
-    
+
     if (rz <= 0.1) rz = 0.1;
-    
+
     final scale = cameraFov / rz;
-    
+
     double screenX = cx + rx * scale;
     double screenY = cy + ry * scale;
-    
+
     // Apply camera shake if any
     if (cameraShake > 0) {
       final shakeX = (random.nextDouble() - 0.5) * cameraShake;
@@ -593,7 +599,7 @@ class FlappyJumpGame extends FlameGame {
       screenX += shakeX;
       screenY += shakeY;
     }
-    
+
     return Offset(screenX, screenY);
   }
 
@@ -613,30 +619,30 @@ class FlappyJumpGame extends FlameGame {
         ],
       ).createShader(backgroundRect);
     canvas.drawRect(backgroundRect, backgroundPaint);
-    
+
     // 2. Draw subtle 3D Grid floor and ceiling converging at a horizon
     _draw3DGrid(canvas);
-    
+
     // 3. Render 3D Parallax Floating Islands (drawn behind obstacles)
     for (final island in islands) {
       _draw3DIsland(canvas, island);
     }
-    
+
     // 4. Render 3D Obstacle Pillars
     for (final pillar in pillars) {
       _draw3DPillar(canvas, pillar);
     }
-    
+
     // 5. Render 3D Coins
     for (final coin in coins) {
       _draw3DCoins(canvas, coin);
     }
-    
+
     // 6. Draw Player (3D ball with gradients, visor, and wings)
     if (hasStarted) {
       _drawPlayer(canvas);
     }
-    
+
     // 7. Render Particles
     for (final p in particles) {
       final paint = Paint()..color = p.color;
@@ -646,7 +652,7 @@ class FlappyJumpGame extends FlameGame {
         canvas.drawCircle(Offset(p.x, p.y), p.size, paint);
       }
     }
-    
+
     // 8. Render Floating Texts
     for (final ft in floatingTexts) {
       final double opacity = (1.0 - (ft.age / ft.lifeTime)).clamp(0.0, 1.0);
@@ -673,7 +679,8 @@ class FlappyJumpGame extends FlameGame {
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(ft.x - textPainter.width / 2, ft.y - textPainter.height / 2));
+      textPainter.paint(canvas,
+          Offset(ft.x - textPainter.width / 2, ft.y - textPainter.height / 2));
     }
   }
 
@@ -682,28 +689,30 @@ class FlappyJumpGame extends FlameGame {
       ..color = const Color(0xFF6E3AFF).withOpacity(0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-      
+
     final cx = size.x / 2;
     final cy = size.y / 2;
-    
+
     // Horizon line
     canvas.drawLine(Offset(0, cy), Offset(size.x, cy), gridPaint);
-    
+
     // Perspective Grid floor
     double gridZSpeed = (elapsedSecs * gameSpeed * 0.4) % 100.0;
-    
+
     // Draw horizontal grid lines in depth
     for (int zIndex = 0; zIndex < 10; zIndex++) {
       double z = 400.0 - zIndex * 40.0 - gridZSpeed;
       if (z <= 10.0) continue;
-      
+
       final screenYFloor = cy + 180.0 * (cameraFov / z);
       final screenYCeil = cy - 180.0 * (cameraFov / z);
-      
-      canvas.drawLine(Offset(0, screenYFloor), Offset(size.x, screenYFloor), gridPaint);
-      canvas.drawLine(Offset(0, screenYCeil), Offset(size.x, screenYCeil), gridPaint);
+
+      canvas.drawLine(
+          Offset(0, screenYFloor), Offset(size.x, screenYFloor), gridPaint);
+      canvas.drawLine(
+          Offset(0, screenYCeil), Offset(size.x, screenYCeil), gridPaint);
     }
-    
+
     // Draw vanishing lines
     for (int i = -6; i <= 6; i++) {
       double xOffset = i * 80.0;
@@ -711,7 +720,7 @@ class FlappyJumpGame extends FlameGame {
       final start = Offset(cx + xOffset * 0.1, cy);
       final end = Offset(cx + xOffset * 5.0, size.y);
       canvas.drawLine(start, end, gridPaint);
-      
+
       // Line on the ceiling
       final startCeil = Offset(cx + xOffset * 0.1, cy);
       final endCeil = Offset(cx + xOffset * 5.0, 0);
@@ -722,23 +731,26 @@ class FlappyJumpGame extends FlameGame {
   void _draw3DIsland(Canvas canvas, ParallaxIsland island) {
     // Project base position
     final projBase = _projectPoint(island.pos);
-    
+
     // Compute vertices coordinates and project them
     List<Offset> projVerts = [];
     for (final v in island.vertices) {
-      final worldV = Vector3D(island.pos.x + v.x, island.pos.y + v.y, island.pos.z + v.z);
+      final worldV =
+          Vector3D(island.pos.x + v.x, island.pos.y + v.y, island.pos.z + v.z);
       projVerts.add(_projectPoint(worldV));
     }
-    
+
     // Check if the island is inside screen boundaries
     if (projBase.dx < -150 || projBase.dx > size.x + 150) return;
-    
-    final fillPaint = Paint()..color = island.color..style = PaintingStyle.fill;
+
+    final fillPaint = Paint()
+      ..color = island.color
+      ..style = PaintingStyle.fill;
     final strokePaint = Paint()
       ..color = island.color.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-      
+
     // Draw crystalline floating rock faces
     // Face 1: Front top
     final path1 = Path()
@@ -749,7 +761,7 @@ class FlappyJumpGame extends FlameGame {
       ..close();
     canvas.drawPath(path1, fillPaint);
     canvas.drawPath(path1, strokePaint);
-    
+
     // Face 2: Left bottom slope
     final path2 = Path()
       ..moveTo(projVerts[0].dx, projVerts[0].dy)
@@ -758,7 +770,7 @@ class FlappyJumpGame extends FlameGame {
       ..close();
     canvas.drawPath(path2, fillPaint);
     canvas.drawPath(path2, strokePaint);
-    
+
     // Face 3: Right bottom slope
     final path3 = Path()
       ..moveTo(projVerts[1].dx, projVerts[1].dy)
@@ -774,7 +786,7 @@ class FlappyJumpGame extends FlameGame {
     double gapHalf = pillar.gapHeight / 2;
     double ceilingY = -280.0;
     double floorY = 280.0;
-    
+
     _draw3DBox(
       canvas,
       x: pillar.worldX,
@@ -784,7 +796,7 @@ class FlappyJumpGame extends FlameGame {
       d: pillar.depth,
       isTopPillar: true,
     );
-    
+
     // Generate 3D Box for Lower Pillar (from gapBottom to floor)
     _draw3DBox(
       canvas,
@@ -808,62 +820,64 @@ class FlappyJumpGame extends FlameGame {
   }) {
     // Define 8 vertices of the 3D pillar box
     List<Vector3D> verts = [
-      Vector3D(x - w/2, yStart, -d/2), // 0: top-left-front
-      Vector3D(x + w/2, yStart, -d/2), // 1: top-right-front
-      Vector3D(x + w/2, yEnd, -d/2),   // 2: bot-right-front
-      Vector3D(x - w/2, yEnd, -d/2),   // 3: bot-left-front
-      
-      Vector3D(x - w/2, yStart, d/2),  // 4: top-left-back
-      Vector3D(x + w/2, yStart, d/2),  // 5: top-right-back
-      Vector3D(x + w/2, yEnd, d/2),    // 6: bot-right-back
-      Vector3D(x - w/2, yEnd, d/2),    // 7: bot-left-back
+      Vector3D(x - w / 2, yStart, -d / 2), // 0: top-left-front
+      Vector3D(x + w / 2, yStart, -d / 2), // 1: top-right-front
+      Vector3D(x + w / 2, yEnd, -d / 2), // 2: bot-right-front
+      Vector3D(x - w / 2, yEnd, -d / 2), // 3: bot-left-front
+
+      Vector3D(x - w / 2, yStart, d / 2), // 4: top-left-back
+      Vector3D(x + w / 2, yStart, d / 2), // 5: top-right-back
+      Vector3D(x + w / 2, yEnd, d / 2), // 6: bot-right-back
+      Vector3D(x - w / 2, yEnd, d / 2), // 7: bot-left-back
     ];
-    
+
     // Project all 8 vertices
     List<Offset> proj = verts.map((v) => _projectPoint(v)).toList();
-    
+
     // Backface culling / screen boundary checks
     bool anyOnScreen = proj.any((pt) => pt.dx >= -100 && pt.dx <= size.x + 100);
     if (!anyOnScreen) return;
-    
+
     // Colors & Shader Design
     // Neon glow styles
     final neonMagenta = const Color(0xFFFF007F);
     final neonPurple = const Color(0xFF6E3AFF);
     final neonDark = const Color(0xFF1D0E3D);
     final neonCyan = const Color(0xFF00FFCC);
-    
+
     final frontPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [neonPurple, neonMagenta],
       ).createShader(Rect.fromPoints(proj[0], proj[2]));
-      
+
     final sidePaint = Paint()
       ..color = const Color(0xFF26105E).withOpacity(0.95)
       ..style = PaintingStyle.fill;
-      
+
     final energyFacePaint = Paint()
       ..shader = RadialGradient(
         colors: [neonCyan, neonPurple],
       ).createShader(Rect.fromPoints(proj[3], proj[6]));
-      
+
     final borderPaint = Paint()
       ..color = neonCyan
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-      
+
     final energyBorderPaint = Paint()
       ..color = neonCyan
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
 
     // Determine perspective side visibility relative to camera center
-    double pillarCameraDeltaX = x - playerPos.x; // We are tracking player horizontal position
-    bool showRightFace = pillarCameraDeltaX < 0; // If behind us, show right face
-    bool showLeftFace = pillarCameraDeltaX > 0;  // If in front, show left face
-    
+    double pillarCameraDeltaX =
+        x - playerPos.x; // We are tracking player horizontal position
+    bool showRightFace =
+        pillarCameraDeltaX < 0; // If behind us, show right face
+    bool showLeftFace = pillarCameraDeltaX > 0; // If in front, show left face
+
     // 1. Draw side faces
     if (showLeftFace) {
       // Left side face [4, 0, 3, 7]
@@ -886,7 +900,7 @@ class FlappyJumpGame extends FlameGame {
       canvas.drawPath(pathRight, sidePaint);
       canvas.drawPath(pathRight, borderPaint);
     }
-    
+
     // 2. Draw top or bottom face (the cap facing the gap)
     if (isTopPillar) {
       // Bottom face cap [3, 2, 6, 7] - faces the gap, drawn glowing neon
@@ -909,7 +923,7 @@ class FlappyJumpGame extends FlameGame {
       canvas.drawPath(pathCap, energyFacePaint);
       canvas.drawPath(pathCap, energyBorderPaint);
     }
-    
+
     // 3. Draw main front face [0, 1, 2, 3]
     final pathFront = Path()
       ..moveTo(proj[0].dx, proj[0].dy)
@@ -924,14 +938,15 @@ class FlappyJumpGame extends FlameGame {
   void _draw3DCoins(Canvas canvas, Coin3D coin) {
     // Draw spinning gold coins in 3D perspective projection
     double radius = 13.0;
-    
+
     // Create base vertices for flat hexagon
     List<Vector3D> verts = [];
     for (int i = 0; i < 6; i++) {
       double angle = i * math.pi / 3;
-      verts.add(Vector3D(math.cos(angle) * radius, math.sin(angle) * radius, 0.0));
+      verts.add(
+          Vector3D(math.cos(angle) * radius, math.sin(angle) * radius, 0.0));
     }
-    
+
     // Rotate coin vertices around local Y axis (rotY)
     List<Vector3D> rotatedVerts = [];
     for (var v in verts) {
@@ -939,80 +954,81 @@ class FlappyJumpGame extends FlameGame {
       double rotZ = v.x * math.sin(coin.rotY);
       rotatedVerts.add(Vector3D(coin.worldX + rotX, coin.worldY + v.y, rotZ));
     }
-    
+
     // Project vertices
     List<Offset> proj = rotatedVerts.map((v) => _projectPoint(v)).toList();
-    
+
     // If fully off-screen, skip
     bool anyOnScreen = proj.any((pt) => pt.dx >= -20 && pt.dx <= size.x + 20);
     if (!anyOnScreen) return;
-    
+
     // Render gold faces and neon outline
     final goldTop = const Color(0xFFFFDE6B);
     final goldBase = const Color(0xFFF5C842);
     final neonCyan = const Color(0xFF00FFCC);
-    
+
     final path = Path()..moveTo(proj[0].dx, proj[0].dy);
     for (int i = 1; i < proj.length; i++) {
       path.lineTo(proj[i].dx, proj[i].dy);
     }
     path.close();
-    
+
     final goldPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [goldTop, goldBase],
       ).createShader(Rect.fromPoints(proj[0], proj[3]));
-      
+
     final strokePaint = Paint()
       ..color = const Color(0xFFFF9E00)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-      
+
     final outerGlow = Paint()
       ..color = neonCyan.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-      
+
     // Draw
     canvas.drawPath(path, outerGlow);
     canvas.drawPath(path, goldPaint);
     canvas.drawPath(path, strokePaint);
-    
+
     // Inner small square hole
     List<Vector3D> holeVerts = [];
     double innerRad = radius * 0.35;
     for (int i = 0; i < 4; i++) {
       double angle = i * math.pi / 2 + math.pi / 4;
-      holeVerts.add(Vector3D(math.cos(angle) * innerRad, math.sin(angle) * innerRad, 0.0));
+      holeVerts.add(Vector3D(
+          math.cos(angle) * innerRad, math.sin(angle) * innerRad, 0.0));
     }
-    
+
     List<Offset> projHole = holeVerts.map((v) {
       double rx = v.x * math.cos(coin.rotY);
       double rz = v.x * math.sin(coin.rotY);
       return _projectPoint(Vector3D(coin.worldX + rx, coin.worldY + v.y, rz));
     }).toList();
-    
+
     final holePath = Path()..moveTo(projHole[0].dx, projHole[0].dy);
     for (int i = 1; i < projHole.length; i++) {
       holePath.lineTo(projHole[i].dx, projHole[i].dy);
     }
     holePath.close();
-    
+
     canvas.drawPath(holePath, Paint()..color = const Color(0xFFC48B02));
   }
 
   void _drawPlayer(Canvas canvas) {
     // Project player position
     final center = _projectPoint(playerPos);
-    
+
     // Draw 3D shadow on floor
     final shadowZPos = Vector3D(playerPos.x, 260.0, 0.0);
     final shadowCenter = _projectPoint(shadowZPos);
     double shadowSize = playerRadius * (cameraFov / (0.0 - cameraPos.z)) * 0.9;
-    
+
     canvas.drawOval(
       Rect.fromCenter(
         center: shadowCenter,
@@ -1021,26 +1037,26 @@ class FlappyJumpGame extends FlameGame {
       ),
       Paint()..color = Colors.black.withOpacity(0.35),
     );
-    
+
     // Save state to rotate visor/wings
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(playerTilt); // Tilt player based on gravity direction
-    
+
     // Wing flapping offsets
     double flap = wingFlapAngle;
-    
+
     // Draw Left and Right Wings
     final wingPaint = Paint()
       ..shader = const LinearGradient(
         colors: [Color(0xFF00FFCC), Color(0xFF6E3AFF)],
       ).createShader(Rect.fromLTWH(-35, -20, 70, 40));
-      
+
     final wingStroke = Paint()
       ..color = const Color(0xFF00FFCC)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-      
+
     // Left Wing
     canvas.save();
     canvas.translate(-playerRadius * 0.8, -playerRadius * 0.2);
@@ -1052,7 +1068,7 @@ class FlappyJumpGame extends FlameGame {
     canvas.drawPath(leftWingPath, wingPaint);
     canvas.drawPath(leftWingPath, wingStroke);
     canvas.restore();
-    
+
     // Right Wing
     canvas.save();
     canvas.translate(playerRadius * 0.8, -playerRadius * 0.2);
@@ -1064,7 +1080,7 @@ class FlappyJumpGame extends FlameGame {
     canvas.drawPath(rightWingPath, wingPaint);
     canvas.drawPath(rightWingPath, wingStroke);
     canvas.restore();
-    
+
     // Draw Robot Main Body Sphere (radial gradient for 3D look)
     final bodyPaint = Paint()
       ..shader = RadialGradient(
@@ -1073,58 +1089,67 @@ class FlappyJumpGame extends FlameGame {
           isGameOver ? const Color(0xFFFF52A2) : const Color(0xFF8C62F8),
           isGameOver ? const Color(0xFF990E49) : const Color(0xFF4C1D95),
         ],
-      ).createShader(Rect.fromCircle(center: Offset.zero, radius: playerRadius));
-      
+      ).createShader(
+          Rect.fromCircle(center: Offset.zero, radius: playerRadius));
+
     final bodyOutline = Paint()
       ..color = isGameOver ? const Color(0xFFFF007F) : const Color(0xFF00FFCC)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
-      
+
     final neonGlow = Paint()
-      ..color = isGameOver ? const Color(0xFFFF007F).withOpacity(0.4) : const Color(0xFF00FFCC).withOpacity(0.4)
+      ..color = isGameOver
+          ? const Color(0xFFFF007F).withOpacity(0.4)
+          : const Color(0xFF00FFCC).withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-      
+
     canvas.drawCircle(Offset.zero, playerRadius, neonGlow);
     canvas.drawCircle(Offset.zero, playerRadius, bodyPaint);
     canvas.drawCircle(Offset.zero, playerRadius, bodyOutline);
-    
+
     // Draw Cute Robot Visor Face
     final visorPaint = Paint()
       ..color = const Color(0xFF0B0A1A)
       ..style = PaintingStyle.fill;
-      
+
     final visorOutline = Paint()
       ..color = const Color(0xFF00FFCC)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
-      
+
     final visorRect = Rect.fromCenter(
       center: const Offset(5.0, -1.0),
       width: playerRadius * 1.1,
       height: playerRadius * 0.55,
     );
-    canvas.drawRRect(RRect.fromRectAndRadius(visorRect, const Radius.circular(5)), visorPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(visorRect, const Radius.circular(5)), visorOutline);
-    
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(visorRect, const Radius.circular(5)),
+        visorPaint);
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(visorRect, const Radius.circular(5)),
+        visorOutline);
+
     // Eyes: Smiley, shocked, or dizzy depending on state
     final eyePaint = Paint()
       ..color = const Color(0xFF00FFCC)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
-      
+
     if (isGameOver) {
       // Dizzy cross eyes 'XX'
       canvas.drawLine(const Offset(1, -3), const Offset(4, -1), eyePaint);
       canvas.drawLine(const Offset(4, -3), const Offset(1, -1), eyePaint);
-      
+
       canvas.drawLine(const Offset(7, -3), const Offset(10, -1), eyePaint);
       canvas.drawLine(const Offset(10, -3), const Offset(7, -1), eyePaint);
     } else if (velocityY < -150) {
       // Shocked eyes (O_O)
-      canvas.drawCircle(const Offset(3.5, -2), 1.8, Paint()..color = const Color(0xFF00FFCC));
-      canvas.drawCircle(const Offset(7.5, -2), 1.8, Paint()..color = const Color(0xFF00FFCC));
+      canvas.drawCircle(
+          const Offset(3.5, -2), 1.8, Paint()..color = const Color(0xFF00FFCC));
+      canvas.drawCircle(
+          const Offset(7.5, -2), 1.8, Paint()..color = const Color(0xFF00FFCC));
     } else {
       // Happy smiley curves (^^)
       final eyePath1 = Path()
@@ -1136,7 +1161,7 @@ class FlappyJumpGame extends FlameGame {
       canvas.drawPath(eyePath1, eyePaint);
       canvas.drawPath(eyePath2, eyePaint);
     }
-    
+
     // Floating bunny-like antenna/ears
     canvas.restore();
   }
@@ -1144,13 +1169,13 @@ class FlappyJumpGame extends FlameGame {
   void _drawStar(Canvas canvas, Offset offset, double size, Paint paint) {
     final path = Path();
     final double innerRadius = size * 0.4;
-    
+
     for (int i = 0; i < 10; i++) {
       double r = (i % 2 == 0) ? size : innerRadius;
       double angle = i * math.pi / 5 - math.pi / 2;
       double x = offset.dx + math.cos(angle) * r;
       double y = offset.dy + math.sin(angle) * r;
-      
+
       if (i == 0) {
         path.moveTo(x, y);
       } else {
@@ -1173,11 +1198,11 @@ class FlappyJumpGameScreen extends StatefulWidget {
 class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
     with SingleTickerProviderStateMixin {
   late FlappyJumpGame _game;
-  
+
   // Game data state
   int _coins = 525;
   int _highScore = 0;
-  
+
   // Confetti / Coin claim animation state
   bool _showCoinClaimAnimation = false;
   late AnimationController _claimAnimController;
@@ -1187,14 +1212,14 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _game = FlappyJumpGame();
     _game.onStateChanged = () {
       if (mounted) setState(() {});
     };
-    
+
     _loadLocalData();
-    
+
     // Setup coin flight claim animation
     _claimAnimController = AnimationController(
       vsync: this,
@@ -1223,7 +1248,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
     final currentCoins = await GamePrefs.getCoins();
     final newTotal = currentCoins + _game.coinsEarned;
     await GamePrefs.saveCoins(newTotal);
-    
+
     if (mounted) {
       // Pop and return total coins earned to GamesScreen/HomeScreen
       Navigator.of(context).pop(_game.coinsEarned);
@@ -1238,12 +1263,16 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
           // Bezier curve progress
           double t = (dt - coin.delay) * 2.0; // speed up individual travel
           if (t > 1.0) t = 1.0;
-          
+
           double mt = 1.0 - t;
-          
+
           // Quadratic Bezier Formula
-          coin.currentX = mt * mt * coin.start.dx + 2 * mt * t * coin.control.dx + t * t * coin.end.dx;
-          coin.currentY = mt * mt * coin.start.dy + 2 * mt * t * coin.control.dy + t * t * coin.end.dy;
+          coin.currentX = mt * mt * coin.start.dx +
+              2 * mt * t * coin.control.dx +
+              t * t * coin.end.dx;
+          coin.currentY = mt * mt * coin.start.dy +
+              2 * mt * t * coin.control.dy +
+              t * t * coin.end.dy;
           coin.progress = t;
         }
       }
@@ -1262,23 +1291,19 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
             behavior: HitTestBehavior.opaque,
             child: GameWidget(game: _game),
           ),
-          
+
           // 2. HUD Game overlay (always visible once playing)
-          if (_game.hasStarted && !_game.isGameOver)
-            _buildHudOverlay(),
-            
+          if (_game.hasStarted && !_game.isGameOver) _buildHudOverlay(),
+
           // 3. Menu overlay (shown before game starts)
-          if (!_game.hasStarted)
-            _buildMenuOverlay(),
-            
+          if (!_game.hasStarted) _buildMenuOverlay(),
+
           // 4. Pause screen overlay
-          if (_game.paused)
-            _buildPauseOverlay(),
-            
+          if (_game.paused) _buildPauseOverlay(),
+
           // 5. Game Over screen overlay
-          if (_game.isGameOver)
-            _buildGameOverOverlay(),
-            
+          if (_game.isGameOver) _buildGameOverOverlay(),
+
           // 6. Flying Coins Claim animation layer
           if (_showCoinClaimAnimation)
             IgnorePointer(
@@ -1295,7 +1320,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   // --- HUD Overlay Screen ---
   Widget _buildHudOverlay() {
     final topPadding = MediaQuery.of(context).padding.top;
-    
+
     return Positioned(
       top: topPadding + 10,
       left: 16,
@@ -1317,7 +1342,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               child: const Icon(Icons.pause, color: Colors.white, size: 22),
             ),
           ),
-          
+
           // Center: Active Score
           Column(
             children: [
@@ -1346,7 +1371,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               ),
             ],
           ),
-          
+
           // Right: Active Coins
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1387,7 +1412,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   // --- Menu Overlay Screen ---
   Widget _buildMenuOverlay() {
     final topPadding = MediaQuery.of(context).padding.top;
-    
+
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -1419,7 +1444,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                       ),
                     ),
                   ),
-                  
+
                   // Coins counter
                   Container(
                     height: 44,
@@ -1456,9 +1481,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ],
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Title (Cool Neon Glowing Title)
             Column(
               children: [
@@ -1487,9 +1512,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Animated Character preview placeholder representation
             Container(
               height: 110,
@@ -1497,7 +1522,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFF6E3AFF).withOpacity(0.2),
-                border: Border.all(color: const Color(0xFF00FFCC).withOpacity(0.4), width: 2),
+                border: Border.all(
+                    color: const Color(0xFF00FFCC).withOpacity(0.4), width: 2),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF6E3AFF).withOpacity(0.3),
@@ -1522,13 +1548,14 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                     ),
                   ),
                   // The player character representation
-                  const Icon(Icons.rocket_launch, color: Color(0xFF00FFCC), size: 44),
+                  const Icon(Icons.rocket_launch,
+                      color: Color(0xFF00FFCC), size: 44),
                 ],
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Stats (High Score display)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -1540,7 +1567,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.emoji_events, color: Color(0xFFFFCC44), size: 20),
+                  const Icon(Icons.emoji_events,
+                      color: Color(0xFFFFCC44), size: 20),
                   const SizedBox(width: 10),
                   Text(
                     'BEST SCORE: ',
@@ -1561,9 +1589,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Play Button
             GestureDetector(
               onTap: _game.startGame,
@@ -1588,7 +1616,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                      const Icon(Icons.play_arrow,
+                          color: Colors.white, size: 24),
                       const SizedBox(width: 8),
                       Text(
                         'TAP TO PLAY',
@@ -1604,7 +1633,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 32),
           ],
         ),
@@ -1625,7 +1654,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
           decoration: BoxDecoration(
             color: const Color(0xFF19163D),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFF6E3AFF).withOpacity(0.4), width: 1.5),
+            border: Border.all(
+                color: const Color(0xFF6E3AFF).withOpacity(0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF6E3AFF).withOpacity(0.2),
@@ -1646,7 +1676,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Resume Button
               _buildPauseActionBtn(
                 onTap: _game.resumeGame,
@@ -1655,7 +1685,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 icon: Icons.play_arrow,
               ),
               const SizedBox(height: 12),
-              
+
               // Restart Button
               _buildPauseActionBtn(
                 onTap: _game.startGame,
@@ -1664,7 +1694,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 icon: Icons.refresh,
               ),
               const SizedBox(height: 12),
-              
+
               // Exit Button
               _buildPauseActionBtn(
                 onTap: () => Navigator.of(context).pop(),
@@ -1690,8 +1720,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
       child: Container(
         height: 48,
         decoration: BoxDecoration(
-          gradient: isPrimary 
-              ? const LinearGradient(colors: [Color(0xFF8C62F8), Color(0xFF6035EE)])
+          gradient: isPrimary
+              ? const LinearGradient(
+                  colors: [Color(0xFF8C62F8), Color(0xFF6035EE)])
               : null,
           color: isPrimary ? null : Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(14),
@@ -1747,7 +1778,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Stats Panel
             Container(
               width: 320,
@@ -1755,7 +1786,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               decoration: BoxDecoration(
                 color: const Color(0xFF19163D),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFFF52A2).withOpacity(0.4), width: 1.5),
+                border: Border.all(
+                    color: const Color(0xFFFF52A2).withOpacity(0.4),
+                    width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFFF52A2).withOpacity(0.15),
@@ -1766,13 +1799,15 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
               child: Column(
                 children: [
                   // Score Row
-                  _buildStatRow('SCORE', '${_game.score}', const Color(0xFF00FFCC)),
+                  _buildStatRow(
+                      'SCORE', '${_game.score}', const Color(0xFF00FFCC)),
                   const Divider(color: Colors.white12, height: 24),
-                  
+
                   // Max Combo Row
-                  _buildStatRow('MAX COMBO', 'x${_game.maxCombo}', const Color(0xFF8C62F8)),
+                  _buildStatRow('MAX COMBO', 'x${_game.maxCombo}',
+                      const Color(0xFF8C62F8)),
                   const Divider(color: Colors.white12, height: 24),
-                  
+
                   // Coins Earned
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1813,9 +1848,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Buttons Row
             if (!_showCoinClaimAnimation)
               SizedBox(
@@ -1847,7 +1882,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.bolt, color: Color(0xFF0F172A), size: 20),
+                                const Icon(Icons.bolt,
+                                    color: Color(0xFF0F172A), size: 20),
                                 const SizedBox(width: 6),
                                 Text(
                                   'CLAIM REWARD',
@@ -1863,9 +1899,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                           ),
                         ),
                       ),
-                      
+
                     const SizedBox(height: 12),
-                    
+
                     Row(
                       children: [
                         // Play Again
@@ -1893,7 +1929,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        
+
                         // Quit Button
                         Expanded(
                           child: GestureDetector(
@@ -1982,26 +2018,26 @@ class _GameCoinClaimPainter extends CustomPainter {
     final goldTop = const Color(0xFFFFDE6B);
     final goldBase = const Color(0xFFF5C842);
     final goldStroke = const Color(0xFFFF9E00);
-    
+
     for (var coin in coins) {
       if (coin.progress <= 0.0 || coin.progress >= 1.0) continue;
-      
+
       canvas.save();
       canvas.translate(coin.currentX, coin.currentY);
-      
+
       // Spinning scale rotation illusion
       double scaleX = math.cos(coin.progress * 10 * math.pi);
       canvas.scale(scaleX.abs(), 1.0);
-      
+
       final double coinRad = 16.0;
       final path = Path()
         ..addOval(Rect.fromCircle(center: Offset.zero, radius: coinRad));
-        
+
       final paint = Paint()
         ..shader = LinearGradient(
           colors: [goldTop, goldBase],
         ).createShader(Rect.fromCircle(center: Offset.zero, radius: coinRad));
-        
+
       canvas.drawPath(path, paint);
       canvas.drawPath(
         path,
@@ -2010,10 +2046,11 @@ class _GameCoinClaimPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.2,
       );
-      
+
       // Core 'R' or Star shape inside the flying coin
-      canvas.drawCircle(Offset.zero, coinRad * 0.4, Paint()..color = const Color(0xFFC48B02));
-      
+      canvas.drawCircle(
+          Offset.zero, coinRad * 0.4, Paint()..color = const Color(0xFFC48B02));
+
       canvas.restore();
     }
   }

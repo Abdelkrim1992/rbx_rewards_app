@@ -53,7 +53,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/9317869a-2a98-4f56-ae36-d822a541fd90';
   static const String treasureChestIcon =
       'https://www.figma.com/api/mcp/asset/6ffe8337-cad6-4012-9285-ac241b3ea726';
-  static const String megaChestIcon = 'assets/images/mega_chest.png';
+  static const String megaChestIcon = 'images/mega_chest.png';
 
   // Home screen
   static const String rbxLogo =
@@ -62,7 +62,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/d61aa950-a3dd-42d9-a9a1-0cc4aed49d80';
   static const String wavingHand =
       'https://www.figma.com/api/mcp/asset/e32c7142-4714-4ff9-adef-c64da6cb1c12';
-  static const String goldRbxCoin = 'assets/images/robux_coins.png';
+  static const String goldRbxCoin = 'images/robux_coins.png';
   static const String arrowRight =
       'https://www.figma.com/api/mcp/asset/ea4bc6b7-3caa-4c49-9268-b6b6a4edf5d1';
   static const String purpleGiftBox =
@@ -75,16 +75,15 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/5fc9ce63-b939-4173-897c-114beeb03910';
   static const String clipboardIcon =
       'https://www.figma.com/api/mcp/asset/4f4ca268-c30e-4253-992e-5fba9647ace9';
-  static const String tapTapGame =
-      'https://www.figma.com/api/mcp/asset/f5dfa589-e054-470f-89a8-6508ae920620';
-  static const String quizMasterGame =
-      'https://www.figma.com/api/mcp/asset/cedd548f-dcba-48f4-9499-359f1cbcea15';
-  static const String memoryMatchGame =
-      'https://www.figma.com/api/mcp/asset/71b59327-cae4-4c8c-9183-792d2d287c55';
-  static const String goldCoin = 'assets/images/robux_coins.png';
+  static const String tapTapGame = 'images/tap_tap_mini_game.jpeg';
+  static const String quizMasterGame = 'images/math_quiz_mini_game.jpeg';
+  static const String quizMasterQuickActions = 'images/quiz_master_quick_actions.jpeg';
+  static const String quizMasterEarnMore = 'images/quiz_master_earn_more.jpeg';
+  static const String memoryMatchGame = 'images/flip_cards_mii_game.PNG';
+  static const String goldCoin = 'images/robux_coins.png';
   static const String chevronRight =
       'https://www.figma.com/api/mcp/asset/916d584b-02ff-4889-9930-e32e15172357';
-  
+
   // Nav icons
   static const String navHome =
       'https://www.figma.com/api/mcp/asset/d38cd333-4ae6-4ee4-b55b-0a03213a164b';
@@ -94,13 +93,13 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/4e879785-63b3-48dc-9f5f-8c6550dc4fb8';
   static const String navProfile =
       'https://www.figma.com/api/mcp/asset/459482cf-86a7-4e07-bb3b-09ecf20414df';
-  
+
   // Profile screen
   static const String profileAvatar =
       'https://www.figma.com/api/mcp/asset/4f8e6556-cadb-4412-9bf7-205c4dabf108';
   static const String fireStreak =
       'https://www.figma.com/api/mcp/asset/e37e3720-4a49-4671-a975-d17d9310d228';
-  static const String rbxCoinIcon = 'assets/images/robux_coins.png';
+  static const String rbxCoinIcon = 'images/robux_coins.png';
   static const String gamepadStat =
       'https://www.figma.com/api/mcp/asset/cca1114d-4f18-4f05-8da3-e8beacb8f47e';
   static const String adsWatched =
@@ -117,8 +116,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/e6dafc79-8710-4cac-a1ec-555574455b53';
 
   // Games screen
-  static const String flappyJumpGame =
-      'https://www.figma.com/api/mcp/asset/71b59327-cae4-4c8c-9183-792d2d287c55';
+  static const String flappyJumpGame = 'images/flappy_mini_game.jpeg';
 }
 
 class AppLayout {
@@ -126,4 +124,3 @@ class AppLayout {
   static const double sectionSpacing = 24.0;
   static const double elementSpacing = 12.0;
 }
-

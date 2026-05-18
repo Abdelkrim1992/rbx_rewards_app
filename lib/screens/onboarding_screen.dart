@@ -19,12 +19,13 @@ class OnboardingScreen extends StatelessWidget {
                   const Spacer(flex: 1),
                   // Hero Illustration
                   Flexible(
-                    flex: 20,
+                    flex: 50,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20)
                           .copyWith(top: 40),
-                      child: Image.network(
-                        AppAssets.heroIllustration,
+                      child: Image.asset(
+                        'images/onboarding_screen_main_image.png',
+                        width: double.infinity,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Container(
                           decoration: BoxDecoration(
@@ -42,7 +43,8 @@ class OnboardingScreen extends StatelessWidget {
                   const Spacer(flex: 1),
                   // Title
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppLayout.screenPadding),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: RichText(
@@ -88,25 +90,26 @@ class OnboardingScreen extends StatelessWidget {
                   const Spacer(flex: 2),
                   // Feature cards
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppLayout.screenPadding),
                     child: IntrinsicHeight(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _FeatureCard(
-                            iconUrl: AppAssets.gamepadIcon,
+                            imagePath: 'images/first_feature_card.jpeg',
                             title: 'Play Games',
                             subtitle: 'Fun mini games to earn coins',
                           ),
                           const SizedBox(width: 8),
                           _FeatureCard(
-                            iconUrl: AppAssets.prizeWheelIcon,
+                            imagePath: 'images/second_feature_card.jpeg',
                             title: 'Spin & Win',
                             subtitle: 'Spin the wheel for big prizes',
                           ),
                           const SizedBox(width: 8),
                           _FeatureCard(
-                            iconUrl: AppAssets.treasureChestIcon,
+                            imagePath: 'images/thirty_feature_card.jpeg',
                             title: 'Unlock Rewards',
                             subtitle: 'Redeem coins for amazing rewards',
                           ),
@@ -120,7 +123,8 @@ class OnboardingScreen extends StatelessWidget {
             ),
             // CTA Button
             Padding(
-              padding: const EdgeInsets.fromLTRB(AppLayout.screenPadding, 0, AppLayout.screenPadding, 30),
+              padding: const EdgeInsets.fromLTRB(
+                  AppLayout.screenPadding, 0, AppLayout.screenPadding, 30),
               child: GestureDetector(
                 onTap: onGetStarted,
                 child: Container(
@@ -160,12 +164,12 @@ class OnboardingScreen extends StatelessWidget {
 }
 
 class _FeatureCard extends StatelessWidget {
-  final String iconUrl;
+  final String imagePath;
   final String title;
   final String subtitle;
 
   const _FeatureCard({
-    required this.iconUrl,
+    required this.imagePath,
     required this.title,
     required this.subtitle,
   });
@@ -209,11 +213,11 @@ class _FeatureCard extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.network(
-                      iconUrl,
+                    child: Image.asset(
+                      imagePath,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.star, color: AppColors.primary, size: 24),
+                      errorBuilder: (_, __, ___) => const Icon(Icons.star,
+                          color: AppColors.primary, size: 24),
                     ),
                   ),
                 ),

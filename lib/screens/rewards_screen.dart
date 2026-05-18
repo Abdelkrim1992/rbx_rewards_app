@@ -2,11 +2,67 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/game_prefs.dart';
 
-class RewardsScreen extends StatelessWidget {
+class RewardsScreen extends StatefulWidget {
   final Function(int) onNavTap;
 
   const RewardsScreen({super.key, required this.onNavTap});
+
+  @override
+  State<RewardsScreen> createState() => _RewardsScreenState();
+}
+
+class _RewardsScreenState extends State<RewardsScreen> {
+  int _balance = 525;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    final coins = await GamePrefs.getCoins();
+    if (!mounted) return;
+    setState(() {
+      _balance = coins;
+    });
+  }
+
+  int _parseRewardCost(String cost) {
+    return int.tryParse(cost.replaceAll(',', '')) ?? 0;
+  }
+
+  Future<void> _redeemReward(_RewardData reward) async {
+    final cost = _parseRewardCost(reward.cost);
+
+    if (_balance < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'You need ${cost - _balance} more RBX Coins to redeem ${reward.title}.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final newBalance = _balance - cost;
+    setState(() {
+      _balance = newBalance;
+    });
+
+    await GamePrefs.saveCoins(newBalance);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${reward.title} redeemed successfully! 🎉'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +102,7 @@ class RewardsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFE),
+      backgroundColor: Colors.white,
       extendBody: true,
       body: SafeArea(
         bottom: false,
@@ -57,17 +113,19 @@ class RewardsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Column(
                   children: [
-                    const RbxAppHeader(),
+                    RbxAppHeader(onNavTap: widget.onNavTap),
                     // Balance widget
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: _BalanceWidget(),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _BalanceWidget(balance: _balance),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Redeem Rewards header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -94,10 +152,18 @@ class RewardsScreen extends StatelessWidget {
                     ListView.separated(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       itemCount: rewards.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (ctx, i) => _RewardItem(data: rewards[i]),
+                      itemBuilder: (ctx, i) {
+                        final reward = rewards[i];
+                        return _RewardItem(
+                          data: reward,
+                          canRedeem: _balance >= _parseRewardCost(reward.cost),
+                          onRedeem: () => _redeemReward(reward),
+                        );
+                      },
                     ),
                     const SizedBox(height: 120),
                   ],
@@ -111,7 +177,7 @@ class RewardsScreen extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 2, onTap: onNavTap),
+          child: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
         ),
       ),
     );
@@ -119,6 +185,10 @@ class RewardsScreen extends StatelessWidget {
 }
 
 class _BalanceWidget extends StatelessWidget {
+  final int balance;
+
+  const _BalanceWidget({required this.balance});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -174,10 +244,10 @@ class _BalanceWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Text(
-                      '12,450',
-                      style: TextStyle(
+                      '$balance',
+                      style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -185,8 +255,8 @@ class _BalanceWidget extends StatelessWidget {
                         height: 1.1,
                       ),
                     ),
-                    SizedBox(height: 2),
-                    Text(
+                    const SizedBox(height: 2),
+                    const Text(
                       'Your RBX Balance',
                       style: TextStyle(
                         fontSize: 12,
@@ -194,7 +264,7 @@ class _BalanceWidget extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'RBX Coins',
                       style: TextStyle(
                         fontSize: 11,
@@ -211,9 +281,10 @@ class _BalanceWidget extends StatelessWidget {
                 child: Image.network(
                   AppAssets.purpleGiftBox,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.account_balance_wallet,
-                          size: 60, color: Colors.white54),
+                  errorBuilder: (_, __, ___) => const Icon(
+                      Icons.account_balance_wallet,
+                      size: 60,
+                      color: Colors.white54),
                 ),
               ),
             ],
@@ -242,8 +313,14 @@ class _RewardData {
 
 class _RewardItem extends StatelessWidget {
   final _RewardData data;
+  final bool canRedeem;
+  final VoidCallback onRedeem;
 
-  const _RewardItem({required this.data});
+  const _RewardItem({
+    required this.data,
+    required this.canRedeem,
+    required this.onRedeem,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +359,8 @@ class _RewardItem extends StatelessWidget {
                   child: Image.network(
                     data.imageUrl,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) =>
-                        Icon(Icons.card_giftcard, color: data.bgColor, size: 36),
+                    errorBuilder: (_, __, ___) => Icon(Icons.card_giftcard,
+                        color: data.bgColor, size: 36),
                   ),
                 ),
               ),
@@ -351,28 +428,35 @@ class _RewardItem extends StatelessWidget {
                     ),
                   ],
                 ),
-                
-                Container(
-                  width: 75,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x446035EE),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Redeem',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                GestureDetector(
+                  onTap: onRedeem,
+                  child: Container(
+                    width: 75,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      gradient: canRedeem ? AppColors.primaryGradient : null,
+                      color: canRedeem ? null : const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: canRedeem
+                          ? const [
+                              BoxShadow(
+                                color: Color(0x446035EE),
+                                blurRadius: 8,
+                                offset: Offset(0, 4),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        canRedeem ? 'Redeem' : 'Locked',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: canRedeem
+                              ? Colors.white
+                              : AppColors.secondaryText,
+                        ),
                       ),
                     ),
                   ),

@@ -5,10 +5,10 @@ import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
+import 'flappy_jump_game_screen.dart';
 import 'earn_more_screen.dart';
-import 'tasks_offers_screen.dart';
 import '../widgets/game_prefs.dart';
-
+import 'quizzes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onNavTap;
@@ -27,6 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _balance = 525;
   bool _isDailyClaimed = false;
+  bool _isMegaChestClaimed = false;
   DateTime? _lastClaimTime;
   Timer? _countdownTimer;
   Duration _timeUntilNextClaim = Duration.zero;
@@ -39,9 +40,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadBalance() async {
     final coins = await GamePrefs.getCoins();
+    final isMegaChestClaimed = await GamePrefs.isMegaChestClaimed();
     setState(() {
       _balance = coins;
+      _isMegaChestClaimed = isMegaChestClaimed;
     });
+  }
+
+  Future<void> _claimMegaChest() async {
+    const reward = 500;
+    final newBalance = _balance + reward;
+
+    setState(() {
+      _balance = newBalance;
+      _isMegaChestClaimed = true;
+    });
+
+    await GamePrefs.saveCoins(newBalance);
+    await GamePrefs.setMegaChestClaimed(true);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Mega Chest opened! You earned 500 RBX 🎉'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -64,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_lastClaimTime == null) return;
     final now = DateTime.now();
     final nextClaimTime = _lastClaimTime!.add(const Duration(hours: 24));
-    
+
     if (now.isAfter(nextClaimTime)) {
       _countdownTimer?.cancel();
       setState(() {
@@ -144,7 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF8F9FA),
                     borderRadius: BorderRadius.circular(16),
@@ -178,28 +203,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _completeClaim();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                _InteractiveCard(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _completeClaim();
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
+                    alignment: Alignment.center,
                     child: const Text(
                       'Awesome!',
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: 0.2,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),
@@ -226,6 +256,46 @@ class _HomeScreenState extends State<HomeScreen> {
     _showRewardPopup();
   }
 
+  Future<void> _showSurveyDialog() async {
+    final coinsEarned = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const SurveyDialog(),
+    );
+
+    if (!mounted) return;
+    if (coinsEarned != null && coinsEarned > 0) {
+      await _loadBalance();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Successfully claimed +250 RBX Coins! 📋'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showScratchDialog() async {
+    final coinsEarned = await showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const ScratchRewardDialog(),
+    );
+
+    if (!mounted) return;
+    if (coinsEarned != null && coinsEarned > 0) {
+      await _loadBalance();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scratch reward claimed +$coinsEarned RBX Coins! 🎁'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -241,10 +311,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const RbxAppHeader(),
+                    RbxAppHeader(onNavTap: widget.onNavTap),
                     // Welcome greeting
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           const Text(
@@ -265,7 +336,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Balance Card
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: _InteractiveCard(
                         onTap: () => widget.onNavTap(2), // Navigate to Rewards
                         child: Container(
@@ -289,22 +361,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Image.asset(
                                     AppAssets.goldRbxCoin,
-                                    width: 52,
-                                    height: 52,
+                                    width: 50,
+                                    height: 50,
                                     errorBuilder: (_, __, ___) => const Icon(
                                       Icons.monetization_on,
-                                      size: 52,
+                                      size: 50,
                                       color: Color(0xFFFFCC44),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'YOUR RBX BALANCE',
                                         style: TextStyle(
-                                          fontSize: 11,
+                                          fontSize: 12,
                                           color: Color(0xFF868A9F),
                                           letterSpacing: 0.8,
                                           fontWeight: FontWeight.w600,
@@ -313,19 +386,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       const SizedBox(height: 4),
                                       Row(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.baseline,
-                                        textBaseline: TextBaseline.alphabetic,
+                                            CrossAxisAlignment.end,
                                         children: [
-                                          Text(
-                                            '$_balance',
-                                            style: const TextStyle(
-                                              fontSize: 25,
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFF131326),
-                                              letterSpacing: -0.7,
-                                              height: 1.0,
-                                            ),
-                                          ),
+                                          Text('$_balance',
+                                              style: const TextStyle(
+                                                fontSize: 27,
+                                                fontWeight: FontWeight.w800,
+                                                color: Color(0xFF131326),
+                                                letterSpacing: 0,
+                                                height: 1.0,
+                                              )),
                                           const SizedBox(width: 6),
                                           const Text(
                                             'RBX Coins',
@@ -355,14 +425,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Daily Reward Card
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: AppColors.dailyCardGradient,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.15),
+                              color: const Color.fromARGB(255, 68, 41, 159)
+                                  .withOpacity(0.15),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -371,16 +443,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Row(
                           children: [
                             Expanded(
-                              flex: 4,
+                              flex: 5,
                               child: Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 20, 0, 20),
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 20, 0, 20),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _isDailyClaimed 
-                                        ? 'Reward Claimed! See you tomorrow'
-                                        : 'Daily Reward',
+                                      _isDailyClaimed
+                                          ? 'Reward Claimed\nSee you tomorrow'
+                                          : 'Daily Reward',
                                       style: const TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.w800,
@@ -392,8 +465,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(height: 8),
                                     Text(
                                       _isDailyClaimed
-                                        ? 'You earned 100 coins today.'
-                                        : 'Come back every day and\nclaim awesome rewards.',
+                                          ? 'You earned 100 coins today.'
+                                          : 'Come back every day and claim awesome rewards.',
                                       style: const TextStyle(
                                         fontSize: 12,
                                         color: Color(0xFF4A4B60),
@@ -402,37 +475,53 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     const SizedBox(height: 14),
                                     _InteractiveCard(
-                                      onTap: _isDailyClaimed ? null : _claimDaily,
+                                      onTap:
+                                          _isDailyClaimed ? null : _claimDaily,
                                       child: Container(
                                         height: 38,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16),
                                         decoration: BoxDecoration(
-                                          gradient: _isDailyClaimed 
-                                            ? null 
-                                            : AppColors.primaryGradient,
-                                          color: _isDailyClaimed ? Colors.white.withOpacity(0.5) : null,
-                                          borderRadius: BorderRadius.circular(14),
-                                          boxShadow: _isDailyClaimed ? null : [
-                                            BoxShadow(
-                                              color: AppColors.primary.withOpacity(0.3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 6),
-                                            )
-                                          ],
+                                          gradient: _isDailyClaimed
+                                              ? null
+                                              : AppColors.primaryGradient,
+                                          color: _isDailyClaimed
+                                              ? Colors.white.withOpacity(0.5)
+                                              : null,
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                          boxShadow: _isDailyClaimed
+                                              ? null
+                                              : [
+                                                  BoxShadow(
+                                                    color: AppColors.primary
+                                                        .withOpacity(0.3),
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 6),
+                                                  )
+                                                ],
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             if (_isDailyClaimed)
-                                              const Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
-                                            if (_isDailyClaimed) const SizedBox(width: 6),
+                                              const Icon(Icons.timer_outlined,
+                                                  size: 16,
+                                                  color: AppColors.primary),
+                                            if (_isDailyClaimed)
+                                              const SizedBox(width: 6),
                                             Text(
-                                              _isDailyClaimed ? _formatDuration(_timeUntilNextClaim) : 'Claim Now',
+                                              _isDailyClaimed
+                                                  ? 'Ends ${_formatDuration(_timeUntilNextClaim)}'
+                                                  : 'Claim Now',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w800,
-                                                color: _isDailyClaimed ? AppColors.primary : Colors.white,
+                                                color: _isDailyClaimed
+                                                    ? AppColors.primary
+                                                    : Colors.white,
                                                 letterSpacing: 0.3,
                                               ),
                                             ),
@@ -472,7 +561,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Quick Actions header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: const _SectionHeader(
                         title: 'Quick Actions',
                       ),
@@ -481,17 +571,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Quick Actions grid
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           _QuickActionCard(
                             iconUrl: AppAssets.chestIcon,
                             title: 'Chest',
                             badge: 'Ready',
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const ChestScreen()),
-                            ),
+                            onTap: () async {
+                              final earned =
+                                  await Navigator.of(context).push<int>(
+                                MaterialPageRoute(
+                                    builder: (_) => const ChestScreen()),
+                              );
+                              if (earned != null && earned > 0) {
+                                await _loadBalance();
+                              }
+                            },
                           ),
                           const SizedBox(width: 12),
                           _QuickActionCard(
@@ -502,10 +599,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 12),
                           _QuickActionCard(
-                            iconUrl: AppAssets.missionsIcon,
-                            title: 'Missions',
-                            badge: '3/6',
-                            onTap: () {},
+                            iconUrl: AppAssets.quizMasterQuickActions,
+                            title: 'Quizzes',
+                            badge: 'Ready',
+                            onTap: () async {
+                              final earned =
+                                  await Navigator.of(context).push<int>(
+                                MaterialPageRoute(
+                                    builder: (_) => const QuizzesScreen()),
+                              );
+                              if (earned != null && earned > 0) {
+                                await _loadBalance();
+                              }
+                            },
                           ),
                         ],
                       ),
@@ -514,7 +620,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Play to Earn header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Play to Earn',
                         linkText: 'View All',
@@ -525,19 +632,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Games row
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
                           Expanded(
                             child: _GameCard(
                               imageUrl: AppAssets.tapTapGame,
                               title: 'Tap Tap',
+                              subtitle: 'Tap & earn',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFEAF3FF),
                               onTap: () async {
-                                final earned = await Navigator.of(context).push<int>(
+                                final earned =
+                                    await Navigator.of(context).push<int>(
                                   MaterialPageRoute(
-                                    builder: (context) => const TapTapGameScreen(),
+                                    builder: (context) =>
+                                        const TapTapGameScreen(),
                                   ),
                                 );
                                 if (earned != null && earned > 0) {
@@ -549,24 +660,40 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _GameCard(
                               imageUrl: AppAssets.quizMasterGame,
-                              title: 'Quiz Master',
-                              coins: '+150 RBX',
+                              title: 'Math Quiz',
+                              subtitle: 'Answer & win',
+                              coins: '+200 RBX',
                               bgColor: const Color(0xFFE3F8EB),
                               onTap: () => widget.onNavTap(1),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _GameCard(
-                              imageUrl: AppAssets.memoryMatchGame,
-                              title: 'Memory Match',
-                              coins: '+250 RBX',
-                              bgColor: const Color(0xFFEBE7FF),
-                              onTap: () => widget.onNavTap(1),
+                              imageUrl: AppAssets.flappyJumpGame,
+                              title: 'Flappy Jump',
+                              subtitle: 'Fly & earn',
+                              coins: '+200 RBX',
+                              bgColor: const Color(0xFFFFF3E3),
+                              onTap: () async {
+                                final earned =
+                                    await Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const FlappyJumpGameScreen(),
+                                  ),
+                                );
+                                if (earned != null && earned > 0) {
+                                  setState(() {
+                                    _balance += earned;
+                                  });
+                                  GamePrefs.saveCoins(_balance);
+                                }
+                              },
                             ),
                           ),
                         ],
@@ -576,54 +703,64 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Earn More header
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Earn More',
                         linkText: 'View All',
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => EarnMoreScreen(onNavTap: widget.onNavTap),
+                            builder: (_) =>
+                                EarnMoreScreen(onNavTap: widget.onNavTap),
                           ),
-                        ),
+                        ).then((_) => _loadBalance()),
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
 
                     // Earn More list
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
                       child: IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
                               child: _EarnMoreVerticalCard(
-                                iconUrl: AppAssets.memoryMatchGame,
-                                title: 'Flip Card',
-                                subtitle: 'Flip & match',
-                                badge: 'Up to 300',
-                                onTap: () {},
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _EarnMoreVerticalCard(
-                                iconUrl: AppAssets.quizMasterGame,
-                                title: 'Quizzes',
+                                iconUrl: AppAssets.quizMasterEarnMore,
+                                title: 'Quiz Master',
                                 subtitle: 'Answer & earn',
                                 badge: 'Up to 400',
-                                onTap: () {},
+                                onTap: () async {
+                                  final earned = await Navigator.of(context).push<int>(
+                                    MaterialPageRoute(builder: (_) => const QuizzesScreen()),
+                                  );
+                                  if (earned != null && earned > 0 && context.mounted) {
+                                    _loadBalance();
+                                  }
+                                },
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: _EarnMoreVerticalCard(
                                 iconUrl: AppAssets.tapTapGame,
                                 title: 'Scratch',
                                 subtitle: 'Reveal rewards',
                                 badge: 'Up to 350',
-                                onTap: () {},
+                                onTap: _showScratchDialog,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: _EarnMoreVerticalCard(
+                                iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
+                                title: 'Surveys',
+                                subtitle: 'Answer polls',
+                                badge: 'Up to 250',
+                                onTap: _showSurveyDialog,
                               ),
                             ),
                           ],
@@ -633,9 +770,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Mega Chest Card
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                      child: _MegaChestCard(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _MegaChestCard(
+                        balance: _balance,
+                        isClaimed: _isMegaChestClaimed,
+                        onClaim: _claimMegaChest,
+                      ),
                     ),
                     const SizedBox(height: 120),
                   ],
@@ -768,16 +910,27 @@ class _QuickActionCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Image.network(
-                iconUrl,
-                width: 56,
-                height: 56,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.star,
-                  size: 46,
-                  color: AppColors.primary,
-                ),
-              ),
+              iconUrl.startsWith('http')
+                  ? Image.network(
+                      iconUrl,
+                      width: 56,
+                      height: 56,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.star,
+                        size: 46,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : Image.asset(
+                      iconUrl,
+                      width: 56,
+                      height: 56,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.star,
+                        size: 46,
+                        color: AppColors.primary,
+                      ),
+                    ),
               const SizedBox(height: 8),
               Text(
                 title,
@@ -790,7 +943,8 @@ class _QuickActionCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(10),
@@ -798,7 +952,7 @@ class _QuickActionCard extends StatelessWidget {
                 child: Text(
                   badge,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                     color: AppColors.purple,
                   ),
@@ -811,7 +965,6 @@ class _QuickActionCard extends StatelessWidget {
     );
   }
 }
-
 
 class _EarnMoreVerticalCard extends StatelessWidget {
   final String iconUrl;
@@ -853,21 +1006,32 @@ class _EarnMoreVerticalCard extends StatelessWidget {
             children: [
               // Image container at the top
               Container(
-                height: 76,
+                height: 70,
                 width: double.infinity,
                 color: AppColors.primarySoft,
-                child: Image.network(
-                  iconUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.star,
-                    color: AppColors.primary,
-                    size: 32,
-                  ),
-                ),
+                child: iconUrl.startsWith('http')
+                    ? Image.network(
+                        iconUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.star,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                      )
+                    : Image.asset(
+                        iconUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.star,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                      ),
               ),
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
                 child: Column(
                   children: [
                     // Title
@@ -882,7 +1046,7 @@ class _EarnMoreVerticalCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     // Subtitle
                     Text(
                       subtitle,
@@ -899,35 +1063,34 @@ class _EarnMoreVerticalCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     // Badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Flexible(
-                            child: Text(
-                              badge,
-                              style: const TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.purple,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            badge,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.purple,
                             ),
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
                           ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 4),
                           Image.asset(
                             AppAssets.goldCoin,
-                            width: 10,
-                            height: 10,
+                            width: 20,
+                            height: 20,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.monetization_on,
-                              size: 10,
+                              size: 20,
                               color: Color(0xFFFFCC44),
                             ),
                           ),
@@ -945,14 +1108,25 @@ class _EarnMoreVerticalCard extends StatelessWidget {
   }
 }
 
-
 class _MegaChestCard extends StatelessWidget {
-  const _MegaChestCard();
+  static const int coinGoal = 2000;
+  final int balance;
+  final bool isClaimed;
+  final VoidCallback onClaim;
+
+  const _MegaChestCard({
+    required this.balance,
+    required this.isClaimed,
+    required this.onClaim,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final progress = (balance / coinGoal).clamp(0.0, 1.0);
+    final canClaim = balance >= coinGoal && !isClaimed;
+
     return _InteractiveCard(
-      onTap: () {},
+      onTap: canClaim ? onClaim : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
@@ -974,14 +1148,20 @@ class _MegaChestCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   RichText(
-                    text: const TextSpan(
-                      style: TextStyle(
+                    text: TextSpan(
+                      style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF131326),
                       ),
                       children: [
-                        TextSpan(text: 'Earn more coins to unlock Mega Chest'),
+                        TextSpan(
+                          text: isClaimed
+                              ? 'Mega Chest claimed'
+                              : canClaim
+                                  ? 'Mega Chest unlocked! Tap to claim'
+                                  : 'Earn more coins to unlock Mega Chest',
+                        ),
                       ],
                     ),
                   ),
@@ -992,17 +1172,18 @@ class _MegaChestCard extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
-                            value: 1450 / 2000,
+                            value: progress,
                             minHeight: 8,
                             backgroundColor: AppColors.primarySoft,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.purple),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppColors.purple),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        '1,450 / 2,000',
-                        style: TextStyle(
+                      Text(
+                        '${balance.clamp(0, coinGoal)} / $coinGoal',
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF868A9F),
@@ -1018,7 +1199,8 @@ class _MegaChestCard extends StatelessWidget {
               AppAssets.megaChestIcon,
               width: 60,
               height: 60,
-              errorBuilder: (_, __, ___) => const Icon(Icons.inventory, size: 56, color: AppColors.purple),
+              errorBuilder: (_, __, ___) => const Icon(Icons.inventory,
+                  size: 56, color: AppColors.purple),
             ),
           ],
         ),
@@ -1030,6 +1212,7 @@ class _MegaChestCard extends StatelessWidget {
 class _GameCard extends StatelessWidget {
   final String imageUrl;
   final String title;
+  final String subtitle;
   final String coins;
   final Color bgColor;
   final VoidCallback? onTap;
@@ -1037,6 +1220,7 @@ class _GameCard extends StatelessWidget {
   const _GameCard({
     required this.imageUrl,
     required this.title,
+    required this.subtitle,
     required this.coins,
     required this.bgColor,
     this.onTap,
@@ -1063,49 +1247,94 @@ class _GameCard extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                height: 76, // Matched with _EarnMoreVerticalCard image height
+                height: 70, // Matched with _EarnMoreVerticalCard image height
                 width: double.infinity,
                 color: bgColor,
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.sports_esports,
-                    size: 44,
-                    color: AppColors.primary.withOpacity(0.5),
-                  ),
-                ),
+                child: imageUrl.startsWith('http')
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.sports_esports,
+                          size: 44,
+                          color: AppColors.primary.withOpacity(0.5),
+                        ),
+                      )
+                    : Image.asset(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.sports_esports,
+                          size: 44,
+                          color: AppColors.primary.withOpacity(0.5),
+                        ),
+                      ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16), // Increased padding
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       title,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 15, // Increased from 13
+                        fontSize: 13, // Increased from 13
                         fontWeight: FontWeight.w800, // Bolder
                         color: Color(0xFF131326),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.monetization_on,
-                                  size: 16, color: Color(0xFFFFCC44)), // Increased from 14
-                        const SizedBox(width: 4),
-                        Text(
-                          coins,
-                          style: const TextStyle(
-                            fontSize: 13, // Increased from 11
-                            fontWeight: FontWeight.w700, // Bolder
-                            color: Color(0xFF868A9F),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF868A9F),
+                        fontWeight: FontWeight.w500,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            coins,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.purple,
+                            ),
+                            softWrap: false,
+                            overflow: TextOverflow.visible,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Image.asset(
+                            AppAssets.goldCoin,
+                            width: 20,
+                            height: 20,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.monetization_on,
+                              size: 20,
+                              color: Color(0xFFFFCC44),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

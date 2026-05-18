@@ -25,7 +25,8 @@ class MathQuizScreen extends StatefulWidget {
   State<MathQuizScreen> createState() => _MathQuizScreenState();
 }
 
-class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStateMixin {
+class _MathQuizScreenState extends State<MathQuizScreen>
+    with TickerProviderStateMixin {
   // Game States: 'MENU', 'PLAYING', 'GAMEOVER'
   String _gameState = 'MENU';
 
@@ -217,7 +218,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
-    
+
     // Z = _correctCount * 50 coins (as seen in screenshot: 8/10 Correct = 400 RBX Coins)
     final coins = _correctCount * 50;
 
@@ -251,7 +252,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F7FF),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
@@ -281,94 +282,143 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
       headerText = 'Question $_questionIndex/$_totalQuestions';
     } else if (_gameState == 'GAMEOVER') {
       headerText = 'Quiz Results';
+    } else {
+      headerText = 'Math Quiz';
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              if (_gameState == 'PLAYING') {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    title: const Text('Quit Quiz?', style: TextStyle(fontWeight: FontWeight.w800)),
-                    content: const Text('Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel', style: TextStyle(color: Color(0xFF868A9F))),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: SizedBox(
+        height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () {
+                  if (_gameState == 'PLAYING') {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        surfaceTintColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        title: Text(
+                          'Quit Quiz?',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                            color: const Color(0xFF131326),
+                          ),
+                        ),
+                        content: Text(
+                          'Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: const Color(0xFF4A4B60),
+                            height: 1.4,
+                          ),
+                        ),
+                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                        actions: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _InteractiveCard(
+                                  onTap: () => Navigator.pop(ctx),
+                                  child: Container(
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F1FB),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Cancel',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF868A9F),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _InteractiveCard(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    Navigator.pop(context);
+                                  },
+                                  child: Container(
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFF5252),
+                                          Color(0xFFFF1744)
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFFFF1744)
+                                              .withOpacity(0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Quit',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Quit', style: TextStyle(color: Color(0xFFFF3B30), fontWeight: FontWeight.w700)),
-                      ),
-                    ],
+                    );
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              } else {
-                Navigator.of(context).pop();
-              }
-            },
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.transparent,
-              ),
-              child: const Icon(
-                Icons.arrow_back_ios_new,
-                color: Color(0xFF131326),
-                size: 20,
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: AppColors.purple,
+                    size: 18,
+                  ),
+                ),
               ),
             ),
-          ),
-          if (headerText.isNotEmpty) ...[
-            const Spacer(),
             Text(
               headerText,
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF131326),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF131326),
               ),
             ),
-            const Spacer(),
-            const SizedBox(width: 40), // spacer offset to balance back arrow
-          ] else ...[
-            const Spacer(),
-            // Start screen coin pill
-            Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F1FB),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E2F5)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.currency_bitcoin, color: Color(0xFFFFB000), size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    'RBX: $_userCoins',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF131326),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+
           ],
-        ],
+        ),
       ),
     );
   }
@@ -471,7 +521,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
       key: const ValueKey('PLAYING'),
       children: [
         const SizedBox(height: 10),
-        
+
         // Giant Rounded Purple Question Card
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -504,7 +554,7 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
             ),
           ),
         ),
-        
+
         const SizedBox(height: 25),
 
         // 2x2 Grid of Option Buttons
@@ -662,7 +712,8 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.currency_bitcoin, color: Color(0xFFFFB000), size: 28),
+            const Icon(Icons.currency_bitcoin,
+                color: Color(0xFFFFB000), size: 28),
             const SizedBox(width: 8),
             Text(
               '+$_coinsEarned RBX Coins',
@@ -752,7 +803,8 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
     return AnimatedBuilder(
       animation: _floatController,
       builder: (context, child) {
-        final floatOffset = math.sin(_floatController.value * 2 * math.pi) * 12.0;
+        final floatOffset =
+            math.sin(_floatController.value * 2 * math.pi) * 12.0;
 
         return Stack(
           children: [
@@ -760,37 +812,43 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
             Positioned(
               top: 80 + floatOffset,
               left: 30,
-              child: _buildDecorativeSymbol('÷', 48, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '÷', 48, const Color(0xFF6338F9).withOpacity(0.7)),
             ),
             // Top Center Equal Floater
             Positioned(
               top: 40 - floatOffset,
               right: 140,
-              child: _buildDecorativeSymbol('=', 40, const Color(0xFF8B64FF).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '=', 40, const Color(0xFF8B64FF).withOpacity(0.7)),
             ),
             // Top Right Plus Floater
             Positioned(
               top: 100 + floatOffset,
               right: 40,
-              child: _buildDecorativeSymbol('+', 44, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '+', 44, const Color(0xFF6338F9).withOpacity(0.7)),
             ),
             // Bottom Left Plus Floater
             Positioned(
               bottom: 120 + floatOffset,
               left: 45,
-              child: _buildDecorativeSymbol('÷', 46, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '÷', 46, const Color(0xFF6338F9).withOpacity(0.7)),
             ),
             // Bottom Center Minus Floater
             Positioned(
               bottom: 80 - floatOffset,
               right: 120,
-              child: _buildDecorativeSymbol('=', 38, const Color(0xFF8B64FF).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '=', 38, const Color(0xFF8B64FF).withOpacity(0.7)),
             ),
             // Bottom Right Multiply Floater
             Positioned(
               bottom: 140 + floatOffset,
               right: 50,
-              child: _buildDecorativeSymbol('×', 42, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol(
+                  '×', 42, const Color(0xFF6338F9).withOpacity(0.7)),
             ),
 
             // Drifting Gold Coins (drifting absolute positioned images)
@@ -841,6 +899,37 @@ class _MathQuizScreenState extends State<MathQuizScreen> with TickerProviderStat
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _InteractiveCard({required this.child, this.onTap});
+
+  @override
+  State<_InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<_InteractiveCard> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.97),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        if (widget.onTap != null) widget.onTap!();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: widget.child,
       ),
     );
   }

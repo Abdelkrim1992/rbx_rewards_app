@@ -12,9 +12,11 @@ dependencies:
   flutter:
     sdk: flutter
   cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.10+1
   google_fonts: ^6.2.1
   flame: ^1.37.0
   shared_preferences: ^2.5.5
+  scratcher: ^2.5.0
 
 dev_dependencies:
   flutter_test:
@@ -24,4 +26,15 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/icons/
     - assets/images/
+    - assets/images/onboarding_screen_main_image.png
+    - assets/images/first_feature_card.jpeg
+    - assets/images/second_feature_card.jpeg
+    - assets/images/thirty_feature_card.jpeg
+    - assets/images/mega_chest.png
+    - assets/images/robux_coins.png
+    - assets/images/tap_tap_mini_game.jpeg
+    - assets/images/math_quiz_mini_game.jpeg
+    - assets/images/flip_cards_mii_game.PNG
+    - assets/images/flappy_mini_game.jpeg

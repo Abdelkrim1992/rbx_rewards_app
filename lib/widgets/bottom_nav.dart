@@ -61,7 +61,8 @@ class RbxBottomNav extends StatelessWidget {
                       errorBuilder: (_, __, ___) => Icon(
                         _fallbackIcon(i),
                         size: 22,
-                        color: isActive ? AppColors.purple : AppColors.mutedText,
+                        color:
+                            isActive ? AppColors.purple : AppColors.mutedText,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -69,7 +70,8 @@ class RbxBottomNav extends StatelessWidget {
                       items[i].label,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isActive ? AppColors.purple : AppColors.mutedText,
+                        color:
+                            isActive ? AppColors.purple : AppColors.mutedText,
                         letterSpacing: 0.275,
                       ),
                     ),
@@ -85,11 +87,16 @@ class RbxBottomNav extends StatelessWidget {
 
   IconData _fallbackIcon(int index) {
     switch (index) {
-      case 0: return Icons.home_outlined;
-      case 1: return Icons.sports_esports_outlined;
-      case 2: return Icons.card_giftcard_outlined;
-      case 3: return Icons.person_outline;
-      default: return Icons.circle;
+      case 0:
+        return Icons.home_outlined;
+      case 1:
+        return Icons.sports_esports_outlined;
+      case 2:
+        return Icons.card_giftcard_outlined;
+      case 3:
+        return Icons.person_outline;
+      default:
+        return Icons.circle;
     }
   }
 }

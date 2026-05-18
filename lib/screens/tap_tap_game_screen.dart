@@ -142,7 +142,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       _lastTickTime = elapsed;
       return;
     }
-    final double dt = (elapsed.inMilliseconds - _lastTickTime.inMilliseconds) / 1000.0;
+    final double dt =
+        (elapsed.inMilliseconds - _lastTickTime.inMilliseconds) / 1000.0;
     _lastTickTime = elapsed;
 
     setState(() {
@@ -197,7 +198,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
         bool allArrived = true;
         for (int i = _flyingCoins.length - 1; i >= 0; i--) {
           final coin = _flyingCoins[i];
-          
+
           if (coin.delay > 0) {
             coin.delay -= dt;
             allArrived = false;
@@ -214,7 +215,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
         if (allArrived && _flyingCoins.isNotEmpty) {
           _isClaiming = false;
           _ticker?.stop();
-          
+
           // Save coins to prefs!
           GamePrefs.getCoins().then((currentCoins) async {
             await GamePrefs.saveCoins(currentCoins + _coinsEarned);
@@ -276,7 +277,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     // Calculate displacement from screen center to tilt the target in 3D
     final dx = localPos.dx - box.size.width / 2;
     final dy = localPos.dy - box.size.height / 2;
-    
+
     setState(() {
       _tiltX = -(dy / (box.size.height / 2)).clamp(-1.0, 1.0) * 0.35;
       _tiltY = (dx / (box.size.width / 2)).clamp(-1.0, 1.0) * 0.35;
@@ -395,11 +396,13 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     });
 
     // Create 15 flying coins
-    final Offset target = const Offset(200, 40); // Top-right app header general direction
+    final Offset target =
+        const Offset(200, 40); // Top-right app header general direction
     for (int i = 0; i < 15; i++) {
-      final double controlX = startCenter.dx + (_random.nextDouble() - 0.5) * 300;
+      final double controlX =
+          startCenter.dx + (_random.nextDouble() - 0.5) * 300;
       final double controlY = startCenter.dy - _random.nextDouble() * 250;
-      
+
       _flyingCoins.add(
         _FlyingCoin(
           start: startCenter,
@@ -478,93 +481,102 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
               ),
             );
           }),
-          
+
           SafeArea(
             child: Column(
               children: [
                 // Top Header Nav Bar with integrated reactive Timer subtitle
+                // Top Header Nav Bar with integrated reactive Timer subtitle
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFEBE7FF)),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: AppColors.purple,
-                            size: 18,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: SizedBox(
+                    height: 44,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: GestureDetector(
+                            onTap: () => Navigator.of(context).pop(),
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new,
+                                color: AppColors.purple,
+                                size: 18,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Tap Tap',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF131326),
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          // Beautiful reactive subtitle that displays the live timer countdown!
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 150),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: _hasStarted && !_isGameOver
-                                  ? (_timeLeftSeconds <= 4 ? Colors.red : AppColors.purple)
-                                  : AppColors.purple,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Inter',
-                            ),
-                            child: Text(
-                              _hasStarted
-                                  ? (_isGameOver 
-                                      ? 'Game Over!' 
-                                      : 'Time: 00:${_timeLeftSeconds.toString().padLeft(2, '0')}')
-                                  : '3D Action Mode',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      
-                      // Live Score Container matching the mockup pill perfectly
-                      Container(
-                        height: 44,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFEBE7FF)),
-                        ),
-                        child: Row(
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.bolt, color: AppColors.purple, size: 20),
-                            const SizedBox(width: 6),
-                            Text(
-                              '$_score',
-                              style: const TextStyle(
+                            const Text(
+                              'Tap Tap',
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF131326),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            // Beautiful reactive subtitle that displays the live timer countdown!
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 150),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _hasStarted && !_isGameOver
+                                    ? (_timeLeftSeconds <= 4
+                                        ? Colors.red
+                                        : AppColors.purple)
+                                    : AppColors.purple,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Inter',
+                              ),
+                              child: Text(
+                                _hasStarted
+                                    ? (_isGameOver
+                                        ? 'Game Over!'
+                                        : 'Time: 00:${_timeLeftSeconds.toString().padLeft(2, '0')}')
+                                    : '3D Action Mode',
                               ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySoft,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.bolt,
+                                    color: AppColors.purple, size: 20),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$_score',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF131326),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -572,8 +584,9 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                   child: Transform.translate(
                     offset: Offset(dx, dy),
                     child: Center(
-                      child: _hasStarted 
-                          ? _buildGameplay(auraColor, crystalCoreColor, crystalState)
+                      child: _hasStarted
+                          ? _buildGameplay(
+                              auraColor, crystalCoreColor, crystalState)
                           : _buildInstructions(),
                     ),
                   ),
@@ -600,14 +613,14 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
             ),
 
           // End Game 3D Dialog Overlay
-          if (_isGameOver)
-            _buildEndGameDialog(),
+          if (_isGameOver) _buildEndGameDialog(),
         ],
       ),
     );
   }
 
-  Widget _buildGameplay(Color auraColor, Color crystalCoreColor, String crystalState) {
+  Widget _buildGameplay(
+      Color auraColor, Color crystalCoreColor, String crystalState) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -617,7 +630,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           decoration: BoxDecoration(
             color: crystalCoreColor.withOpacity(0.12),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: crystalCoreColor.withOpacity(0.3), width: 1.5),
+            border: Border.all(
+                color: crystalCoreColor.withOpacity(0.3), width: 1.5),
           ),
           child: Text(
             crystalState,
@@ -629,7 +643,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
             ),
           ),
         ),
-        
+
         const SizedBox(height: 35),
 
         // The Concentric Tapping Target inspired by mockup
@@ -798,7 +812,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              color: _timeLeftSeconds <= 4 ? Colors.red : const Color(0xFF868A9F),
+              color:
+                  _timeLeftSeconds <= 4 ? Colors.red : const Color(0xFF868A9F),
               letterSpacing: 1.0,
             ),
           ),
@@ -970,14 +985,15 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Score breakdown table
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         'Total Taps',
-                        style: TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
+                        style:
+                            TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
                       ),
                       Text(
                         '$_score',
@@ -995,7 +1011,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     children: [
                       const Text(
                         'Max Combo',
-                        style: TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
+                        style:
+                            TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
                       ),
                       Text(
                         '$_maxCombo x',
@@ -1008,7 +1025,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     ],
                   ),
                   const Divider(height: 24, color: Color(0xFFEEEEEF)),
-                  
+
                   // Big Reward display
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1036,48 +1053,51 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
-                  // Action buttons
-                  Builder(
-                    builder: (btnContext) {
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (_isClaiming) return;
-                            
-                            // Find absolute coordinate of button to launch coins from
-                            final RenderBox box = btnContext.findRenderObject() as RenderBox;
-                            final Offset localCenter = Offset(box.size.width / 2, box.size.height / 2);
-                            final Offset globalCenter = box.localToGlobal(localCenter);
-                            
-                            // Get coordinates relative to base stack context
-                            final RenderBox screenBox = context.findRenderObject() as RenderBox;
-                            final Offset overlayCenter = screenBox.globalToLocal(globalCenter);
 
-                            _triggerClaimCoins(overlayCenter);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            _isClaiming ? 'Claiming...' : 'Claim & Exit',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
+                  // Action buttons
+                  Builder(builder: (btnContext) {
+                    return SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (_isClaiming) return;
+
+                          // Find absolute coordinate of button to launch coins from
+                          final RenderBox box =
+                              btnContext.findRenderObject() as RenderBox;
+                          final Offset localCenter =
+                              Offset(box.size.width / 2, box.size.height / 2);
+                          final Offset globalCenter =
+                              box.localToGlobal(localCenter);
+
+                          // Get coordinates relative to base stack context
+                          final RenderBox screenBox =
+                              context.findRenderObject() as RenderBox;
+                          final Offset overlayCenter =
+                              screenBox.globalToLocal(globalCenter);
+
+                          _triggerClaimCoins(overlayCenter);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                      );
-                    }
-                  ),
-                  
+                        child: Text(
+                          _isClaiming ? 'Claiming...' : 'Claim & Exit',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+
                   const SizedBox(height: 10),
                   SizedBox(
                     width: double.infinity,
@@ -1194,13 +1214,13 @@ class _CrystalPainter extends CustomPainter {
     // Define vertices of 3D hexagonal double pyramid crystal
     final pTop = Offset(cx, 10);
     final pBottom = Offset(cx, size.height - 10);
-    
+
     final pLeftMid = Offset(10, cy);
     final pRightMid = Offset(size.width - 10, cy);
 
     final pInnerLeft = Offset(cx - 30, cy - 20);
     final pInnerRight = Offset(cx + 30, cy - 20);
-    
+
     final pInnerLeftLow = Offset(cx - 30, cy + 20);
     final pInnerRightLow = Offset(cx + 30, cy + 20);
 
@@ -1233,12 +1253,14 @@ class _CrystalPainter extends CustomPainter {
 
     // Top half facets (left to right)
     drawFacet([pTop, pLeftMid, pInnerLeft], darkShadow);
-    drawFacet([pTop, pInnerLeft, pInnerRight], specularGlow); // Specular reflection facet
+    drawFacet([pTop, pInnerLeft, pInnerRight],
+        specularGlow); // Specular reflection facet
     drawFacet([pTop, pInnerRight, pRightMid], topLight);
 
     // Mid section connector facets
     drawFacet([pLeftMid, pInnerLeftLow, pInnerLeft], midColor);
-    drawFacet([pInnerLeft, pInnerLeftLow, pInnerRightLow, pInnerRight], crystalBody);
+    drawFacet(
+        [pInnerLeft, pInnerLeftLow, pInnerRightLow, pInnerRight], crystalBody);
     drawFacet([pInnerRight, pInnerRightLow, pRightMid], topLight);
 
     // Bottom half facets (left to right)
@@ -1425,8 +1447,8 @@ class _CoinFlyPainter extends CustomPainter {
       // Don't draw if not started yet
       if (coin.progress <= 0.0) continue;
       final double progress = coin.progress;
-      final double scale = progress < 0.2 
-          ? (progress / 0.2) 
+      final double scale = progress < 0.2
+          ? (progress / 0.2)
           : (progress > 0.8 ? (1.0 - progress) / 0.2 : 1.0);
 
       final Offset pos = coin.position;
@@ -1486,37 +1508,49 @@ class _HandTapPainter extends CustomPainter {
     path.moveTo(size.width * 0.45, size.height * 0.9);
     // Left edge of hand
     path.quadraticBezierTo(
-      size.width * 0.25, size.height * 0.75,
-      size.width * 0.35, size.height * 0.6,
+      size.width * 0.25,
+      size.height * 0.75,
+      size.width * 0.35,
+      size.height * 0.6,
     );
     // Index finger going straight up
     path.lineTo(size.width * 0.35, size.height * 0.25);
     path.quadraticBezierTo(
-      size.width * 0.4, size.height * 0.15,
-      size.width * 0.45, size.height * 0.25,
+      size.width * 0.4,
+      size.height * 0.15,
+      size.width * 0.45,
+      size.height * 0.25,
     );
     path.lineTo(size.width * 0.45, size.height * 0.45);
-    
+
     // Middle finger
     path.quadraticBezierTo(
-      size.width * 0.55, size.height * 0.4,
-      size.width * 0.55, size.height * 0.48,
+      size.width * 0.55,
+      size.height * 0.4,
+      size.width * 0.55,
+      size.height * 0.48,
     );
     // Ring finger
     path.quadraticBezierTo(
-      size.width * 0.65, size.height * 0.43,
-      size.width * 0.65, size.height * 0.51,
+      size.width * 0.65,
+      size.height * 0.43,
+      size.width * 0.65,
+      size.height * 0.51,
     );
     // Pinky finger
     path.quadraticBezierTo(
-      size.width * 0.75, size.height * 0.48,
-      size.width * 0.75, size.height * 0.58,
+      size.width * 0.75,
+      size.height * 0.48,
+      size.width * 0.75,
+      size.height * 0.58,
     );
-    
+
     // Bottom right wrist curving back to start
     path.quadraticBezierTo(
-      size.width * 0.75, size.height * 0.85,
-      size.width * 0.45, size.height * 0.9,
+      size.width * 0.75,
+      size.height * 0.85,
+      size.width * 0.45,
+      size.height * 0.9,
     );
 
     // Draw shadow
@@ -1531,7 +1565,7 @@ class _HandTapPainter extends CustomPainter {
     canvas.drawPath(path, paint);
     // Draw hand outline
     canvas.drawPath(path, strokePaint);
-    
+
     // Draw crease lines inside the hand for realism
     canvas.drawLine(
       Offset(size.width * 0.45, size.height * 0.55),
@@ -1562,7 +1596,7 @@ class _BgElement {
   double rotation;
   double vRotation;
   final bool isStar; // true for star, false for hollow circle
-  
+
   _BgElement({
     required this.x,
     required this.y,
