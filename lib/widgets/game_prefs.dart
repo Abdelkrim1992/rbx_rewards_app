@@ -6,11 +6,11 @@ class GamePrefs {
   static const String _keyFlappyTotalPlayed = 'flappy_jump_total_played';
   static const String _keyTapTapHighScore = 'tap_tap_high_score';
   static const String _keyMegaChestClaimed = 'mega_chest_claimed';
+  static const String _keyOnboardingCompleted = 'onboarding_completed';
 
-  // Load coins balance. Defaults to 525 (the initial app balance).
   static Future<int> getCoins() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyCoins) ?? 525;
+    return prefs.getInt(_keyCoins) ?? 0;
   }
 
   // Save coins balance
@@ -21,7 +21,7 @@ class GamePrefs {
 
   static Future<int> addCoins(int value) async {
     final prefs = await SharedPreferences.getInstance();
-    final total = (prefs.getInt(_keyCoins) ?? 525) + value;
+    final total = (prefs.getInt(_keyCoins) ?? 0) + value;
     await prefs.setInt(_keyCoins, total);
     return total;
   }
@@ -35,6 +35,16 @@ class GamePrefs {
   static Future<void> setMegaChestClaimed(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyMegaChestClaimed, value);
+  }
+
+  static Future<bool> isOnboardingCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyOnboardingCompleted) ?? false;
+  }
+
+  static Future<void> setOnboardingCompleted(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyOnboardingCompleted, value);
   }
 
   // Load Flappy Jump high score
@@ -134,7 +144,7 @@ class GamePrefs {
     final prefs = await SharedPreferences.getInstance();
     final unlockTimeString = prefs.getString(_keyChestUnlockTime);
     if (unlockTimeString == null) return 0;
-    
+
     final unlockTime = DateTime.parse(unlockTimeString);
     final now = DateTime.now();
     if (unlockTime.isBefore(now)) {

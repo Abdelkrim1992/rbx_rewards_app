@@ -1,8 +1,9 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/game_prefs.dart';
 
 class TapTapGameScreen extends StatefulWidget {
   const TapTapGameScreen({super.key});
@@ -216,9 +217,10 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           _isClaiming = false;
           _ticker?.stop();
 
-          // Save coins to prefs!
-          GamePrefs.getCoins().then((currentCoins) async {
-            await GamePrefs.saveCoins(currentCoins + _coinsEarned);
+          // Save coins via state management
+          final appState = context.read<AppState>();
+          appState.addCoins(_coinsEarned).then((_) async {
+            await appState.incrementGamesPlayed();
             if (mounted) {
               Navigator.of(context).pop(_coinsEarned); // Return earned coins
             }
@@ -837,7 +839,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
             ),
             child: Column(
               children: [
-                Image.network(
+                Image.asset(
                   AppAssets.tapTapGame,
                   width: 110,
                   height: 110,

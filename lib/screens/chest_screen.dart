@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chest_painter.dart';
 import '../widgets/coin_burst.dart';
@@ -142,7 +144,6 @@ class _ChestScreenState extends State<ChestScreen>
                         color: Color(0xFF131326),
                       ),
                     ),
-
                   ],
                 ),
               ),
@@ -237,9 +238,11 @@ class _ChestScreenState extends State<ChestScreen>
                         children: [
                           _buildTimeUnit(h.toString().padLeft(2, '0'), 'Hours'),
                           const _TimeSeparator(),
-                          _buildTimeUnit(m.toString().padLeft(2, '0'), 'Minutes'),
+                          _buildTimeUnit(
+                              m.toString().padLeft(2, '0'), 'Minutes'),
                           const _TimeSeparator(),
-                          _buildTimeUnit(s.toString().padLeft(2, '0'), 'Seconds'),
+                          _buildTimeUnit(
+                              s.toString().padLeft(2, '0'), 'Seconds'),
                         ],
                       ),
                     ],
@@ -382,8 +385,7 @@ class _SecondaryButton extends StatefulWidget {
   final String text;
   final IconData icon;
   final VoidCallback? onTap;
-  const _SecondaryButton(
-      {required this.text, required this.icon, this.onTap});
+  const _SecondaryButton({required this.text, required this.icon, this.onTap});
   @override
   State<_SecondaryButton> createState() => _SecondaryButtonState();
 }
@@ -424,7 +426,8 @@ class _SecondaryButtonState extends State<_SecondaryButton> {
               Text(
                 widget.text,
                 style: TextStyle(
-                  color: isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
+                  color:
+                      isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -642,7 +645,12 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
                                         setState(() {
                                           _isClaiming = true;
                                         });
-                                        await GamePrefs.addCoins(_earnedCoins);
+                                        await context
+                                            .read<AppState>()
+                                            .addCoins(_earnedCoins);
+                                        await context
+                                            .read<AppState>()
+                                            .incrementGamesPlayed();
                                         if (!context.mounted) return;
                                         Navigator.of(context).pop(_earnedCoins);
                                       },

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
 
@@ -232,9 +234,8 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   }
 
   void _claimQuizCoins() async {
-    final currentCoins = await GamePrefs.getCoins();
-    final totalNew = currentCoins + _coinsEarned;
-    await GamePrefs.saveCoins(totalNew);
+    await context.read<AppState>().addCoins(_coinsEarned);
+    await context.read<AppState>().incrementGamesPlayed();
 
     if (mounted) {
       Navigator.of(context).pop(_coinsEarned);
@@ -321,7 +322,8 @@ class _MathQuizScreenState extends State<MathQuizScreen>
                             height: 1.4,
                           ),
                         ),
-                        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                        actionsPadding:
+                            const EdgeInsets.fromLTRB(16, 0, 16, 20),
                         actions: [
                           Row(
                             children: [
@@ -416,7 +418,6 @@ class _MathQuizScreenState extends State<MathQuizScreen>
                 color: Color(0xFF131326),
               ),
             ),
-
           ],
         ),
       ),

@@ -3,8 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/game_prefs.dart';
 
 class QuizQuestion {
   final String text;
@@ -88,16 +89,46 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         icon: '🔬',
         bgColor: const Color(0xFF2ECC71),
         questions: [
-          QuizQuestion(text: 'What planet is known as the Red Planet?', correctAnswer: 'Mars', options: ['Venus', 'Mars', 'Jupiter', 'Saturn']),
-          QuizQuestion(text: 'What gas do plants absorb from the air?', correctAnswer: 'CO₂', options: ['Oxygen', 'Nitrogen', 'CO₂', 'Helium']),
-          QuizQuestion(text: 'What is the hardest natural substance?', correctAnswer: 'Diamond', options: ['Gold', 'Iron', 'Diamond', 'Quartz']),
-          QuizQuestion(text: 'What is the boiling point of water in °C?', correctAnswer: '100', options: ['90', '100', '110', '120']),
-          QuizQuestion(text: 'Which planet is closest to the Sun?', correctAnswer: 'Mercury', options: ['Venus', 'Mercury', 'Earth', 'Mars']),
-          QuizQuestion(text: 'What is the chemical symbol for gold?', correctAnswer: 'Au', options: ['Ag', 'Au', 'Fe', 'Cu']),
-          QuizQuestion(text: 'What is the speed of light (km/s)?', correctAnswer: '300,000', options: ['150,000', '300,000', '450,000', '600,000']),
-          QuizQuestion(text: 'Which element has symbol "O"?', correctAnswer: 'Oxygen', options: ['Gold', 'Osmium', 'Oxygen', 'Oganesson']),
-          QuizQuestion(text: 'What is the largest planet in our solar system?', correctAnswer: 'Jupiter', options: ['Saturn', 'Jupiter', 'Neptune', 'Uranus']),
-          QuizQuestion(text: 'Which vitamin does the Sun give us?', correctAnswer: 'Vitamin D', options: ['Vitamin A', 'Vitamin B', 'Vitamin C', 'Vitamin D']),
+          QuizQuestion(
+              text: 'What planet is known as the Red Planet?',
+              correctAnswer: 'Mars',
+              options: ['Venus', 'Mars', 'Jupiter', 'Saturn']),
+          QuizQuestion(
+              text: 'What gas do plants absorb from the air?',
+              correctAnswer: 'CO₂',
+              options: ['Oxygen', 'Nitrogen', 'CO₂', 'Helium']),
+          QuizQuestion(
+              text: 'What is the hardest natural substance?',
+              correctAnswer: 'Diamond',
+              options: ['Gold', 'Iron', 'Diamond', 'Quartz']),
+          QuizQuestion(
+              text: 'What is the boiling point of water in °C?',
+              correctAnswer: '100',
+              options: ['90', '100', '110', '120']),
+          QuizQuestion(
+              text: 'Which planet is closest to the Sun?',
+              correctAnswer: 'Mercury',
+              options: ['Venus', 'Mercury', 'Earth', 'Mars']),
+          QuizQuestion(
+              text: 'What is the chemical symbol for gold?',
+              correctAnswer: 'Au',
+              options: ['Ag', 'Au', 'Fe', 'Cu']),
+          QuizQuestion(
+              text: 'What is the speed of light (km/s)?',
+              correctAnswer: '300,000',
+              options: ['150,000', '300,000', '450,000', '600,000']),
+          QuizQuestion(
+              text: 'Which element has symbol "O"?',
+              correctAnswer: 'Oxygen',
+              options: ['Gold', 'Osmium', 'Oxygen', 'Oganesson']),
+          QuizQuestion(
+              text: 'What is the largest planet in our solar system?',
+              correctAnswer: 'Jupiter',
+              options: ['Saturn', 'Jupiter', 'Neptune', 'Uranus']),
+          QuizQuestion(
+              text: 'Which vitamin does the Sun give us?',
+              correctAnswer: 'Vitamin D',
+              options: ['Vitamin A', 'Vitamin B', 'Vitamin C', 'Vitamin D']),
         ],
       ),
       QuizCategory(
@@ -107,14 +138,38 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         icon: '🌍',
         bgColor: const Color(0xFF3498DB),
         questions: [
-          QuizQuestion(text: 'How many continents are there on Earth?', correctAnswer: '7', options: ['5', '6', '7', '8']),
-          QuizQuestion(text: 'What is the largest ocean on Earth?', correctAnswer: 'Pacific', options: ['Atlantic', 'Indian', 'Pacific', 'Arctic']),
-          QuizQuestion(text: 'Which country has the most people?', correctAnswer: 'India', options: ['USA', 'China', 'India', 'Brazil']),
-          QuizQuestion(text: 'What is the capital of Japan?', correctAnswer: 'Tokyo', options: ['Osaka', 'Tokyo', 'Kyoto', 'Nagoya']),
-          QuizQuestion(text: 'What year did World War II end?', correctAnswer: '1945', options: ['1942', '1944', '1945', '1946']),
-          QuizQuestion(text: 'Which language has the most speakers?', correctAnswer: 'English', options: ['Spanish', 'English', 'Mandarin', 'Hindi']),
-          QuizQuestion(text: 'What is the tallest mountain in the world?', correctAnswer: 'Mount Everest', options: ['K2', 'Mount Everest', 'Kilimanjaro', 'Denali']),
-          QuizQuestion(text: 'Which river is the longest in the world?', correctAnswer: 'Nile', options: ['Amazon', 'Nile', 'Yangtze', 'Mississippi']),
+          QuizQuestion(
+              text: 'How many continents are there on Earth?',
+              correctAnswer: '7',
+              options: ['5', '6', '7', '8']),
+          QuizQuestion(
+              text: 'What is the largest ocean on Earth?',
+              correctAnswer: 'Pacific',
+              options: ['Atlantic', 'Indian', 'Pacific', 'Arctic']),
+          QuizQuestion(
+              text: 'Which country has the most people?',
+              correctAnswer: 'India',
+              options: ['USA', 'China', 'India', 'Brazil']),
+          QuizQuestion(
+              text: 'What is the capital of Japan?',
+              correctAnswer: 'Tokyo',
+              options: ['Osaka', 'Tokyo', 'Kyoto', 'Nagoya']),
+          QuizQuestion(
+              text: 'What year did World War II end?',
+              correctAnswer: '1945',
+              options: ['1942', '1944', '1945', '1946']),
+          QuizQuestion(
+              text: 'Which language has the most speakers?',
+              correctAnswer: 'English',
+              options: ['Spanish', 'English', 'Mandarin', 'Hindi']),
+          QuizQuestion(
+              text: 'What is the tallest mountain in the world?',
+              correctAnswer: 'Mount Everest',
+              options: ['K2', 'Mount Everest', 'Kilimanjaro', 'Denali']),
+          QuizQuestion(
+              text: 'Which river is the longest in the world?',
+              correctAnswer: 'Nile',
+              options: ['Amazon', 'Nile', 'Yangtze', 'Mississippi']),
         ],
       ),
       QuizCategory(
@@ -124,13 +179,34 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         icon: '🦁',
         bgColor: const Color(0xFFE67E22),
         questions: [
-          QuizQuestion(text: 'Which animal is the tallest in the world?', correctAnswer: 'Giraffe', options: ['Elephant', 'Giraffe', 'Horse', 'Camel']),
-          QuizQuestion(text: 'How many legs does a spider have?', correctAnswer: '8', options: ['6', '8', '10', '12']),
-          QuizQuestion(text: 'How many bones are in the human body?', correctAnswer: '206', options: ['196', '206', '216', '226']),
-          QuizQuestion(text: 'What is the largest land animal?', correctAnswer: 'Elephant', options: ['Rhino', 'Hippo', 'Elephant', 'Bear']),
-          QuizQuestion(text: 'Which organ pumps blood in the body?', correctAnswer: 'Heart', options: ['Brain', 'Lungs', 'Heart', 'Liver']),
-          QuizQuestion(text: 'What do pandas primarily eat?', correctAnswer: 'Bamboo', options: ['Fish', 'Bamboo', 'Insects', 'Fruits']),
-          QuizQuestion(text: 'Which bird can fly backwards?', correctAnswer: 'Hummingbird', options: ['Eagle', 'Pigeon', 'Hummingbird', 'Woodpecker']),
+          QuizQuestion(
+              text: 'Which animal is the tallest in the world?',
+              correctAnswer: 'Giraffe',
+              options: ['Elephant', 'Giraffe', 'Horse', 'Camel']),
+          QuizQuestion(
+              text: 'How many legs does a spider have?',
+              correctAnswer: '8',
+              options: ['6', '8', '10', '12']),
+          QuizQuestion(
+              text: 'How many bones are in the human body?',
+              correctAnswer: '206',
+              options: ['196', '206', '216', '226']),
+          QuizQuestion(
+              text: 'What is the largest land animal?',
+              correctAnswer: 'Elephant',
+              options: ['Rhino', 'Hippo', 'Elephant', 'Bear']),
+          QuizQuestion(
+              text: 'Which organ pumps blood in the body?',
+              correctAnswer: 'Heart',
+              options: ['Brain', 'Lungs', 'Heart', 'Liver']),
+          QuizQuestion(
+              text: 'What do pandas primarily eat?',
+              correctAnswer: 'Bamboo',
+              options: ['Fish', 'Bamboo', 'Insects', 'Fruits']),
+          QuizQuestion(
+              text: 'Which bird can fly backwards?',
+              correctAnswer: 'Hummingbird',
+              options: ['Eagle', 'Pigeon', 'Hummingbird', 'Woodpecker']),
         ],
       ),
       QuizCategory(
@@ -140,12 +216,30 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         icon: '🧠',
         bgColor: const Color(0xFF9B5CFF),
         questions: [
-          QuizQuestion(text: 'What is the smallest prime number?', correctAnswer: '2', options: ['0', '1', '2', '3']),
-          QuizQuestion(text: 'How many colors are in a rainbow?', correctAnswer: '7', options: ['5', '6', '7', '8']),
-          QuizQuestion(text: 'How many hours are in a day?', correctAnswer: '24', options: ['12', '24', '36', '48']),
-          QuizQuestion(text: 'How many sides does a hexagon have?', correctAnswer: '6', options: ['5', '6', '7', '8']),
-          QuizQuestion(text: 'What is the square root of 144?', correctAnswer: '12', options: ['10', '12', '14', '16']),
-          QuizQuestion(text: 'What is 15% of 200?', correctAnswer: '30', options: ['15', '20', '30', '45']),
+          QuizQuestion(
+              text: 'What is the smallest prime number?',
+              correctAnswer: '2',
+              options: ['0', '1', '2', '3']),
+          QuizQuestion(
+              text: 'How many colors are in a rainbow?',
+              correctAnswer: '7',
+              options: ['5', '6', '7', '8']),
+          QuizQuestion(
+              text: 'How many hours are in a day?',
+              correctAnswer: '24',
+              options: ['12', '24', '36', '48']),
+          QuizQuestion(
+              text: 'How many sides does a hexagon have?',
+              correctAnswer: '6',
+              options: ['5', '6', '7', '8']),
+          QuizQuestion(
+              text: 'What is the square root of 144?',
+              correctAnswer: '12',
+              options: ['10', '12', '14', '16']),
+          QuizQuestion(
+              text: 'What is 15% of 200?',
+              correctAnswer: '30',
+              options: ['15', '20', '30', '45']),
         ],
       ),
     ];
@@ -160,7 +254,8 @@ class _QuizzesScreenState extends State<QuizzesScreen>
 
   void _startQuizRound(QuizCategory category) {
     _activeCategory = category;
-    final shuffled = List<QuizQuestion>.from(category.questions)..shuffle(_random);
+    final shuffled = List<QuizQuestion>.from(category.questions)
+      ..shuffle(_random);
     final count = math.min(_totalQuestions, shuffled.length);
     _sessionQuestions = shuffled.take(count).toList();
 
@@ -251,8 +346,8 @@ class _QuizzesScreenState extends State<QuizzesScreen>
   }
 
   void _claimQuizCoins() async {
-    final currentCoins = await GamePrefs.getCoins();
-    await GamePrefs.saveCoins(currentCoins + _coinsEarned);
+    await context.read<AppState>().addCoins(_coinsEarned);
+    await context.read<AppState>().incrementGamesPlayed();
     if (mounted) {
       Navigator.of(context).pop(_coinsEarned);
     }
@@ -461,7 +556,8 @@ class _QuizzesScreenState extends State<QuizzesScreen>
       children: [
         const SizedBox(height: 24),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -479,7 +575,8 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         const SizedBox(height: 16),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(AppLayout.screenPadding, 0, AppLayout.screenPadding, 40),
+            padding: const EdgeInsets.fromLTRB(
+                AppLayout.screenPadding, 0, AppLayout.screenPadding, 40),
             itemCount: _categories.length,
             separatorBuilder: (_, __) => const SizedBox(height: 14),
             itemBuilder: (ctx, i) {
@@ -740,10 +837,11 @@ class _QuizzesScreenState extends State<QuizzesScreen>
               ),
               const SizedBox(height: 14),
               GestureDetector(
-                onTap: () {
+                onTap: () async {
                   if (_coinsEarned > 0) {
-                     GamePrefs.addCoins(_coinsEarned);
+                    await context.read<AppState>().addCoins(_coinsEarned);
                   }
+                  await context.read<AppState>().incrementGamesPlayed();
                   _backToMenu();
                 },
                 child: Container(

@@ -1,8 +1,9 @@
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/game_prefs.dart';
 
 class SpinScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -19,12 +20,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   late Animation<double> _animation;
   late Animation<double> _pulseAnimation;
   bool _isSpinning = false;
-  int _freeSpins = 1;
-  int _balance = 525;
   double _adButtonScale = 1.0;
-  
-  Timer? _timer;
-  int _secondsRemaining = 0;
 
   final List<_WheelSegment> segments = const [
     _WheelSegment(label: '100', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
@@ -54,55 +50,29 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     );
 
     _animation = AlwaysStoppedAnimation(0.0);
-    _loadBalance();
-  }
-
-  Future<void> _loadBalance() async {
-    final coins = await GamePrefs.getCoins();
-    if (!mounted) return;
-    setState(() {
-      _balance = coins;
-    });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _controller.dispose();
     _pulseController.dispose();
     super.dispose();
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    setState(() {
-      _secondsRemaining = 86400; // 24 hours
-    });
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_secondsRemaining > 0) {
-        setState(() => _secondsRemaining--);
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  String _formatTime(int seconds) {
-    int h = seconds ~/ 3600;
-    int m = (seconds % 3600) ~/ 60;
-    int s = seconds % 60;
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final h = totalSeconds ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    final s = totalSeconds % 60;
     if (h > 0) {
       return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
     }
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  void _spin() {
-    if (_isSpinning || _freeSpins == 0) return;
+  Future<void> _spin() async {
+    final appState = context.read<AppState>();
+    if (_isSpinning || appState.spinFreeSpins == 0) return;
     final random = Random();
     final targetSegment = random.nextInt(6);
     final baseRotations = 5 + random.nextInt(3);
@@ -121,8 +91,8 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
 
     setState(() {
       _isSpinning = true;
-      _freeSpins--;
     });
+    await context.read<AppState>().useSpin();
 
     _pulseController.stop();
 
@@ -130,14 +100,13 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     _controller.forward().then((_) async {
       final prize = segments[targetSegment].label;
       final reward = _prizeToCoins(prize);
-      final newBalance = _balance + reward;
 
-      await GamePrefs.saveCoins(newBalance);
+      await context.read<AppState>().addCoins(reward);
+      await context.read<AppState>().incrementGamesPlayed();
       if (!mounted) return;
 
       setState(() {
         _isSpinning = false;
-        _balance = newBalance;
       });
       _pulseController.repeat(reverse: true);
       _showWinDialog(prize);
@@ -164,14 +133,17 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
       barrierColor: Colors.black87,
       builder: (context) => SpinRewardDialog(prize: prize),
     ).then((_) {
-      if (_freeSpins == 0) {
-        _startTimer();
-      }
+      // Cooldown is managed by AppState; no local timer needed
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final freeSpins = appState.spinFreeSpins;
+    final isCooldown = appState.isSpinOnCooldown;
+    final cooldownRemaining = appState.spinCooldownRemaining;
+
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
 
@@ -215,7 +187,6 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                         color: Color(0xFF131326),
                       ),
                     ),
-
                   ],
                 ),
               ),
@@ -310,16 +281,22 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                               painter: _WheelPainter(segments),
                                             ),
                                           ),
-                                          ...List.generate(segments.length, (i) {
-                                            final segmentAngle = (2 * pi) / segments.length;
-                                            final startAngle = i * segmentAngle - pi / 2;
-                                            final textAngle = startAngle + segmentAngle / 2;
-                                            
+                                          ...List.generate(segments.length,
+                                              (i) {
+                                            final segmentAngle =
+                                                (2 * pi) / segments.length;
+                                            final startAngle =
+                                                i * segmentAngle - pi / 2;
+                                            final textAngle =
+                                                startAngle + segmentAngle / 2;
+
                                             final center = wheelSize / 2;
                                             final imgRadius = center * 0.42;
-                                            final imgX = center + imgRadius * cos(textAngle);
-                                            final imgY = center + imgRadius * sin(textAngle);
-                                            
+                                            final imgX = center +
+                                                imgRadius * cos(textAngle);
+                                            final imgY = center +
+                                                imgRadius * sin(textAngle);
+
                                             return Positioned(
                                               left: imgX - 10,
                                               top: imgY - 10,
@@ -345,7 +322,8 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                       animation: _pulseAnimation,
                                       builder: (context, child) {
                                         return Transform.scale(
-                                          scale: _isSpinning || (_secondsRemaining > 0 && _freeSpins == 0)
+                                          scale: _isSpinning ||
+                                                  (isCooldown && freeSpins == 0)
                                               ? 1.0
                                               : _pulseAnimation.value,
                                           child: child,
@@ -386,28 +364,37 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                               Text(
                                                 _isSpinning
                                                     ? '...'
-                                                    : (_secondsRemaining > 0 && _freeSpins == 0)
-                                                        ? _formatTime(_secondsRemaining)
+                                                    : (isCooldown &&
+                                                            freeSpins == 0)
+                                                        ? _formatDuration(
+                                                            cooldownRemaining)
                                                         : 'SPIN',
                                                 style: TextStyle(
-                                                  fontSize: (_secondsRemaining > 0 && _freeSpins == 0) ? 14 : 16,
+                                                  fontSize: (isCooldown &&
+                                                          freeSpins == 0)
+                                                      ? 14
+                                                      : 16,
                                                   fontWeight: FontWeight.w900,
-                                                  color: (_secondsRemaining > 0 && _freeSpins == 0)
+                                                  color: (isCooldown &&
+                                                          freeSpins == 0)
                                                       ? Colors.grey
                                                       : AppColors.primary,
                                                   letterSpacing: 1,
                                                 ),
                                               ),
-                                              if (!_isSpinning && !(_secondsRemaining > 0 && _freeSpins == 0))
+                                              if (!_isSpinning &&
+                                                  !(isCooldown &&
+                                                      freeSpins == 0))
                                                 const Icon(Icons.touch_app,
                                                     size: 14,
                                                     color:
                                                         AppColors.primaryText),
-                                              if (!_isSpinning && (_secondsRemaining > 0 && _freeSpins == 0))
+                                              if (!_isSpinning &&
+                                                  (isCooldown &&
+                                                      freeSpins == 0))
                                                 const Icon(Icons.lock_clock,
                                                     size: 14,
-                                                    color:
-                                                        Colors.grey),
+                                                    color: Colors.grey),
                                             ],
                                           ),
                                         ),
@@ -462,7 +449,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 8),
                     // Free spins info
                     Text(
-                      'Free Spins: $_freeSpins',
+                      'Free Spins: $freeSpins',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -473,11 +460,9 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                     // Watch Ad button
                     GestureDetector(
                       onTapDown: (_) => setState(() => _adButtonScale = 0.95),
-                      onTapUp: (_) {
-                        setState(() {
-                          _adButtonScale = 1.0;
-                          _freeSpins++;
-                        });
+                      onTapUp: (_) async {
+                        setState(() => _adButtonScale = 1.0);
+                        await context.read<AppState>().addFreeSpin();
                       },
                       onTapCancel: () => setState(() => _adButtonScale = 1.0),
                       child: AnimatedScale(
@@ -707,7 +692,8 @@ class _WheelPainter extends CustomPainter {
 
       // Label
       final textAngle = startAngle + segmentAngle / 2;
-      final textRadius = radius * 0.72; // Moved slightly outward to give space for the coin
+      final textRadius =
+          radius * 0.72; // Moved slightly outward to give space for the coin
       final textX = center.dx + textRadius * cos(textAngle);
       final textY = center.dy + textRadius * sin(textAngle);
 

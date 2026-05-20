@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
 
@@ -437,17 +439,14 @@ class FlappyJumpGame extends FlameGame {
         combo++;
         if (combo > maxCombo) maxCombo = combo;
 
-        int coinReward = 1;
         String multiplierMsg = "";
         Color scoreColor = Colors.white;
 
         if (combo >= 20) {
-          coinReward = 3;
           multiplierMsg = "⚡ CRITICAL x3!";
           scoreColor = const Color(0xFFFFCC44);
           if (!isMuted) HapticFeedback.heavyImpact();
         } else if (combo >= 10) {
-          coinReward = 2;
           multiplierMsg = "🔥 COMBO x2!";
           scoreColor = const Color(0xFF00FFCC);
           if (!isMuted) HapticFeedback.mediumImpact();
@@ -455,8 +454,7 @@ class FlappyJumpGame extends FlameGame {
           if (!isMuted) HapticFeedback.selectionClick();
         }
 
-        coinsEarned += coinReward;
-
+        coinsEarned = score ~/ 2;
         // Display floating texts
         final playerScreen = _projectPoint(playerPos);
         floatingTexts.add(GameFloatingText(
@@ -480,6 +478,8 @@ class FlappyJumpGame extends FlameGame {
             lifeTime: 1.0,
           ));
         }
+
+        onStateChanged?.call();
       }
 
       // Delete old pillars
@@ -502,8 +502,8 @@ class FlappyJumpGame extends FlameGame {
 
       if (!coin.collected && dist < playerRadius + 14.0) {
         coin.collected = true;
-        coinsEarned += 2; // Each coin item rewards +2 coins
         score += 2; // Increases score too!
+        coinsEarned = score ~/ 2;
         combo++;
         if (combo > maxCombo) maxCombo = combo;
 
@@ -542,6 +542,7 @@ class FlappyJumpGame extends FlameGame {
         ));
 
         coins.removeAt(i);
+        onStateChanged?.call();
       } else if (coin.worldX < -300.0) {
         coins.removeAt(i);
       }
@@ -1200,11 +1201,13 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   late FlappyJumpGame _game;
 
   // Game data state
-  int _coins = 525;
+  int _coins = 0;
+  int _displayedCoins = 0;
   int _highScore = 0;
 
   // Confetti / Coin claim animation state
   bool _showCoinClaimAnimation = false;
+  bool _hasClaimedReward = false;
   late AnimationController _claimAnimController;
   final List<_GameClaimCoin> _flyingCoins = [];
   final math.Random _random = math.Random();
@@ -1224,8 +1227,17 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
     _claimAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    )..addListener(() {
+    )
+      ..addListener(() {
         _updateFlyingCoins();
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          setState(() {
+            _showCoinClaimAnimation = false;
+            _displayedCoins = _coins;
+          });
+        }
       });
   }
 
@@ -1234,6 +1246,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
     final highScore = await GamePrefs.getFlappyHighScore();
     setState(() {
       _coins = coins;
+      _displayedCoins = coins;
       _highScore = highScore;
     });
   }
@@ -1245,19 +1258,87 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   }
 
   void _triggerClaimCoins() async {
-    final currentCoins = await GamePrefs.getCoins();
-    final newTotal = currentCoins + _game.coinsEarned;
-    await GamePrefs.saveCoins(newTotal);
+    if (_hasClaimedReward ||
+        _showCoinClaimAnimation ||
+        _game.coinsEarned <= 0) {
+      return;
+    }
 
-    if (mounted) {
-      // Pop and return total coins earned to GamesScreen/HomeScreen
-      Navigator.of(context).pop(_game.coinsEarned);
+    final currentCoins = context.read<AppState>().coins;
+    final newTotal = await context.read<AppState>().addCoins(_game.coinsEarned);
+    await context.read<AppState>().incrementGamesPlayed();
+
+    if (!mounted) {
+      return;
+    }
+
+    _prepareFlyingCoins();
+
+    setState(() {
+      _coins = newTotal;
+      _displayedCoins = currentCoins;
+      _hasClaimedReward = true;
+      _showCoinClaimAnimation = true;
+    });
+
+    if (!_game.isMuted) {
+      HapticFeedback.mediumImpact();
+    }
+
+    _claimAnimController.forward(from: 0);
+  }
+
+  void _prepareFlyingCoins() {
+    final size = MediaQuery.of(context).size;
+    final start = Offset(size.width / 2, size.height / 2 + 150);
+    final end = Offset(size.width / 2 + 110, size.height / 2 - 8);
+    final coinCount = _game.coinsEarned.clamp(6, 16).toInt();
+
+    _flyingCoins.clear();
+    for (int i = 0; i < coinCount; i++) {
+      final spreadX = (_random.nextDouble() - 0.5) * 120;
+      final spreadY = (_random.nextDouble() - 0.5) * 40;
+      final control = Offset(
+        size.width / 2 + spreadX,
+        size.height / 2 - 150 + spreadY,
+      );
+      _flyingCoins.add(_GameClaimCoin(
+        start: Offset(
+          start.dx + (_random.nextDouble() - 0.5) * 80,
+          start.dy + (_random.nextDouble() - 0.5) * 24,
+        ),
+        end: Offset(
+          end.dx + (_random.nextDouble() - 0.5) * 24,
+          end.dy + (_random.nextDouble() - 0.5) * 18,
+        ),
+        control: control,
+        delay: i * 0.025,
+      ));
     }
   }
 
+  void _playAgainFromGameOver() {
+    _claimAnimController.reset();
+    _flyingCoins.clear();
+    setState(() {
+      _showCoinClaimAnimation = false;
+      _hasClaimedReward = false;
+      _displayedCoins = _coins;
+    });
+    _game.startGame();
+  }
+
   void _updateFlyingCoins() {
+    if (!mounted) return;
+
     final dt = _claimAnimController.value;
     setState(() {
+      if (_showCoinClaimAnimation) {
+        final eased = Curves.easeOutCubic.transform(dt);
+        _displayedCoins =
+            (_coins - (_game.coinsEarned * (1.0 - eased))).round();
+      }
+
       for (var coin in _flyingCoins) {
         if (dt > coin.delay) {
           // Bezier curve progress
@@ -1803,6 +1884,10 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                       'SCORE', '${_game.score}', const Color(0xFF00FFCC)),
                   const Divider(color: Colors.white12, height: 24),
 
+                  _buildCoinStatRow('RBX BALANCE', _displayedCoins,
+                      highlight: _showCoinClaimAnimation),
+                  const Divider(color: Colors.white12, height: 24),
+
                   // Max Combo Row
                   _buildStatRow('MAX COMBO', 'x${_game.maxCombo}',
                       const Color(0xFF8C62F8)),
@@ -1858,7 +1943,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 child: Column(
                   children: [
                     // Claim button (Always first if earned > 0)
-                    if (_game.coinsEarned > 0)
+                    if (_game.coinsEarned > 0 && !_hasClaimedReward)
                       GestureDetector(
                         onTap: _triggerClaimCoins,
                         child: Container(
@@ -1899,6 +1984,39 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                           ),
                         ),
                       ),
+                    if (_game.coinsEarned > 0 && _hasClaimedReward)
+                      Container(
+                        width: double.infinity,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color:
+                              const Color(0xFF00FFCC).withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color:
+                                const Color(0xFF00FFCC).withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle,
+                                  color: Color(0xFF00FFCC), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'REWARD CLAIMED',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF00FFCC),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
 
                     const SizedBox(height: 12),
 
@@ -1907,7 +2025,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                         // Play Again
                         Expanded(
                           child: GestureDetector(
-                            onTap: _game.startGame,
+                            onTap: _playAgainFromGameOver,
                             child: Container(
                               height: 50,
                               decoration: BoxDecoration(
@@ -1933,7 +2051,8 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                         // Quit Button
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
+                            onTap: () => Navigator.of(context).pop(
+                                _hasClaimedReward ? _game.coinsEarned : null),
                             child: Container(
                               height: 50,
                               decoration: BoxDecoration(
@@ -1986,6 +2105,61 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCoinStatRow(String label, int value, {bool highlight = false}) {
+    final pulse = highlight
+        ? 1.0 + math.sin(_claimAnimController.value * math.pi) * 0.08
+        : 1.0;
+
+    return Transform.scale(
+      scale: pulse,
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.white60,
+            ),
+          ),
+          Row(
+            children: [
+              Image.asset(
+                AppAssets.goldRbxCoin,
+                width: 22,
+                height: 22,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.monetization_on,
+                  color: Color(0xFFFFCC44),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$value RBX',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFFFFCC44),
+                  shadows: highlight
+                      ? [
+                          const Shadow(
+                            color: Color(0xFFFFCC44),
+                            blurRadius: 12,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

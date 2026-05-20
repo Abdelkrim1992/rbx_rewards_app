@@ -6,7 +6,6 @@ import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
 import 'math_quiz_screen.dart';
 import 'flip_card_game_screen.dart';
-import 'quizzes_screen.dart';
 
 class GamesScreen extends StatelessWidget {
   final Function(int) onNavTap;
@@ -39,12 +38,6 @@ class GamesScreen extends StatelessWidget {
         title: 'Flip Cards',
         coins: '+200',
         bgColor: const Color(0xFFFFE8F0),
-      ),
-      _GameData(
-        imageUrl: AppAssets.quizMasterGame,
-        title: 'Quizzes',
-        coins: '+400',
-        bgColor: const Color(0xFFE0F4FF),
       ),
     ];
 
@@ -155,19 +148,6 @@ class GamesScreen extends StatelessWidget {
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         const FlipCardGameScreen(),
-                                  ),
-                                )
-                                    .then((coinsEarned) {
-                                  if (coinsEarned != null) {
-                                    onNavTap(0);
-                                  }
-                                });
-                              } else if (game.title == 'Quizzes') {
-                                Navigator.of(context)
-                                    .push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const QuizzesScreen(),
                                   ),
                                 )
                                     .then((coinsEarned) {
@@ -342,7 +322,7 @@ class _GameCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: AppColors.primaryText,
                     ),
@@ -370,8 +350,8 @@ class _GameCard extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
                                   color: AppColors.purple,
                                 ),
                               ),
@@ -379,7 +359,7 @@ class _GameCard extends StatelessWidget {
                             const Text(
                               ' RBX',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 14,
                                 color: AppColors.secondaryText,
                               ),
                             ),

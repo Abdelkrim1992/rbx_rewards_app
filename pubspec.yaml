@@ -15,6 +15,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   google_fonts: ^6.2.1
   flame: ^1.37.0
+  provider: ^6.1.2
   shared_preferences: ^2.5.5
   scratcher: ^2.5.0
 
@@ -28,7 +29,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
-    - assets/images/onboarding_screen_main_image.png
+    - assets/images/onboarding_screen_main_image.jpeg
     - assets/images/first_feature_card.jpeg
     - assets/images/second_feature_card.jpeg
     - assets/images/thirty_feature_card.jpeg
@@ -38,3 +39,4 @@ flutter:
     - assets/images/math_quiz_mini_game.jpeg
     - assets/images/flip_cards_mii_game.PNG
     - assets/images/flappy_mini_game.jpeg
+    - assets/images/logo_image.jpeg

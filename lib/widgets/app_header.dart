@@ -9,17 +9,17 @@ class RbxAppHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+      padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
               // RBX Logo cube
-              Image.network(
+              Image.asset(
                 AppAssets.rbxLogo,
-                width: 50,
-                height: 50,
+                width: 140,
+                height: 100,
                 errorBuilder: (_, __, ___) => Container(
                   width: 50,
                   height: 50,
@@ -32,30 +32,30 @@ class RbxAppHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'RBX',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      fontStyle: FontStyle.italic,
-                      color: Color(0xFF131326),
-                      letterSpacing: -0.6,
-                      height: 1.0,
-                    ),
-                  ),
-                  const Text(
-                    'Spin & Earn',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.purple,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: [
+              //     const Text(
+              //       'RBX',
+              //       style: TextStyle(
+              //         fontSize: 24,
+              //         fontWeight: FontWeight.w900,
+              //         fontStyle: FontStyle.italic,
+              //         color: Color(0xFF131326),
+              //         letterSpacing: -0.6,
+              //         height: 1.0,
+              //       ),
+              //     ),
+              //     const Text(
+              //       'Spin & Earn',
+              //       style: TextStyle(
+              //         fontSize: 14,
+              //         color: AppColors.purple,
+              //         height: 1.0,
+              //       ),
+              //     ),
+              //   ],
+              // ),
             ],
           ),
           GestureDetector(
@@ -76,7 +76,7 @@ class RbxAppHeader extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                child: Image.network(
+                child: Image.asset(
                   AppAssets.profileAvatar,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>

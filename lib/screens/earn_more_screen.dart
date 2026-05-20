@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
 import 'package:scratcher/scratcher.dart';
+import '../state/app_state.dart';
 import '../widgets/game_prefs.dart';
 import 'chest_screen.dart';
 import 'quizzes_screen.dart';
@@ -145,7 +147,6 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-
                   ],
                 ),
               ),
@@ -217,7 +218,8 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                     badgeText: 'Up to 400',
                     onTap: () async {
                       final earned = await Navigator.of(context).push<int>(
-                        MaterialPageRoute(builder: (_) => const QuizzesScreen()),
+                        MaterialPageRoute(
+                            builder: (_) => const QuizzesScreen()),
                       );
                       if (earned != null && earned > 0 && context.mounted) {
                         _loadBalance();
@@ -288,8 +290,8 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
   }
 
   void _claimAdReward() async {
-    final currentCoins = await GamePrefs.getCoins();
-    await GamePrefs.saveCoins(currentCoins + 100);
+    await context.read<AppState>().addCoins(100);
+    await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(100);
     }
@@ -494,8 +496,8 @@ class _SurveyDialogState extends State<SurveyDialog> {
   }
 
   void _claimSurveyReward() async {
-    final currentCoins = await GamePrefs.getCoins();
-    await GamePrefs.saveCoins(currentCoins + 250);
+    await context.read<AppState>().addCoins(250);
+    await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(250);
     }
@@ -756,8 +758,8 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
     setState(() {
       _claimed = true;
     });
-    final currentCoins = await GamePrefs.getCoins();
-    await GamePrefs.saveCoins(currentCoins + _reward);
+    await context.read<AppState>().addCoins(_reward);
+    await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(_reward);
     }

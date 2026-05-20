@@ -24,7 +24,7 @@ class OnboardingScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20)
                           .copyWith(top: 40),
                       child: Image.asset(
-                        'images/onboarding_screen_main_image.png',
+                        AppAssets.onboardingHero,
                         width: double.infinity,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => Container(
@@ -97,19 +97,19 @@ class OnboardingScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _FeatureCard(
-                            imagePath: 'images/first_feature_card.jpeg',
+                            imagePath: 'assets/images/first_feature_card.jpeg',
                             title: 'Play Games',
                             subtitle: 'Fun mini games to earn coins',
                           ),
                           const SizedBox(width: 8),
                           _FeatureCard(
-                            imagePath: 'images/second_feature_card.jpeg',
+                            imagePath: 'assets/images/second_feature_card.jpeg',
                             title: 'Spin & Win',
                             subtitle: 'Spin the wheel for big prizes',
                           ),
                           const SizedBox(width: 8),
                           _FeatureCard(
-                            imagePath: 'images/thirty_feature_card.jpeg',
+                            imagePath: 'assets/images/thirty_feature_card.jpeg',
                             title: 'Unlock Rewards',
                             subtitle: 'Redeem coins for amazing rewards',
                           ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/game_prefs.dart';
 
 class RewardsScreen extends StatefulWidget {
   final Function(int) onNavTap;
@@ -14,46 +15,28 @@ class RewardsScreen extends StatefulWidget {
 }
 
 class _RewardsScreenState extends State<RewardsScreen> {
-  int _balance = 525;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBalance();
-  }
-
-  Future<void> _loadBalance() async {
-    final coins = await GamePrefs.getCoins();
-    if (!mounted) return;
-    setState(() {
-      _balance = coins;
-    });
-  }
-
   int _parseRewardCost(String cost) {
     return int.tryParse(cost.replaceAll(',', '')) ?? 0;
   }
 
   Future<void> _redeemReward(_RewardData reward) async {
     final cost = _parseRewardCost(reward.cost);
+    final appState = context.read<AppState>();
+    final balance = appState.coins;
 
-    if (_balance < cost) {
+    if (balance < cost) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-              'You need ${cost - _balance} more RBX Coins to redeem ${reward.title}.'),
+              'You need ${cost - balance} more RBX Coins to redeem ${reward.title}.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
-    final newBalance = _balance - cost;
-    setState(() {
-      _balance = newBalance;
-    });
-
-    await GamePrefs.saveCoins(newBalance);
+    final success = await appState.spendCoins(cost);
+    if (!success) return;
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -110,15 +93,17 @@ class _RewardsScreenState extends State<RewardsScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.only(top: 20, bottom: 100),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RbxAppHeader(onNavTap: widget.onNavTap),
                     // Balance widget
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
-                      child: _BalanceWidget(balance: _balance),
+                      child: _BalanceWidget(
+                          balance: context.watch<AppState>().coins),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
@@ -158,9 +143,11 @@ class _RewardsScreenState extends State<RewardsScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (ctx, i) {
                         final reward = rewards[i];
+                        final appState = context.watch<AppState>();
                         return _RewardItem(
                           data: reward,
-                          canRedeem: _balance >= _parseRewardCost(reward.cost),
+                          canRedeem:
+                              appState.coins >= _parseRewardCost(reward.cost),
                           onRedeem: () => _redeemReward(reward),
                         );
                       },
@@ -177,7 +164,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
+          child: RbxBottomNav(currentIndex: 3, onTap: widget.onNavTap),
         ),
       ),
     );
@@ -198,8 +185,8 @@ class _BalanceWidget extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppColors.primary.withOpacity(0.85),
-            AppColors.primaryLight,
+            const Color.fromARGB(255, 195, 176, 255).withValues(alpha: 0.85),
+            const Color.fromARGB(255, 137, 91, 255),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -215,26 +202,17 @@ class _BalanceWidget extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           // Decorative sparkles
-          Positioned(
-            right: 0,
-            top: -5,
-            child: const Text('✨', style: TextStyle(fontSize: 18)),
-          ),
-          Positioned(
-            right: 40,
-            bottom: -5,
-            child: const Text('✨', style: TextStyle(fontSize: 12)),
-          ),
+
           Row(
             children: [
               Image.asset(
                 AppAssets.goldRbxCoin,
-                width: 48,
-                height: 52,
+                width: 45,
+                height: 45,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(
                   Icons.monetization_on,
-                  size: 48,
+                  size: 45,
                   color: Color(0xFFFFCC44),
                 ),
               ),
@@ -251,7 +229,7 @@ class _BalanceWidget extends StatelessWidget {
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
-                        letterSpacing: -0.8,
+                        letterSpacing: 0,
                         height: 1.1,
                       ),
                     ),
@@ -264,22 +242,15 @@ class _BalanceWidget extends StatelessWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const Text(
-                      'RBX Coins',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.white60,
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 80,
+                width: 120,
                 height: 90,
-                child: Image.network(
-                  AppAssets.purpleGiftBox,
+                child: Image.asset(
+                  AppAssets.balanceWidgetImage,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Icon(
                       Icons.account_balance_wallet,

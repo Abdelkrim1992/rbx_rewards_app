@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/spin_screen.dart';
 import 'screens/games_screen.dart';
+import 'screens/offers_screen.dart';
 import 'screens/rewards_screen.dart';
 import 'screens/profile_screen.dart';
+import 'state/app_state.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +26,12 @@ void main() {
   );
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const RbxRewardsApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppState()..load(),
+      child: const RbxRewardsApp(),
+    ),
+  );
 }
 
 class RbxRewardsApp extends StatelessWidget {
@@ -55,12 +63,11 @@ class AppNavigator extends StatefulWidget {
 }
 
 class _AppNavigatorState extends State<AppNavigator> {
-  bool _onboarded = false;
   int _currentTab = 0;
   bool _showSpin = false;
 
-  void _onGetStarted() {
-    setState(() => _onboarded = true);
+  Future<void> _onGetStarted() async {
+    await context.read<AppState>().setOnboardingCompleted(true);
   }
 
   void _onNavTap(int index) {
@@ -88,7 +95,13 @@ class _AppNavigatorState extends State<AppNavigator> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_onboarded) {
+    final appState = context.watch<AppState>();
+
+    if (!appState.isLoaded) {
+      return const SizedBox.shrink();
+    }
+
+    if (!appState.isOnboardingCompleted) {
       return OnboardingScreen(onGetStarted: _onGetStarted);
     }
 
@@ -105,8 +118,10 @@ class _AppNavigatorState extends State<AppNavigator> {
       case 1:
         return GamesScreen(onNavTap: _onNavTap);
       case 2:
-        return RewardsScreen(onNavTap: _onNavTap);
+        return OffersScreen(onNavTap: _onNavTap);
       case 3:
+        return RewardsScreen(onNavTap: _onNavTap);
+      case 4:
         return ProfileScreen(onNavTap: _onNavTap);
       default:
         return HomeScreen(

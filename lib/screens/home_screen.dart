@@ -1,13 +1,14 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
+import 'math_quiz_screen.dart';
 import 'earn_more_screen.dart';
-import '../widgets/game_prefs.dart';
 import 'quizzes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,83 +26,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _balance = 525;
-  bool _isDailyClaimed = false;
-  bool _isMegaChestClaimed = false;
-  DateTime? _lastClaimTime;
-  Timer? _countdownTimer;
-  Duration _timeUntilNextClaim = Duration.zero;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadBalance();
-  }
-
-  Future<void> _loadBalance() async {
-    final coins = await GamePrefs.getCoins();
-    final isMegaChestClaimed = await GamePrefs.isMegaChestClaimed();
-    setState(() {
-      _balance = coins;
-      _isMegaChestClaimed = isMegaChestClaimed;
-    });
-  }
-
-  Future<void> _claimMegaChest() async {
-    const reward = 500;
-    final newBalance = _balance + reward;
-
-    setState(() {
-      _balance = newBalance;
-      _isMegaChestClaimed = true;
-    });
-
-    await GamePrefs.saveCoins(newBalance);
-    await GamePrefs.setMegaChestClaimed(true);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Mega Chest opened! You earned 500 RBX 🎉'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _countdownTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startCountdown() {
-    _lastClaimTime = DateTime.now();
-    _countdownTimer?.cancel();
-    _updateCountdown();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _updateCountdown();
-    });
-  }
-
-  void _updateCountdown() {
-    if (!mounted) return;
-    if (_lastClaimTime == null) return;
-    final now = DateTime.now();
-    final nextClaimTime = _lastClaimTime!.add(const Duration(hours: 24));
-
-    if (now.isAfter(nextClaimTime)) {
-      _countdownTimer?.cancel();
-      setState(() {
-        _isDailyClaimed = false;
-        _timeUntilNextClaim = Duration.zero;
-      });
-    } else {
-      setState(() {
-        _timeUntilNextClaim = nextClaimTime.difference(now);
-      });
-    }
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String hours = twoDigits(duration.inHours);
@@ -125,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -216,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -242,17 +166,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _completeClaim() {
-    setState(() {
-      _isDailyClaimed = true;
-      _balance += 100;
-    });
-    GamePrefs.saveCoins(_balance);
-    _startCountdown();
+  Future<void> _completeClaim() async {
+    await context.read<AppState>().claimDailyReward();
   }
 
   void _claimDaily() {
-    if (_isDailyClaimed) return;
+    if (context.read<AppState>().isDailyRewardCoolingDown) return;
     _showRewardPopup();
   }
 
@@ -265,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     if (coinsEarned != null && coinsEarned > 0) {
-      await _loadBalance();
+      await context.read<AppState>().refreshCoins();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -285,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     if (coinsEarned != null && coinsEarned > 0) {
-      await _loadBalance();
+      await context.read<AppState>().refreshCoins();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -296,8 +215,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  ({int goal, String label}) _getNextRewardTier(int coins) {
+    final tiers = [
+      (goal: 1000, label: '100 RBX Bonus'),
+      (goal: 3000, label: '\$1 Roblox Card'),
+      (goal: 5000, label: '\$5 Roblox Card'),
+      (goal: 10000, label: '\$10 Roblox Card'),
+      (goal: 20000, label: '\$20 Roblox Card'),
+    ];
+    for (final tier in tiers) {
+      if (coins < tier.goal) return tier;
+    }
+    return tiers.last;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final isDailyClaimed = appState.isDailyRewardCoolingDown;
+    final timeUntilNextClaim = appState.dailyRewardRemaining;
+    final nextTier = _getNextRewardTier(appState.coins);
+
     return Scaffold(
       backgroundColor: Colors.white,
       extendBody: true,
@@ -313,12 +251,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     RbxAppHeader(onNavTap: widget.onNavTap),
                     // Welcome greeting
-                    Padding(
+                    const Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
-                          const Text(
+                          Text(
                             'Welcome back',
                             style: TextStyle(
                               fontSize: 22,
@@ -327,8 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               letterSpacing: -0.55,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          const Text('👋', style: TextStyle(fontSize: 22)),
+                          SizedBox(width: 8),
+                          Text('👋', style: TextStyle(fontSize: 22)),
                         ],
                       ),
                     ),
@@ -339,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: _InteractiveCard(
-                        onTap: () => widget.onNavTap(2), // Navigate to Rewards
+                        onTap: () => widget.onNavTap(3), // Navigate to Rewards
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -361,8 +299,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   Image.asset(
                                     AppAssets.goldRbxCoin,
-                                    width: 50,
-                                    height: 50,
+                                    width: 40,
+                                    height: 40,
                                     errorBuilder: (_, __, ___) => const Icon(
                                       Icons.monetization_on,
                                       size: 50,
@@ -388,11 +326,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.end,
                                         children: [
-                                          Text('$_balance',
+                                          Text('${appState.coins}',
                                               style: const TextStyle(
-                                                fontSize: 27,
+                                                fontSize: 24,
                                                 fontWeight: FontWeight.w800,
-                                                color: Color(0xFF131326),
+                                                color: Color(0xFF664DFF),
                                                 letterSpacing: 0,
                                                 height: 1.0,
                                               )),
@@ -423,6 +361,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
+                    // Progress Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _ProgressBar(
+                        current: appState.coins,
+                        goal: nextTier.goal,
+                        label: nextTier.label,
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
+
                     // Daily Reward Card
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -434,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: const Color.fromARGB(255, 68, 41, 159)
-                                  .withOpacity(0.15),
+                                  .withValues(alpha: 0.15),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -451,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _isDailyClaimed
+                                      isDailyClaimed
                                           ? 'Reward Claimed\nSee you tomorrow'
                                           : 'Daily Reward',
                                       style: const TextStyle(
@@ -464,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      _isDailyClaimed
+                                      isDailyClaimed
                                           ? 'You earned 100 coins today.'
                                           : 'Come back every day and claim awesome rewards.',
                                       style: const TextStyle(
@@ -476,26 +426,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(height: 14),
                                     _InteractiveCard(
                                       onTap:
-                                          _isDailyClaimed ? null : _claimDaily,
+                                          isDailyClaimed ? null : _claimDaily,
                                       child: Container(
                                         height: 38,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 16),
                                         decoration: BoxDecoration(
-                                          gradient: _isDailyClaimed
+                                          gradient: isDailyClaimed
                                               ? null
                                               : AppColors.primaryGradient,
-                                          color: _isDailyClaimed
-                                              ? Colors.white.withOpacity(0.5)
+                                          color: isDailyClaimed
+                                              ? Colors.white
+                                                  .withValues(alpha: 0.5)
                                               : null,
                                           borderRadius:
                                               BorderRadius.circular(14),
-                                          boxShadow: _isDailyClaimed
+                                          boxShadow: isDailyClaimed
                                               ? null
                                               : [
                                                   BoxShadow(
                                                     color: AppColors.primary
-                                                        .withOpacity(0.3),
+                                                        .withValues(alpha: 0.3),
                                                     blurRadius: 12,
                                                     offset: const Offset(0, 6),
                                                   )
@@ -506,20 +457,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            if (_isDailyClaimed)
+                                            if (isDailyClaimed)
                                               const Icon(Icons.timer_outlined,
                                                   size: 16,
                                                   color: AppColors.primary),
-                                            if (_isDailyClaimed)
+                                            if (isDailyClaimed)
                                               const SizedBox(width: 6),
                                             Text(
-                                              _isDailyClaimed
-                                                  ? 'Ends ${_formatDuration(_timeUntilNextClaim)}'
+                                              isDailyClaimed
+                                                  ? 'Ends ${_formatDuration(timeUntilNextClaim)}'
                                                   : 'Claim Now',
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w800,
-                                                color: _isDailyClaimed
+                                                color: isDailyClaimed
                                                     ? AppColors.primary
                                                     : Colors.white,
                                                 letterSpacing: 0.3,
@@ -540,7 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 alignment: Alignment.centerRight,
                                 padding: const EdgeInsets.only(right: 12),
                                 child: Opacity(
-                                  opacity: _isDailyClaimed ? 0.7 : 1.0,
+                                  opacity: isDailyClaimed ? 0.7 : 1.0,
                                   child: Image.network(
                                     AppAssets.purpleGiftBox,
                                     fit: BoxFit.contain,
@@ -560,10 +511,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Quick Actions header
-                    Padding(
+                    const Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
-                      child: const _SectionHeader(
+                      child: _SectionHeader(
                         title: 'Quick Actions',
                       ),
                     ),
@@ -586,7 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     builder: (_) => const ChestScreen()),
                               );
                               if (earned != null && earned > 0) {
-                                await _loadBalance();
+                                await context.read<AppState>().refreshCoins();
                               }
                             },
                           ),
@@ -609,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     builder: (_) => const QuizzesScreen()),
                               );
                               if (earned != null && earned > 0) {
-                                await _loadBalance();
+                                await context.read<AppState>().refreshCoins();
                               }
                             },
                           ),
@@ -652,10 +603,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 );
                                 if (earned != null && earned > 0) {
-                                  setState(() {
-                                    _balance += earned;
-                                  });
-                                  GamePrefs.saveCoins(_balance);
+                                  await context.read<AppState>().refreshCoins();
                                 }
                               },
                             ),
@@ -668,7 +616,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Answer & win',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFE3F8EB),
-                              onTap: () => widget.onNavTap(1),
+                              onTap: () async {
+                                final earned =
+                                    await Navigator.of(context).push<int>(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const MathQuizScreen(),
+                                  ),
+                                );
+                                if (earned != null && earned > 0) {
+                                  await context.read<AppState>().refreshCoins();
+                                }
+                              },
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -688,10 +647,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 );
                                 if (earned != null && earned > 0) {
-                                  setState(() {
-                                    _balance += earned;
-                                  });
-                                  GamePrefs.saveCoins(_balance);
+                                  await context.read<AppState>().refreshCoins();
                                 }
                               },
                             ),
@@ -708,13 +664,17 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _SectionHeader(
                         title: 'Earn More',
                         linkText: 'View All',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                EarnMoreScreen(onNavTap: widget.onNavTap),
-                          ),
-                        ).then((_) => _loadBalance()),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  EarnMoreScreen(onNavTap: widget.onNavTap),
+                            ),
+                          );
+                          if (!context.mounted) return;
+                          await context.read<AppState>().refreshCoins();
+                        },
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
@@ -734,11 +694,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 subtitle: 'Answer & earn',
                                 badge: 'Up to 400',
                                 onTap: () async {
-                                  final earned = await Navigator.of(context).push<int>(
-                                    MaterialPageRoute(builder: (_) => const QuizzesScreen()),
+                                  final earned =
+                                      await Navigator.of(context).push<int>(
+                                    MaterialPageRoute(
+                                        builder: (_) => const QuizzesScreen()),
                                   );
-                                  if (earned != null && earned > 0 && context.mounted) {
-                                    _loadBalance();
+                                  if (earned != null && earned > 0) {
+                                    if (!context.mounted) return;
+                                    await context
+                                        .read<AppState>()
+                                        .refreshCoins();
                                   }
                                 },
                               ),
@@ -756,7 +721,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 6),
                             Expanded(
                               child: _EarnMoreVerticalCard(
-                                iconUrl: 'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
+                                iconUrl:
+                                    'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
                                 title: 'Surveys',
                                 subtitle: 'Answer polls',
                                 badge: 'Up to 250',
@@ -769,15 +735,74 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Mega Chest Card
+                    // Offers & Tasks header
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
-                      child: _MegaChestCard(
-                        balance: _balance,
-                        isClaimed: _isMegaChestClaimed,
-                        onClaim: _claimMegaChest,
+                      child: _SectionHeader(
+                        title: 'Offers & Tasks',
+                        linkText: 'Show all offers',
+                        onTap: () => widget.onNavTap(2),
                       ),
+                    ),
+                    const SizedBox(height: AppLayout.elementSpacing),
+
+                    // Offers & Tasks grid
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final cardWidth = (constraints.maxWidth - 6) / 2;
+                          return Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              SizedBox(
+                                width: cardWidth,
+                                child: _OfferCard(
+                                  iconUrl:
+                                      'https://cdn3d.iconscout.com/3d/premium/thumb/candy-11172680-8996698.png',
+                                  title: 'Candy Crush Saga',
+                                  subtitle: 'Reach Level 15',
+                                  reward: '+2,500',
+                                  onTap: () {},
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _OfferCard(
+                                  iconUrl:
+                                      'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
+                                  title: 'Complete Survey',
+                                  subtitle: 'Complete a Survey',
+                                  reward: '+800',
+                                  onTap: () => _showSurveyDialog(),
+                                ),
+                              ),
+                              SizedBox(
+                                width: cardWidth,
+                                child: _OfferCard(
+                                  iconUrl:
+                                      'https://cdn3d.iconscout.com/3d/premium/thumb/beach-umbrella-6848699-5608670.png',
+                                  title: 'Travel Town',
+                                  subtitle: 'Install & Open',
+                                  reward: '+1,200',
+                                  onTap: () {},
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
+
+                    // VIP Pass Card
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _VipPassCard(onTap: () {}),
                     ),
                     const SizedBox(height: 120),
                   ],
@@ -954,7 +979,7 @@ class _QuickActionCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.purple,
+                    color: Color(0xFF664DFF),
                   ),
                 ),
               ),
@@ -1108,85 +1133,111 @@ class _EarnMoreVerticalCard extends StatelessWidget {
   }
 }
 
-class _MegaChestCard extends StatelessWidget {
-  static const int coinGoal = 2000;
-  final int balance;
-  final bool isClaimed;
-  final VoidCallback onClaim;
+class _OfferCard extends StatelessWidget {
+  final String iconUrl;
+  final String title;
+  final String subtitle;
+  final String reward;
+  final VoidCallback? onTap;
 
-  const _MegaChestCard({
-    required this.balance,
-    required this.isClaimed,
-    required this.onClaim,
+  const _OfferCard({
+    required this.iconUrl,
+    required this.title,
+    required this.subtitle,
+    required this.reward,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final progress = (balance / coinGoal).clamp(0.0, 1.0);
-    final canClaim = balance >= coinGoal && !isClaimed;
-
     return _InteractiveCard(
-      onTap: canClaim ? onClaim : null,
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0A000000),
-              blurRadius: 15,
-              offset: Offset(0, 8),
+              blurRadius: 12,
+              offset: Offset(0, 6),
             ),
           ],
-          border: Border.all(color: const Color(0xFFF3F4F6)),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 15),
         child: Row(
           children: [
+            // App icon
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                iconUrl,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.local_offer,
+                    size: 24,
+                    color: Color(0xFF6035EE),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF131326),
-                      ),
-                      children: [
-                        TextSpan(
-                          text: isClaimed
-                              ? 'Mega Chest claimed'
-                              : canClaim
-                                  ? 'Mega Chest unlocked! Tap to claim'
-                                  : 'Earn more coins to unlock Mega Chest',
-                        ),
-                      ],
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF131326),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF868A9F),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 8,
-                            backgroundColor: AppColors.primarySoft,
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                AppColors.purple),
-                          ),
+                      Image.asset(
+                        AppAssets.goldRbxCoin,
+                        width: 16,
+                        height: 16,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.monetization_on,
+                          size: 16,
+                          color: Color(0xFFFFCC44),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 4),
                       Text(
-                        '${balance.clamp(0, coinGoal)} / $coinGoal',
+                        '$reward RBX',
                         style: const TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF868A9F),
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF131326),
                         ),
                       ),
                     ],
@@ -1194,13 +1245,173 @@ class _MegaChestCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 20),
-            Image.asset(
-              AppAssets.megaChestIcon,
-              width: 60,
-              height: 60,
-              errorBuilder: (_, __, ___) => const Icon(Icons.inventory,
-                  size: 56, color: AppColors.purple),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgressBar extends StatelessWidget {
+  final int current;
+  final int goal;
+  final String label;
+
+  const _ProgressBar({
+    required this.current,
+    required this.goal,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (current / goal).clamp(0.0, 1.0);
+    final remaining = (goal - current).clamp(0, goal);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Your Progress',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF131326),
+                ),
+              ),
+              Text(
+                '\$current / \$goal',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF868A9F),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: const Color(0xFFF1F5F9),
+              valueColor: AlwaysStoppedAnimation(AppColors.primary),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            remaining > 0
+                ? '\$remaining coins until \$label'
+                : 'You can redeem your \$label now!',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color:
+                  remaining > 0 ? const Color(0xFF868A9F) : AppColors.primary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VipPassCard extends StatelessWidget {
+  final VoidCallback? onTap;
+
+  const _VipPassCard({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return _InteractiveCard(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x331A1A2E),
+              blurRadius: 12,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.diamond,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'VIP Pass',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Remove ads + 2x coins for \$4.99/week',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.6),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
             ),
           ],
         ),
