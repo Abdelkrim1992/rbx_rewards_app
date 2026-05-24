@@ -4,6 +4,21 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/refreshable_scroll.dart';
+
+// Predefined avatar options
+const List<String> _kAvatarOptions = [
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Felix',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Luna',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Max',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Zoe',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Nova',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Ash',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Echo',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Orion',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Lyra',
+  'https://api.dicebear.com/7.x/adventurer/png?seed=Pixel',
+];
 
 class ProfileScreen extends StatelessWidget {
   final Function(int) onNavTap;
@@ -34,16 +49,18 @@ class ProfileScreen extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 20, bottom: 100),
+              child: RefreshableScrollView(
+                padding: const EdgeInsets.only(top: 12, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const RbxAppHeader(),
                     // Profile card
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.only(
+                          left: AppLayout.screenPadding,
+                          right: AppLayout.screenPadding,
+                          top: 5),
                       child: Container(
                         padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                         decoration: BoxDecoration(
@@ -93,20 +110,35 @@ class ProfileScreen extends StatelessWidget {
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: ClipOval(
-                                              child: Image.network(
-                                                AppAssets.profileAvatar,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Container(
-                                                  color:
-                                                      const Color(0xFFEEEEEF),
-                                                  child: const Icon(
-                                                    Icons.person,
-                                                    size: 40,
-                                                    color: AppColors.purple,
-                                                  ),
-                                                ),
-                                              ),
+                                              child: appState.profilePhotoUrl != null
+                                                  ? Image.network(
+                                                      appState.profilePhotoUrl!,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, __, ___) =>
+                                                          Container(
+                                                        color:
+                                                            const Color(0xFFEEEEEF),
+                                                        child: const Icon(
+                                                          Icons.person,
+                                                          size: 40,
+                                                          color: AppColors.purple,
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : Image.network(
+                                                      AppAssets.profileAvatar,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, __, ___) =>
+                                                          Container(
+                                                        color:
+                                                            const Color(0xFFEEEEEF),
+                                                        child: const Icon(
+                                                          Icons.person,
+                                                          size: 40,
+                                                          color: AppColors.purple,
+                                                        ),
+                                                      ),
+                                                    ),
                                             ),
                                           ),
                                         ),
@@ -120,15 +152,41 @@ class ProfileScreen extends StatelessWidget {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        'Player',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF0F172A),
-                                        ),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              appState.displayName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF0F172A),
+                                              ),
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () =>
+                                                _showEditProfileDialog(
+                                                    context, appState),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF3F4FE),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                    color: const Color(
+                                                        0xFFD5D7FB)),
+                                              ),
+                                              child: const Icon(
+                                                Icons.edit,
+                                                size: 16,
+                                                color: Color(0xFF5C3EF0),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: 8),
                                       Container(
@@ -262,12 +320,12 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           _StatCard(
                             iconUrl: AppAssets.gamepadStat,
-                            value: '${appState.gamesPlayed}',
+                            value: '${appState.totalGamesPlayed}',
                             label: 'Games Played',
                           ),
                           _StatCard(
                             iconUrl: AppAssets.adsWatched,
-                            value: '${appState.offersCompleted}',
+                            value: '${appState.totalOffersCompleted}',
                             label: 'Offers Done',
                           ),
                         ],
@@ -275,15 +333,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Achievements section
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: _SectionHeader(title: 'Achievements'),
-                    ),
-                    const SizedBox(height: AppLayout.elementSpacing),
-                    _AchievementsList(appState: appState),
-                    const SizedBox(height: AppLayout.sectionSpacing),
+
 
                     // Invite Friends
                     Padding(
@@ -530,146 +580,18 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _AchievementsList extends StatelessWidget {
-  final AppState appState;
-  const _AchievementsList({required this.appState});
 
-  @override
-  Widget build(BuildContext context) {
-    final achievements = [
-      _AchievementData(
-        icon: Icons.sports_esports,
-        title: 'First Steps',
-        desc: 'Play your first game',
-        isUnlocked: appState.gamesPlayed >= 1,
-      ),
-      _AchievementData(
-        icon: Icons.emoji_events,
-        title: 'Game Master',
-        desc: 'Play 10 games',
-        isUnlocked: appState.gamesPlayed >= 10,
-      ),
-      _AchievementData(
-        icon: Icons.monetization_on,
-        title: 'Coin Collector',
-        desc: 'Earn 1,000 coins',
-        isUnlocked: appState.totalCoinsEarned >= 1000,
-      ),
-      _AchievementData(
-        icon: Icons.diamond,
-        title: 'Rich Player',
-        desc: 'Earn 10,000 coins',
-        isUnlocked: appState.totalCoinsEarned >= 10000,
-      ),
-      _AchievementData(
-        icon: Icons.local_fire_department,
-        title: 'Daily Regular',
-        desc: '7-day streak',
-        isUnlocked: appState.consecutiveDays >= 7,
-      ),
-      _AchievementData(
-        icon: Icons.local_offer,
-        title: 'Offer Hunter',
-        desc: 'Complete 5 offers',
-        isUnlocked: appState.offersCompleted >= 5,
-      ),
-    ];
-
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        padding:
-            const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-        scrollDirection: Axis.horizontal,
-        itemCount: achievements.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final a = achievements[index];
-          return _AchievementChip(data: a);
-        },
-      ),
-    );
-  }
-}
-
-class _AchievementData {
-  final IconData icon;
-  final String title;
-  final String desc;
-  final bool isUnlocked;
-  const _AchievementData({
-    required this.icon,
-    required this.title,
-    required this.desc,
-    required this.isUnlocked,
-  });
-}
-
-class _AchievementChip extends StatelessWidget {
-  final _AchievementData data;
-  const _AchievementChip({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color:
-            data.isUnlocked ? const Color(0xFFF3F4FE) : const Color(0xFFF8F9FB),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: data.isUnlocked
-              ? const Color(0xFFD5D7FB)
-              : const Color(0xFFF3F4F6),
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            data.icon,
-            size: 28,
-            color: data.isUnlocked
-                ? const Color(0xFF5C3EF0)
-                : const Color(0xFFCBD5E1),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            data.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: data.isUnlocked
-                  ? const Color(0xFF0F172A)
-                  : const Color(0xFF94A3B8),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            data.desc,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 9,
-              color: data.isUnlocked
-                  ? const Color(0xFF64748B)
-                  : const Color(0xFFCBD5E1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _InviteFriendsCard extends StatelessWidget {
+  // Static mock data for referral system
+  final String referralCode = 'RBX-7A2F';
+  final int friendsJoined = 3;
+  final int coinsEarnedFromReferrals = 500;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient,
         borderRadius: BorderRadius.circular(20),
@@ -681,72 +603,502 @@ class _InviteFriendsCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.people, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Invite Friends',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Earn +500 RBX per invite!',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.85),
+                child: const Icon(Icons.people, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Refer & Earn',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Earn 10% from friends\' offerwall earnings forever',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Referral Code Box
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'YOUR CODE',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white.withOpacity(0.7),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      referralCode,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () {
+                    final messenger = ScaffoldMessenger.of(context);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Referral code copied!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Copy',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              final messenger = ScaffoldMessenger.of(context);
-              messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Invite link copied to clipboard!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Copy Link',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+          const SizedBox(height: 16),
+
+          // Stats row
+          Row(
+            children: [
+              Expanded(
+                child: _ReferralStat(
+                  value: '$friendsJoined',
+                  label: 'Friends Joined',
                 ),
               ),
-            ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              Expanded(
+                child: _ReferralStat(
+                  value: '+$coinsEarnedFromReferrals',
+                  label: 'RBX Earned',
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+class _ReferralStat extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const _ReferralStat({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.8),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void _showEditProfileDialog(BuildContext context, AppState appState) {
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => _EditProfileDialog(appState: appState),
+  );
+}
+
+class _EditProfileDialog extends StatefulWidget {
+  final AppState appState;
+  const _EditProfileDialog({required this.appState});
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog>
+    with SingleTickerProviderStateMixin {
+  late final TextEditingController _nameController;
+  late AnimationController _animController;
+  late Animation<double> _scaleAnim;
+  String? _selectedAvatarUrl;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController =
+        TextEditingController(text: widget.appState.displayName);
+    _selectedAvatarUrl = widget.appState.profilePhotoUrl;
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOutBack,
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    final newName = _nameController.text.trim();
+    // Update name if changed and not empty
+    if (newName.isNotEmpty && newName != widget.appState.displayName) {
+      await widget.appState.updateDisplayName(newName);
+    }
+    // Update photo if changed
+    if (_selectedAvatarUrl != widget.appState.profilePhotoUrl) {
+      await widget.appState.updateProfilePhoto(_selectedAvatarUrl);
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnim,
+      child: Dialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F2F8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close,
+                          size: 16, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Username field
+              const Text(
+                'Username',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _nameController,
+                maxLength: 20,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF0F172A),
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter your username',
+                  hintStyle: const TextStyle(
+                    color: Color(0xFFB0B8C8),
+                    fontSize: 15,
+                  ),
+                  counterText: '',
+                  filled: true,
+                  fillColor: const Color(0xFFF8F9FF),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 14),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFFE8EAFF), width: 1.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFFE8EAFF), width: 1.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(
+                        color: Color(0xFF6035EE), width: 1.5),
+                  ),
+                  prefixIcon: const Icon(Icons.person_outline,
+                      color: Color(0xFF6035EE), size: 20),
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 22),
+
+              // Avatar section
+              const Text(
+                'Profile Photo',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Pick an avatar — optional',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFFB0B8C8),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 72,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _kAvatarOptions.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (_, i) {
+                    final url = _kAvatarOptions[i];
+                    final isSelected = _selectedAvatarUrl == url;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        // Toggle off if already selected
+                        _selectedAvatarUrl =
+                            isSelected ? null : url;
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF6035EE)
+                                : const Color(0xFFE8EAFF),
+                            width: isSelected ? 3 : 1.5,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: const Color(0xFF6035EE)
+                                        .withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  )
+                                ]
+                              : [],
+                        ),
+                        child: ClipOval(
+                          child: Image.network(
+                            url,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: const Color(0xFFF1EDFF),
+                              child: const Icon(
+                                Icons.person,
+                                color: Color(0xFF6035EE),
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              // Action buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _isSaving ? null : () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: Color(0xFFE8EAFF), width: 1.5),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6035EE).withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isSaving ? null : _save,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 void _showHelpDialog(BuildContext context) {
   showDialog(

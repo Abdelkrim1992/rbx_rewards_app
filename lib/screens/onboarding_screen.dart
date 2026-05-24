@@ -40,7 +40,7 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Spacer(flex: 1),
+                  // const Spacer(flex: 3),
                   // Title
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -87,13 +87,14 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Spacer(flex: 2),
+                  const Spacer(flex: 4),
                   // Feature cards
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppLayout.screenPadding),
                     child: IntrinsicHeight(
                       child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _FeatureCard(
@@ -125,38 +126,86 @@ class OnboardingScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppLayout.screenPadding, 0, AppLayout.screenPadding, 30),
-              child: GestureDetector(
-                onTap: onGetStarted,
-                child: Container(
-                  width: double.infinity,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x736035EE),
-                        blurRadius: 24,
-                        offset: Offset(0, 12),
-                        spreadRadius: -8,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Get Started',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        letterSpacing: 0.425,
-                      ),
-                    ),
-                  ),
-                ),
+              child: Center(
+                child: _GetStartedButton(onTap: onGetStarted),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GetStartedButton extends StatefulWidget {
+  final VoidCallback onTap;
+
+  const _GetStartedButton({required this.onTap});
+
+  @override
+  State<_GetStartedButton> createState() => _GetStartedButtonState();
+}
+
+class _GetStartedButtonState extends State<_GetStartedButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 100),
+    lowerBound: 0.0,
+    upperBound: 0.05,
+  );
+
+  void _onTapDown(TapDownDetails details) => _controller.forward();
+  void _onTapUp(TapUpDetails details) => _controller.reverse();
+  void _onTapCancel() => _controller.reverse();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 1 - _controller.value,
+            child: child,
+          );
+        },
+        child: Container(
+          width: 320,
+          height: 55,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x736035EE),
+                blurRadius: 24,
+                offset: Offset(0, 12),
+                spreadRadius: -8,
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Text(
+              'Get Started',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 0.45
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -176,7 +225,8 @@ class _FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
+    return SizedBox(
+      width: 100,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
@@ -215,6 +265,8 @@ class _FeatureCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(14),
                     child: Image.asset(
                       imagePath,
+                      width: double.infinity,
+                      height: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => const Icon(Icons.star,
                           color: AppColors.primary, size: 24),

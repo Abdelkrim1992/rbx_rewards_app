@@ -7,9 +7,9 @@ import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:scratcher/scratcher.dart';
 import '../state/app_state.dart';
-import '../widgets/game_prefs.dart';
 import 'chest_screen.dart';
 import 'quizzes_screen.dart';
+import '../widgets/refreshable_scroll.dart';
 
 class EarnMoreScreen extends StatefulWidget {
   final Function(int)? onNavTap;
@@ -21,20 +21,9 @@ class EarnMoreScreen extends StatefulWidget {
 }
 
 class _EarnMoreScreenState extends State<EarnMoreScreen> {
-  int _balance = 0;
-
   @override
   void initState() {
     super.initState();
-    _loadBalance();
-  }
-
-  Future<void> _loadBalance() async {
-    final coins = await GamePrefs.getCoins();
-    if (!mounted) return;
-    setState(() {
-      _balance = coins;
-    });
   }
 
   void _showWatchAdDialog(BuildContext context) {
@@ -46,7 +35,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
       if (coinsEarned != null && coinsEarned > 0) {
         _showSuccessSnackbar(
             context, 'Successfully claimed +100 RBX Coins! 📺');
-        _loadBalance();
+        // balance updates via AppState realtime
       }
     });
   }
@@ -60,7 +49,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
       if (coinsEarned != null && coinsEarned > 0) {
         _showSuccessSnackbar(
             context, 'Successfully claimed +250 RBX Coins! 📋');
-        _loadBalance();
+        // balance updates via AppState realtime
       }
     });
   }
@@ -74,7 +63,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
       if (context.mounted && coinsEarned != null && coinsEarned > 0) {
         _showSuccessSnackbar(
             context, 'Scratch reward claimed +$coinsEarned RBX Coins! 🎁');
-        _loadBalance();
+        // balance updates via AppState realtime
       }
     });
   }
@@ -163,7 +152,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: ListView(
+              child: RefreshableListView(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppLayout.screenPadding),
                 children: [
@@ -222,7 +211,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                             builder: (_) => const QuizzesScreen()),
                       );
                       if (earned != null && earned > 0 && context.mounted) {
-                        _loadBalance();
+                        // balance updates via AppState realtime
                       }
                     },
                   ),
@@ -290,7 +279,7 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
   }
 
   void _claimAdReward() async {
-    await context.read<AppState>().addCoins(100);
+    await context.read<AppState>().addCoins(100, source: 'ad');
     await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(100);
@@ -299,146 +288,173 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: const Color(0xFF0F172A), // Premium dark mode ad style
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Ad header
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'SPONSORED AD',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white.withOpacity(0.8),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _adFinished ? 'Finished' : 'Rewards in ${_secondsLeft}s...',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFFFFB000),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Video player simulation screen
-            Container(
-              width: double.infinity,
-              height: 180,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF312E81), Color(0xFF4F46E5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: Colors.white.withOpacity(0.1), width: 1.5),
+    return PopScope(
+      canPop: _adFinished,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || _adFinished) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit Ad?'),
+            content: const Text('You will lose your ad reward. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
               ),
-              child: Stack(
-                alignment: Alignment.center,
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: const Color(0xFF0F172A), // Premium dark mode ad style
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Ad header
+              Row(
                 children: [
-                  // Animated lines simulating video graphics
-                  Positioned(
-                    bottom: 20,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                     child: Text(
-                      _adFinished
-                          ? 'Video Completed! 🎉'
-                          : 'Amazing Robux Rewards 3D...',
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                      'SPONSORED AD',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white.withOpacity(0.8),
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
-
-                  // Big Play or Gift Icon Pulsing
-                  Icon(
-                    _adFinished
-                        ? Icons.card_giftcard_rounded
-                        : Icons.play_circle_filled,
-                    color: Colors.white,
-                    size: 60,
+                  const Spacer(),
+                  Text(
+                    _adFinished ? 'Finished' : 'Rewards in ${_secondsLeft}s...',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFFFB000),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Visual Progress indicator
-            Container(
-              height: 6,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: _progress,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Claim action button
-            _InteractiveCard(
-              onTap: _adFinished ? _claimAdReward : null,
-              child: Container(
+              // Video player simulation screen
+              Container(
                 width: double.infinity,
-                height: 54,
+                height: 180,
                 decoration: BoxDecoration(
-                  gradient: _adFinished ? AppColors.primaryGradient : null,
-                  color: _adFinished ? null : const Color(0xFFE2E2F5),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: _adFinished
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          )
-                        ]
-                      : null,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF312E81), Color(0xFF4F46E5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.1), width: 1.5),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  _adFinished ? 'CLAIM +100 COINS 🪙' : 'WATCHING VIDEO...',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _adFinished ? Colors.white : const Color(0xFF868A9F),
-                    letterSpacing: 0.3,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Animated lines simulating video graphics
+                    Positioned(
+                      bottom: 20,
+                      child: Text(
+                        _adFinished
+                            ? 'Video Completed! 🎉'
+                            : 'Amazing Robux Rewards 3D...',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+
+                    // Big Play or Gift Icon Pulsing
+                    Icon(
+                      _adFinished
+                          ? Icons.card_giftcard_rounded
+                          : Icons.play_circle_filled,
+                      color: Colors.white,
+                      size: 60,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Visual Progress indicator
+              Container(
+                height: 6,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: _progress,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+
+              // Claim action button
+              _InteractiveCard(
+                onTap: _adFinished ? _claimAdReward : null,
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: _adFinished ? AppColors.primaryGradient : null,
+                    color: _adFinished ? null : const Color(0xFFE2E2F5),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: _adFinished
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            )
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _adFinished ? 'CLAIM +100 COINS 🪙' : 'WATCHING VIDEO...',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color:
+                          _adFinished ? Colors.white : const Color(0xFF868A9F),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -496,7 +512,7 @@ class _SurveyDialogState extends State<SurveyDialog> {
   }
 
   void _claimSurveyReward() async {
-    await context.read<AppState>().addCoins(250);
+    await context.read<AppState>().addCoins(250, source: 'survey');
     await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(250);
@@ -508,224 +524,251 @@ class _SurveyDialogState extends State<SurveyDialog> {
     final isFinished = _step == 4;
     final currentQ = _questions[_step];
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header Progress
-            Row(
-              children: [
-                Text(
-                  'QUICK POLL',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const Spacer(),
-                if (!isFinished)
+    return PopScope(
+      canPop: isFinished,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || isFinished) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit Survey?'),
+            content:
+                const Text('Your survey progress will be lost. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Progress
+              Row(
+                children: [
                   Text(
-                    'Step $_step of 3',
-                    style: GoogleFonts.inter(
+                    'QUICK POLL',
+                    style: GoogleFonts.outfit(
                       fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF868A9F),
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                  const Spacer(),
+                  if (!isFinished)
+                    Text(
+                      'Step $_step of 3',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF868A9F),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            if (!isFinished && currentQ != null) ...[
-              // Question text
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  currentQ.q,
+              if (!isFinished && currentQ != null) ...[
+                // Question text
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    currentQ.q,
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF131326),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Options
+                Column(
+                  children: List.generate(currentQ.opts.length, (idx) {
+                    final isSel = _selectedOption == idx;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedOption = idx;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: isSel
+                              ? const Color(0xFFF3EAFD)
+                              : const Color(0xFFFAFAFE),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSel
+                                ? AppColors.primary
+                                : const Color(0xFFECEBFC),
+                            width: 2.0,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                currentQ.opts[idx],
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: isSel
+                                      ? AppColors.primary
+                                      : const Color(0xFF131326),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSel
+                                      ? AppColors.primary
+                                      : const Color(0xFFDCDAF0),
+                                  width: 2,
+                                ),
+                                color: isSel
+                                    ? AppColors.primary
+                                    : Colors.transparent,
+                              ),
+                              child: isSel
+                                  ? const Icon(Icons.check,
+                                      color: Colors.white, size: 12)
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 16),
+
+                // Action button
+                _InteractiveCard(
+                  onTap: _selectedOption != null ? _nextStep : null,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      gradient: _selectedOption != null
+                          ? AppColors.primaryGradient
+                          : null,
+                      color: _selectedOption != null
+                          ? null
+                          : const Color(0xFFE2E2F5),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: _selectedOption != null
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              )
+                            ]
+                          : null,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      _step == 3 ? 'FINISH' : 'NEXT STEP',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: _selectedOption != null
+                            ? Colors.white
+                            : const Color(0xFF868A9F),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // Complete card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE3F8EB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.stars,
+                    color: Color(0xFF00C853),
+                    size: 64,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Poll Complete! 🌟',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF131326),
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
-
-              // Options
-              Column(
-                children: List.generate(currentQ.opts.length, (idx) {
-                  final isSel = _selectedOption == idx;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedOption = idx;
-                      });
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: isSel
-                            ? const Color(0xFFF3EAFD)
-                            : const Color(0xFFFAFAFE),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isSel
-                              ? AppColors.primary
-                              : const Color(0xFFECEBFC),
-                          width: 2.0,
+                const SizedBox(height: 8),
+                Text(
+                  'Thank you for your valuable feedback!',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF868A9F),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _InteractiveCard(
+                  onTap: _claimSurveyReward,
+                  child: Container(
+                    width: double.infinity,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              currentQ.opts[idx],
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: isSel
-                                    ? AppColors.primary
-                                    : const Color(0xFF131326),
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSel
-                                    ? AppColors.primary
-                                    : const Color(0xFFDCDAF0),
-                                width: 2,
-                              ),
-                              color: isSel
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                            ),
-                            child: isSel
-                                ? const Icon(Icons.check,
-                                    color: Colors.white, size: 12)
-                                : null,
-                          ),
-                        ],
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'CLAIM +250 COINS 🪙',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
                       ),
                     ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 16),
-
-              // Action button
-              _InteractiveCard(
-                onTap: _selectedOption != null ? _nextStep : null,
-                child: Container(
-                  width: double.infinity,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    gradient: _selectedOption != null
-                        ? AppColors.primaryGradient
-                        : null,
-                    color: _selectedOption != null
-                        ? null
-                        : const Color(0xFFE2E2F5),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: _selectedOption != null
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            )
-                          ]
-                        : null,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _step == 3 ? 'FINISH' : 'NEXT STEP',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: _selectedOption != null
-                          ? Colors.white
-                          : const Color(0xFF868A9F),
-                      letterSpacing: 0.3,
-                    ),
                   ),
                 ),
-              ),
-            ] else ...[
-              // Complete card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE3F8EB),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.stars,
-                  color: Color(0xFF00C853),
-                  size: 64,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Poll Complete! 🌟',
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF131326),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Thank you for your valuable feedback!',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: const Color(0xFF868A9F),
-                ),
-              ),
-              const SizedBox(height: 24),
-              _InteractiveCard(
-                onTap: _claimSurveyReward,
-                child: Container(
-                  width: double.infinity,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'CLAIM +250 COINS 🪙',
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -758,7 +801,7 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
     setState(() {
       _claimed = true;
     });
-    await context.read<AppState>().addCoins(_reward);
+    await context.read<AppState>().addCoins(_reward, source: 'scratch');
     await context.read<AppState>().incrementOffersCompleted();
     if (mounted) {
       Navigator.of(context).pop(_reward);
@@ -767,168 +810,195 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'SCRATCH CARD',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.primary,
-                    letterSpacing: 0.5,
+    return PopScope(
+      canPop: _claimed,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || _claimed) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit Scratch?'),
+            content:
+                const Text('Your scratch progress will be lost. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'SCRATCH CARD',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.primary,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  _revealed
-                      ? 'Reward ready'
-                      : '${(_scratchProgress * 100).round()}%',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF868A9F),
+                  const Spacer(),
+                  Text(
+                    _revealed
+                        ? 'Reward ready'
+                        : '${(_scratchProgress * 100).round()}%',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF868A9F),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              height: 190,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFECEBFC), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  )
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: Scratcher(
-                  key: scratchKey,
-                  brushSize: 40,
-                  threshold: 80,
-                  color: const Color(0xFFCBD5E1),
-                  image: null,
-                  onChange: (value) {
-                    setState(() {
-                      _scratchProgress = value / 100;
-                    });
-                  },
-                  onThreshold: () {
-                    HapticFeedback.heavyImpact();
-                    setState(() {
-                      _revealed = true;
-                      _scratchProgress = 1.0;
-                    });
-                    scratchKey.currentState?.reveal(
-                      duration: const Duration(milliseconds: 500),
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFFFFF3E3), Color(0xFFFFD56B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              const SizedBox(height: 18),
+              Container(
+                width: double.infinity,
+                height: 190,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFECEBFC), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Scratcher(
+                    key: scratchKey,
+                    brushSize: 40,
+                    threshold: 80,
+                    color: const Color(0xFFCBD5E1),
+                    image: null,
+                    onChange: (value) {
+                      setState(() {
+                        _scratchProgress = value / 100;
+                      });
+                    },
+                    onThreshold: () {
+                      HapticFeedback.heavyImpact();
+                      setState(() {
+                        _revealed = true;
+                        _scratchProgress = 1.0;
+                      });
+                      scratchKey.currentState?.reveal(
+                        duration: const Duration(milliseconds: 500),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFFFFF3E3), Color(0xFFFFD56B)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            AppAssets.goldRbxCoin,
+                            width: 56,
+                            height: 56,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.monetization_on,
+                              color: Color(0xFFFFB000),
+                              size: 56,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '+$_reward RBX',
+                            style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'You revealed a reward!',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF4A4B60),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          AppAssets.goldRbxCoin,
-                          width: 56,
-                          height: 56,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.monetization_on,
-                            color: Color(0xFFFFB000),
-                            size: 56,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '+$_reward RBX',
-                          style: GoogleFonts.outfit(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'You revealed a reward!',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF4A4B60),
-                          ),
-                        ),
-                      ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  minHeight: 8,
+                  value: _scratchProgress,
+                  backgroundColor: const Color(0xFFECEBFC),
+                  valueColor:
+                      const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _InteractiveCard(
+                onTap: _revealed ? _claimScratchReward : null,
+                child: Container(
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    gradient: _revealed ? AppColors.primaryGradient : null,
+                    color: _revealed ? null : const Color(0xFFE2E2F5),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: _revealed
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    _revealed ? 'CLAIM +$_reward COINS 🪙' : 'KEEP SCRATCHING',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: _revealed ? Colors.white : const Color(0xFF868A9F),
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                minHeight: 8,
-                value: _scratchProgress,
-                backgroundColor: const Color(0xFFECEBFC),
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _InteractiveCard(
-              onTap: _revealed ? _claimScratchReward : null,
-              child: Container(
-                width: double.infinity,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: _revealed ? AppColors.primaryGradient : null,
-                  color: _revealed ? null : const Color(0xFFE2E2F5),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: _revealed
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ]
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  _revealed ? 'CLAIM +$_reward COINS 🪙' : 'KEEP SCRATCHING',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _revealed ? Colors.white : const Color(0xFF868A9F),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

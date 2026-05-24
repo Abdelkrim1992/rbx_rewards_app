@@ -2,8 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
+import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ad_reward_dialog.dart';
 
 class TapTapGameScreen extends StatefulWidget {
   const TapTapGameScreen({super.key});
@@ -19,6 +21,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   bool _isGameOver = false;
   int _score = 0;
   int _coinsEarned = 0;
+  int _originalCoinsEarned = 0;
   int _comboCount = 0;
   int _maxCombo = 0;
   double _timerProgress = 1.0;
@@ -26,6 +29,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   Ticker? _ticker;
   Duration _lastTickTime = Duration.zero;
   double _timeElapsedSinceLastTap = 0.0;
+  String? _sessionId;
+  DateTime? _gameStartTime;
 
   // Screen shake variables
   double _shakeIntensity = 0.0;
@@ -48,6 +53,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   // Flying coins for claim animation
   final List<_FlyingCoin> _flyingCoins = [];
   bool _isClaiming = false;
+  bool _adWatched = false;
 
   // Concentric 3D UI states
   final List<_BgElement> _bgElements = [];
@@ -123,6 +129,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       _isGameOver = false;
       _score = 0;
       _coinsEarned = 0;
+      _originalCoinsEarned = 0;
+      _adWatched = false;
       _comboCount = 0;
       _maxCombo = 0;
       _timerProgress = 1.0;
@@ -133,6 +141,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       _isClaiming = false;
     });
 
+    _sessionId = GameService().generateSessionId();
+    _gameStartTime = DateTime.now();
     _lastTickTime = Duration.zero;
     _ticker = createTicker(_onTick);
     _ticker!.start();
@@ -217,14 +227,32 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           _isClaiming = false;
           _ticker?.stop();
 
-          // Save coins via state management
-          final appState = context.read<AppState>();
-          appState.addCoins(_coinsEarned).then((_) async {
-            await appState.incrementGamesPlayed();
-            if (mounted) {
-              Navigator.of(context).pop(_coinsEarned); // Return earned coins
-            }
+          // Submit game result to server
+          final duration = _gameStartTime != null
+              ? DateTime.now().difference(_gameStartTime!).inSeconds
+              : 1;
+          final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+          // Always credit coins locally first so the user never loses earned rewards.
+          context.read<AppState>().optimisticAddCoins(finalScore);
+
+          GameService()
+              .submitGameResult(
+                gameName: 'tap_tap',
+                score: finalScore,
+                durationSeconds: duration.clamp(1, 3600),
+                sessionId:
+                    _sessionId ?? 'tap_${GameService().generateSessionId()}',
+                originalScore: _originalCoinsEarned,
+                multiplier: _adWatched ? 2 : 1,
+              )
+              .then((_) {})
+              .catchError((e) {
+            debugPrint('Failed to submit tap tap result: $e');
           });
+
+          if (mounted) {
+            Navigator.of(context).pop(finalScore);
+          }
         }
       }
 
@@ -258,10 +286,11 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   }
 
   void _endGame() {
-    _coinsEarned = (_score * 0.5).ceil(); // 1 coin for every 2 taps
+    _originalCoinsEarned = (_score * 0.5).ceil(); // 1 coin for every 2 taps
     if (_maxCombo > 10) {
-      _coinsEarned += (_maxCombo * 0.5).round(); // Combo bonus!
+      _originalCoinsEarned += (_maxCombo * 0.5).round(); // Combo bonus!
     }
+    _coinsEarned = _originalCoinsEarned;
     _endDialogController.reset();
     _endDialogController.forward();
   }
@@ -445,178 +474,206 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       crystalState = 'COMBO x$_comboCount';
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Background soft abstract radial glows
-          Positioned(
-            top: -150,
-            left: -150,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [auraColor.withOpacity(0.1), Colors.transparent],
-                ),
+    final isPlaying = _hasStarted && !_isGameOver;
+    return PopScope(
+      canPop: !isPlaying,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || !isPlaying) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Leave Game?'),
+            content: const Text('Your progress will be lost. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
               ),
-            ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Leave'),
+              ),
+            ],
           ),
-
-          // Beautiful floating background stars/circles inspired by the mockup
-          ..._bgElements.map((bg) {
-            return Positioned(
-              left: bg.x,
-              top: bg.y,
-              child: Transform.rotate(
-                angle: bg.rotation,
-                child: Opacity(
-                  opacity: 0.12,
-                  child: Icon(
-                    bg.isStar ? Icons.star : Icons.circle_outlined,
-                    size: bg.size,
-                    color: const Color(0xFF6E3AFF),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            // Background soft abstract radial glows
+            Positioned(
+              top: -150,
+              left: -150,
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [auraColor.withOpacity(0.1), Colors.transparent],
                   ),
                 ),
               ),
-            );
-          }),
+            ),
 
-          SafeArea(
-            child: Column(
-              children: [
-                // Top Header Nav Bar with integrated reactive Timer subtitle
-                // Top Header Nav Bar with integrated reactive Timer subtitle
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: SizedBox(
-                    height: 44,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
+            // Beautiful floating background stars/circles inspired by the mockup
+            ..._bgElements.map((bg) {
+              return Positioned(
+                left: bg.x,
+                top: bg.y,
+                child: Transform.rotate(
+                  angle: bg.rotation,
+                  child: Opacity(
+                    opacity: 0.12,
+                    child: Icon(
+                      bg.isStar ? Icons.star : Icons.circle_outlined,
+                      size: bg.size,
+                      color: const Color(0xFF6E3AFF),
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            SafeArea(
+              child: Column(
+                children: [
+                  // Top Header Nav Bar with integrated reactive Timer subtitle
+                  // Top Header Nav Bar with integrated reactive Timer subtitle
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: SizedBox(
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: GestureDetector(
+                              onTap: () => Navigator.of(context).pop(),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySoft,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: AppColors.purple,
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Tap Tap',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF131326),
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              // Beautiful reactive subtitle that displays the live timer countdown!
+                              AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 150),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: _hasStarted && !_isGameOver
+                                      ? (_timeLeftSeconds <= 4
+                                          ? Colors.red
+                                          : AppColors.purple)
+                                      : AppColors.purple,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Inter',
+                                ),
+                                child: Text(
+                                  _hasStarted
+                                      ? (_isGameOver
+                                          ? 'Game Over!'
+                                          : 'Time: 00:${_timeLeftSeconds.toString().padLeft(2, '0')}')
+                                      : '3D Action Mode',
+                                ),
+                              ),
+                            ],
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
                             child: Container(
-                              width: 44,
-                              height: 44,
+                              height: 38,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
                               decoration: BoxDecoration(
                                 color: AppColors.primarySoft,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: AppColors.purple,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Tap Tap',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF131326),
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            // Beautiful reactive subtitle that displays the live timer countdown!
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 150),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: _hasStarted && !_isGameOver
-                                    ? (_timeLeftSeconds <= 4
-                                        ? Colors.red
-                                        : AppColors.purple)
-                                    : AppColors.purple,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Inter',
-                              ),
-                              child: Text(
-                                _hasStarted
-                                    ? (_isGameOver
-                                        ? 'Game Over!'
-                                        : 'Time: 00:${_timeLeftSeconds.toString().padLeft(2, '0')}')
-                                    : '3D Action Mode',
-                              ),
-                            ),
-                          ],
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            height: 38,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.bolt,
-                                    color: AppColors.purple, size: 20),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '$_score',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF131326),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.bolt,
+                                      color: AppColors.purple, size: 20),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$_score',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF131326),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
-                Expanded(
-                  child: Transform.translate(
-                    offset: Offset(dx, dy),
-                    child: Center(
-                      child: _hasStarted
-                          ? _buildGameplay(
-                              auraColor, crystalCoreColor, crystalState)
-                          : _buildInstructions(),
+                  Expanded(
+                    child: Transform.translate(
+                      offset: Offset(dx, dy),
+                      child: Center(
+                        child: _hasStarted
+                            ? _buildGameplay(
+                                auraColor, crystalCoreColor, crystalState)
+                            : _buildInstructions(),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Custom Physics Render Overlays (Confetti / Particles)
-          IgnorePointer(
-            child: CustomPaint(
-              size: Size.infinite,
-              painter: _OverlaysPainter(_particles, _floatingTexts),
-            ),
-          ),
-
-          // Flying Claimed Coins overlay
-          if (_isClaiming)
-            IgnorePointer(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _CoinFlyPainter(_flyingCoins),
+                ],
               ),
             ),
 
-          // End Game 3D Dialog Overlay
-          if (_isGameOver) _buildEndGameDialog(),
-        ],
+            // Custom Physics Render Overlays (Confetti / Particles)
+            IgnorePointer(
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: _OverlaysPainter(_particles, _floatingTexts),
+              ),
+            ),
+
+            // Flying Claimed Coins overlay
+            if (_isClaiming)
+              IgnorePointer(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _CoinFlyPainter(_flyingCoins),
+                ),
+              ),
+
+            // End Game 3D Dialog Overlay
+            if (_isGameOver) _buildEndGameDialog(),
+          ],
+        ),
       ),
     );
   }
@@ -1055,6 +1112,64 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // 2x Ad button (shown only if not yet watched)
+                  if (!_adWatched)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: GestureDetector(
+                        onTap: _isClaiming
+                            ? null
+                            : () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (_) => AdRewardDialog(
+                                    onRewardGranted: () {
+                                      setState(() {
+                                        _coinsEarned = _originalCoinsEarned * 2;
+                                        _adWatched = true;
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                        child: Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFFCC44).withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.play_circle,
+                                  color: Colors.white, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                'Watch Ad for 2x Coins',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Action buttons
                   Builder(builder: (btnContext) {

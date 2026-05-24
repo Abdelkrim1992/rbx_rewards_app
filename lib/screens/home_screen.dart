@@ -4,6 +4,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/refreshable_scroll.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
@@ -130,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 _InteractiveCard(
                   onTap: () {
                     Navigator.of(context).pop();
-                    _completeClaim();
                   },
                   child: Container(
                     width: double.infinity,
@@ -167,12 +167,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _completeClaim() async {
-    await context.read<AppState>().claimDailyReward();
+    final success = await context.read<AppState>().claimDailyReward();
+    if (!mounted) return;
+    if (success) {
+      _showRewardPopup();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to claim daily reward. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   void _claimDaily() {
-    if (context.read<AppState>().isDailyRewardCoolingDown) return;
-    _showRewardPopup();
+    final appState = context.read<AppState>();
+    if (appState.isDailyRewardCoolingDown) return;
+    _completeClaim();
   }
 
   Future<void> _showSurveyDialog() async {
@@ -215,26 +228,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  ({int goal, String label}) _getNextRewardTier(int coins) {
-    final tiers = [
-      (goal: 1000, label: '100 RBX Bonus'),
-      (goal: 3000, label: '\$1 Roblox Card'),
-      (goal: 5000, label: '\$5 Roblox Card'),
-      (goal: 10000, label: '\$10 Roblox Card'),
-      (goal: 20000, label: '\$20 Roblox Card'),
-    ];
-    for (final tier in tiers) {
-      if (coins < tier.goal) return tier;
-    }
-    return tiers.last;
-  }
+
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final isDailyClaimed = appState.isDailyRewardCoolingDown;
     final timeUntilNextClaim = appState.dailyRewardRemaining;
-    final nextTier = _getNextRewardTier(appState.coins);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -244,12 +244,45 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(top: 20, bottom: 100),
+              child: RefreshableScrollView(
+                padding: const EdgeInsets.only(top: 12, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RbxAppHeader(onNavTap: widget.onNavTap),
+                    // Offline banner
+                    if (!appState.isOnline)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppLayout.screenPadding, vertical: 8),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3CD),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFFE69C)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.wifi_off,
+                                  color: Color(0xFF856404), size: 20),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'You are offline. Earning features are disabled.',
+                                  style: TextStyle(
+                                    color: Color(0xFF856404),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     // Welcome greeting
                     const Padding(
                       padding: const EdgeInsets.symmetric(
@@ -361,18 +394,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Progress Bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: _ProgressBar(
-                        current: appState.coins,
-                        goal: nextTier.goal,
-                        label: nextTier.label,
-                      ),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
-
                     // Daily Reward Card
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -383,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color.fromARGB(255, 68, 41, 159)
+                              color: const Color.fromARGB(255, 120, 78, 255)
                                   .withValues(alpha: 0.15),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
@@ -530,39 +551,48 @@ class _HomeScreenState extends State<HomeScreen> {
                             iconUrl: AppAssets.chestIcon,
                             title: 'Chest',
                             badge: 'Ready',
-                            onTap: () async {
-                              final earned =
-                                  await Navigator.of(context).push<int>(
-                                MaterialPageRoute(
-                                    builder: (_) => const ChestScreen()),
-                              );
-                              if (earned != null && earned > 0) {
-                                await context.read<AppState>().refreshCoins();
-                              }
-                            },
+                            onTap: appState.isOnline
+                                ? () async {
+                                    final earned =
+                                        await Navigator.of(context).push<int>(
+                                      MaterialPageRoute(
+                                          builder: (_) => const ChestScreen()),
+                                    );
+                                    if (earned != null && earned > 0) {
+                                      await context
+                                          .read<AppState>()
+                                          .refreshCoins();
+                                    }
+                                  }
+                                : null,
                           ),
                           const SizedBox(width: 12),
                           _QuickActionCard(
                             iconUrl: AppAssets.spinWheelIcon,
                             title: 'Spin & Win',
                             badge: 'Ready',
-                            onTap: widget.onSpinTap,
+                            onTap: appState.isOnline ? widget.onSpinTap : null,
                           ),
                           const SizedBox(width: 12),
                           _QuickActionCard(
                             iconUrl: AppAssets.quizMasterQuickActions,
                             title: 'Quizzes',
                             badge: 'Ready',
-                            onTap: () async {
-                              final earned =
-                                  await Navigator.of(context).push<int>(
-                                MaterialPageRoute(
-                                    builder: (_) => const QuizzesScreen()),
-                              );
-                              if (earned != null && earned > 0) {
-                                await context.read<AppState>().refreshCoins();
-                              }
-                            },
+                            onTap: appState.isOnline
+                                ? () async {
+                                    final earned =
+                                        await Navigator.of(context).push<int>(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const QuizzesScreen()),
+                                    );
+                                    if (earned != null && earned > 0) {
+                                      await context
+                                          .read<AppState>()
+                                          .refreshCoins();
+                                    }
+                                  }
+                                : null,
                           ),
                         ],
                       ),
@@ -594,18 +624,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Tap & earn',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFEAF3FF),
-                              onTap: () async {
-                                final earned =
-                                    await Navigator.of(context).push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const TapTapGameScreen(),
-                                  ),
-                                );
-                                if (earned != null && earned > 0) {
-                                  await context.read<AppState>().refreshCoins();
-                                }
-                              },
+                              onTap: appState.isOnline
+                                  ? () async {
+                                      final earned =
+                                          await Navigator.of(context).push<int>(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const TapTapGameScreen(),
+                                        ),
+                                      );
+                                      if (earned != null && earned > 0) {
+                                        await context
+                                            .read<AppState>()
+                                            .refreshCoins();
+                                      }
+                                    }
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -616,18 +650,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Answer & win',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFE3F8EB),
-                              onTap: () async {
-                                final earned =
-                                    await Navigator.of(context).push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MathQuizScreen(),
-                                  ),
-                                );
-                                if (earned != null && earned > 0) {
-                                  await context.read<AppState>().refreshCoins();
-                                }
-                              },
+                              onTap: appState.isOnline
+                                  ? () async {
+                                      final earned =
+                                          await Navigator.of(context).push<int>(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const MathQuizScreen(),
+                                        ),
+                                      );
+                                      if (earned != null && earned > 0) {
+                                        await context
+                                            .read<AppState>()
+                                            .refreshCoins();
+                                      }
+                                    }
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -638,18 +676,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               subtitle: 'Fly & earn',
                               coins: '+200 RBX',
                               bgColor: const Color(0xFFFFF3E3),
-                              onTap: () async {
-                                final earned =
-                                    await Navigator.of(context).push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const FlappyJumpGameScreen(),
-                                  ),
-                                );
-                                if (earned != null && earned > 0) {
-                                  await context.read<AppState>().refreshCoins();
-                                }
-                              },
+                              onTap: appState.isOnline
+                                  ? () async {
+                                      final earned =
+                                          await Navigator.of(context).push<int>(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const FlappyJumpGameScreen(),
+                                        ),
+                                      );
+                                      if (earned != null && earned > 0) {
+                                        await context
+                                            .read<AppState>()
+                                            .refreshCoins();
+                                      }
+                                    }
+                                  : null,
                             ),
                           ),
                         ],
@@ -741,59 +783,48 @@ class _HomeScreenState extends State<HomeScreen> {
                           horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Offers & Tasks',
-                        linkText: 'Show all offers',
+                        linkText: 'View All',
                         onTap: () => widget.onNavTap(2),
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),
 
-                    // Offers & Tasks grid
+                    // Offers & Tasks list (3 items)
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final cardWidth = (constraints.maxWidth - 6) / 2;
-                          return Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              SizedBox(
-                                width: cardWidth,
-                                child: _OfferCard(
-                                  iconUrl:
-                                      'https://cdn3d.iconscout.com/3d/premium/thumb/candy-11172680-8996698.png',
-                                  title: 'Candy Crush Saga',
-                                  subtitle: 'Reach Level 15',
-                                  reward: '+2,500',
-                                  onTap: () {},
-                                ),
-                              ),
-                              SizedBox(
-                                width: cardWidth,
-                                child: _OfferCard(
-                                  iconUrl:
-                                      'https://cdn3d.iconscout.com/3d/premium/thumb/clipboard-survey-9937084-8134762.png',
-                                  title: 'Complete Survey',
-                                  subtitle: 'Complete a Survey',
-                                  reward: '+800',
-                                  onTap: () => _showSurveyDialog(),
-                                ),
-                              ),
-                              SizedBox(
-                                width: cardWidth,
-                                child: _OfferCard(
-                                  iconUrl:
-                                      'https://cdn3d.iconscout.com/3d/premium/thumb/beach-umbrella-6848699-5608670.png',
-                                  title: 'Travel Town',
-                                  subtitle: 'Install & Open',
-                                  reward: '+1,200',
-                                  onTap: () {},
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+                      child: Column(
+                        children: [
+                          _HomeOfferListItem(
+                            icon: Icons.casino,
+                            title: 'Candy Crush Saga',
+                            subtitle: 'Reach Level 15',
+                            reward: 2500,
+                            difficulty: 'Hard',
+                            estimatedTime: '3 hours',
+                            onTap: () {},
+                          ),
+                          const SizedBox(height: 12),
+                          _HomeOfferListItem(
+                            icon: Icons.poll,
+                            title: 'Complete Survey',
+                            subtitle: 'Share your shopping habits',
+                            reward: 800,
+                            difficulty: 'Easy',
+                            estimatedTime: '5 min',
+                            onTap: () => _showSurveyDialog(),
+                          ),
+                          const SizedBox(height: 12),
+                          _HomeOfferListItem(
+                            icon: Icons.shopping_bag,
+                            title: 'Travel Town',
+                            subtitle: 'Install & Open',
+                            reward: 1200,
+                            difficulty: 'Easy',
+                            estimatedTime: '3 min',
+                            onTap: () {},
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
@@ -1133,29 +1164,47 @@ class _EarnMoreVerticalCard extends StatelessWidget {
   }
 }
 
-class _OfferCard extends StatelessWidget {
-  final String iconUrl;
+class _HomeOfferListItem extends StatelessWidget {
+  final IconData icon;
   final String title;
   final String subtitle;
-  final String reward;
+  final int reward;
+  final String difficulty;
+  final String estimatedTime;
   final VoidCallback? onTap;
 
-  const _OfferCard({
-    required this.iconUrl,
+  const _HomeOfferListItem({
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.reward,
+    required this.difficulty,
+    required this.estimatedTime,
     this.onTap,
   });
 
+  Color _difficultyColor(String difficulty) {
+    switch (difficulty) {
+      case 'Easy':
+        return const Color(0xFF27AE60);
+      case 'Medium':
+        return const Color(0xFFFF9800);
+      case 'Hard':
+        return const Color(0xFFE74C3C);
+      default:
+        return const Color(0xFF868A9F);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return _InteractiveCard(
+    return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0xFFF3F4F6)),
           boxShadow: const [
             BoxShadow(
@@ -1165,34 +1214,21 @@ class _OfferCard extends StatelessWidget {
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 15),
         child: Row(
           children: [
-            // App icon
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                iconUrl,
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.local_offer,
-                    size: 24,
-                    color: Color(0xFF6035EE),
-                  ),
-                ),
+            // Icon
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
               ),
+              child: Icon(icon, color: Colors.white, size: 26),
             ),
-            const SizedBox(width: 8),
-            // Text content
+            const SizedBox(width: 14),
+
+            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1200,50 +1236,118 @@ class _OfferCard extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       color: Color(0xFF131326),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 4),
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 12,
                       color: Color(0xFF868A9F),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
-                      Image.asset(
-                        AppAssets.goldRbxCoin,
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.monetization_on,
-                          size: 16,
-                          color: Color(0xFFFFCC44),
+                      // Difficulty tag
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _difficultyColor(difficulty).withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          difficulty,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: _difficultyColor(difficulty),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$reward RBX',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF131326),
-                        ),
+                      const SizedBox(width: 8),
+                      // Time tag
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer,
+                              size: 12, color: Color(0xFF868A9F)),
+                          const SizedBox(width: 3),
+                          Text(
+                            estimatedTime,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF868A9F),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
+            ),
+
+            // Reward
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      AppAssets.goldRbxCoin,
+                      width: 18,
+                      height: 18,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.monetization_on,
+                        size: 18,
+                        color: Color(0xFFFFCC44),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$reward',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF131326),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1252,85 +1356,7 @@ class _OfferCard extends StatelessWidget {
   }
 }
 
-class _ProgressBar extends StatelessWidget {
-  final int current;
-  final int goal;
-  final String label;
 
-  const _ProgressBar({
-    required this.current,
-    required this.goal,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = (current / goal).clamp(0.0, 1.0);
-    final remaining = (goal - current).clamp(0, goal);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Your Progress',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF131326),
-                ),
-              ),
-              Text(
-                '\$current / \$goal',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF868A9F),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 10,
-              backgroundColor: const Color(0xFFF1F5F9),
-              valueColor: AlwaysStoppedAnimation(AppColors.primary),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            remaining > 0
-                ? '\$remaining coins until \$label'
-                : 'You can redeem your \$label now!',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color:
-                  remaining > 0 ? const Color(0xFF868A9F) : AppColors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _VipPassCard extends StatelessWidget {
   final VoidCallback? onTap;

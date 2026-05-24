@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
+import '../widgets/ad_reward_dialog.dart';
 
 class MathQuestion {
   final String text;
@@ -38,8 +40,12 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   int _questionIndex = 1;
   final int _totalQuestions = 10;
   int _coinsEarned = 0;
+  int _originalCoinsEarned = 0;
+  bool _adWatched = false;
   int _highScore = 0;
   int _userCoins = 0;
+  String? _sessionId;
+  DateTime? _gameStartTime;
 
   // Active question details
   late MathQuestion _currentQuestion;
@@ -75,11 +81,9 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   }
 
   Future<void> _loadHighScoreAndCoins() async {
-    final hs = await GamePrefs.getMathQuizHighScore();
-    final uc = await GamePrefs.getCoins();
+    final appState = context.read<AppState>();
     setState(() {
-      _highScore = hs;
-      _userCoins = uc;
+      _userCoins = appState.coins;
     });
   }
 
@@ -103,13 +107,16 @@ class _MathQuizScreenState extends State<MathQuizScreen>
       _questionIndex = 1;
       _score = 0;
       _coinsEarned = 0;
+      _originalCoinsEarned = 0;
+      _adWatched = false;
       _secondsLeft = 60;
       _timerProgress = 1.0;
       _selectedAnswer = null;
       _isCorrectAnswer = null;
     });
 
-    GamePrefs.incrementMathQuizPlayed();
+    _sessionId = GameService().generateSessionId();
+    _gameStartTime = DateTime.now();
     _generateQuestion();
     _startSessionTimer();
   }
@@ -225,20 +232,59 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     final coins = _correctCount * 50;
 
     setState(() {
+      _originalCoinsEarned = coins;
       _coinsEarned = coins;
       _gameState = 'GAMEOVER';
     });
 
-    GamePrefs.saveMathQuizHighScore(_score);
     _loadHighScoreAndCoins();
   }
 
+  Future<void> _syncQuizResult(int finalScore, int duration) async {
+    try {
+      await GameService().submitGameResult(
+        gameName: 'math_quiz',
+        score: finalScore,
+        durationSeconds: duration.clamp(1, 3600),
+        sessionId: _sessionId ?? 'math_${GameService().generateSessionId()}',
+        originalScore: _originalCoinsEarned,
+        multiplier: _adWatched ? 2 : 1,
+      );
+    } catch (e) {
+      debugPrint('Failed to submit quiz result: $e');
+    }
+  }
+
   void _claimQuizCoins() async {
-    await context.read<AppState>().addCoins(_coinsEarned);
-    await context.read<AppState>().incrementGamesPlayed();
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+    final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+
+    // Always credit coins locally first so the user never loses earned rewards.
+    context.read<AppState>().optimisticAddCoins(finalScore);
+
+    // Try to sync to server in the background; don't block the reward on this.
+    await _syncQuizResult(finalScore, duration);
 
     if (mounted) {
-      Navigator.of(context).pop(_coinsEarned);
+      Navigator.of(context).pop(finalScore);
+    }
+  }
+
+  void _playAgain() async {
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+    final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+
+    if (finalScore > 0) {
+      context.read<AppState>().optimisticAddCoins(finalScore);
+      await _syncQuizResult(finalScore, duration);
+    }
+
+    if (mounted) {
+      _startQuizRound();
     }
   }
 
@@ -252,26 +298,120 @@ class _MathQuizScreenState extends State<MathQuizScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Floating 3D decorative background elements (drifting mathematically)
-            if (_gameState == 'MENU') _buildMenuDecorativeFloaters(),
-
-            Column(
-              children: [
-                _buildScreenHeader(),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: _buildCurrentStateView(),
-                  ),
-                ),
-              ],
+    final isPlaying = _gameState == 'PLAYING';
+    return PopScope(
+      canPop: !isPlaying,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || !isPlaying) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text(
+              'Quit Quiz?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                color: const Color(0xFF131326),
+              ),
             ),
-          ],
+            content: Text(
+              'Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFF4A4B60),
+                height: 1.4,
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _InteractiveCard(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F1FB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF868A9F),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InteractiveCard(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF1744).withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Quit',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Floating 3D decorative background elements (drifting mathematically)
+              if (_gameState == 'MENU') _buildMenuDecorativeFloaters(),
+
+              Column(
+                children: [
+                  _buildScreenHeader(),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _buildCurrentStateView(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -734,9 +874,66 @@ class _MathQuizScreenState extends State<MathQuizScreen>
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
+              // Watch Ad for 2x
+              if (_coinsEarned > 0 && !_adWatched)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => AdRewardDialog(
+                          onRewardGranted: () {
+                            setState(() {
+                              _coinsEarned = _originalCoinsEarned * 2;
+                              _adWatched = true;
+                            });
+                          },
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
+                        ),
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFCC44).withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.play_circle,
+                                color: Colors.white, size: 20),
+                            SizedBox(width: 6),
+                            Text(
+                              'Watch Ad for 2x Coins',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
               // Play Again
               GestureDetector(
-                onTap: _startQuizRound,
+                onTap: _playAgain,
                 child: Container(
                   width: double.infinity,
                   height: 60,

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../screens/profile_screen.dart';
+import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
 class RbxAppHeader extends StatelessWidget {
@@ -8,8 +11,15 @@ class RbxAppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final profilePhotoUrl = context.watch<AppState>().profilePhotoUrl;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 0, 20, 0),
+      padding: const EdgeInsets.only(
+        left: AppLayout.screenPadding,
+        right: AppLayout.screenPadding,
+        top: 10,
+        bottom: 20,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -18,8 +28,8 @@ class RbxAppHeader extends StatelessWidget {
               // RBX Logo cube
               Image.asset(
                 AppAssets.rbxLogo,
-                width: 140,
-                height: 100,
+                width: 120,
+                height: 50,
                 errorBuilder: (_, __, ___) => Container(
                   width: 50,
                   height: 50,
@@ -59,7 +69,16 @@ class RbxAppHeader extends StatelessWidget {
             ],
           ),
           GestureDetector(
-            onTap: onNavTap == null ? null : () => onNavTap!(3),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(
+                    onNavTap: onNavTap ?? (_) {},
+                  ),
+                ),
+              );
+            },
             child: Container(
               width: 46,
               height: 46,
@@ -76,12 +95,23 @@ class RbxAppHeader extends StatelessWidget {
                 ],
               ),
               child: ClipOval(
-                child: Image.asset(
-                  AppAssets.profileAvatar,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.person, color: AppColors.purple),
-                ),
+                child: profilePhotoUrl != null
+                    ? Image.network(
+                        profilePhotoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          AppAssets.profileAvatar,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.person, color: AppColors.purple),
+                        ),
+                      )
+                    : Image.asset(
+                        AppAssets.profileAvatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.person, color: AppColors.purple),
+                      ),
               ),
             ),
           ),

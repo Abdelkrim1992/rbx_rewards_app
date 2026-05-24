@@ -1,143 +1,279 @@
 import 'dart:async';
+import 'dart:math';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AppState extends ChangeNotifier {
-  static const Duration dailyRewardCooldown = Duration(hours: 24);
-  static const int dailyRewardAmount = 100;
-  static const int megaChestRewardAmount = 500;
+import '../services/auth_service.dart';
+import '../services/coin_service.dart';
+import '../services/game_service.dart';
+import '../services/pending_transaction_service.dart';
+import '../services/reward_service.dart';
+import '../widgets/game_prefs.dart';
 
-  static const String _keyCoins = 'rbx_coins_balance';
-  static const String _keyMegaChestClaimed = 'mega_chest_claimed';
+class AppState extends ChangeNotifier {
   static const String _keyOnboardingCompleted = 'onboarding_completed';
-  static const String _keyDailyRewardClaimedAt = 'daily_reward_claimed_at';
   static const String _keySpinFreeSpins = 'spin_free_spins';
   static const String _keySpinCooldownEnd = 'spin_cooldown_end';
-  static const String _keyTotalCoinsEarned = 'total_coins_earned';
-  static const String _keyGamesPlayed = 'games_played';
-  static const String _keyOffersCompleted = 'offers_completed';
-  static const String _keyLastActiveDate = 'last_active_date';
-  static const String _keyConsecutiveDays = 'consecutive_days';
+  static const String _keyDailyRewardClaimedAt = 'daily_reward_claimed_at';
 
+  final bool supabaseEnabled;
+  final AuthService _authService;
+  final CoinService _coinService;
+  final RewardService _rewardService;
+  final GameService _gameService = GameService();
+
+  AppState({
+    this.supabaseEnabled = false,
+    required AuthService authService,
+    required CoinService coinService,
+    required RewardService rewardService,
+  })  : _authService = authService,
+        _coinService = coinService,
+        _rewardService = rewardService;
+
+  // --- User data (streamed from Supabase) ---
   int _coins = 0;
-  bool _isLoaded = false;
-  bool _isMegaChestClaimed = false;
-  bool _isOnboardingCompleted = false;
-  DateTime? _dailyRewardClaimedAt;
-  Timer? _timer;
-
-  int _spinFreeSpins = 1;
-  DateTime? _spinCooldownEnd;
-  Timer? _spinTimer;
-
   int _totalCoinsEarned = 0;
+  int _consecutiveDays = 0;
   int _gamesPlayed = 0;
   int _offersCompleted = 0;
-  DateTime? _lastActiveDate;
-  int _consecutiveDays = 0;
+  String _displayName = 'Player';
+  String? _profilePhotoUrl;
+
+  bool _isLoaded = false;
+  bool _isOnboardingCompleted = false;
+  bool _isOnline = true;
+  bool _isAuthenticated = false;
+  String? _errorMessage;
+
+  // --- Daily reward ---
+  Timer? _dailyRewardTimer;
+  Duration _dailyRewardRemaining = Duration.zero;
+
+  // --- Spin state (local only) ---
+  int _spinFreeSpins = 3;
+  Timer? _spinCooldownTimer;
+  Duration _spinCooldownRemaining = Duration.zero;
+
+  StreamSubscription? _connectivitySubscription;
+  StreamSubscription? _balanceSub;
+
+  /// Guards the realtime stream handler from overwriting optimistic local balances
+  /// while an addCoins/spendCoins operation is in-flight.
+  int _pendingCoinOps = 0;
 
   int get coins => _coins;
-  bool get isLoaded => _isLoaded;
-  bool get isMegaChestClaimed => _isMegaChestClaimed;
-  bool get isOnboardingCompleted => _isOnboardingCompleted;
   int get totalCoinsEarned => _totalCoinsEarned;
-  int get gamesPlayed => _gamesPlayed;
-  int get offersCompleted => _offersCompleted;
   int get consecutiveDays => _consecutiveDays;
+  int get gamesPlayed => _gamesPlayed;
+  int get totalGamesPlayed => _gamesPlayed;
+  int get offersCompleted => _offersCompleted;
+  int get totalOffersCompleted => _offersCompleted;
+  String get displayName => _displayName;
+  String? get profilePhotoUrl => _profilePhotoUrl;
 
-  Duration get dailyRewardRemaining {
-    final claimedAt = _dailyRewardClaimedAt;
-    if (claimedAt == null) return Duration.zero;
+  bool get isLoaded => _isLoaded;
+  bool get isOnboardingCompleted => _isOnboardingCompleted;
+  bool get isOnline => _isOnline;
+  bool get isAuthenticated => _isAuthenticated;
+  String? get errorMessage => _errorMessage;
 
-    final remaining =
-        claimedAt.add(dailyRewardCooldown).difference(DateTime.now());
-    return remaining.isNegative ? Duration.zero : remaining;
-  }
-
-  bool get isDailyRewardCoolingDown => dailyRewardRemaining > Duration.zero;
+  Duration get dailyRewardRemaining => _dailyRewardRemaining;
+  bool get isDailyRewardCoolingDown => _dailyRewardRemaining > Duration.zero;
 
   int get spinFreeSpins => _spinFreeSpins;
+  bool get isSpinOnCooldown => _spinCooldownRemaining > Duration.zero;
+  Duration get spinCooldownRemaining => _spinCooldownRemaining;
 
-  bool get isSpinOnCooldown {
-    final end = _spinCooldownEnd;
-    if (end == null) return false;
-    return DateTime.now().isBefore(end);
-  }
-
-  Duration get spinCooldownRemaining {
-    final end = _spinCooldownEnd;
-    if (end == null) return Duration.zero;
-    final remaining = end.difference(DateTime.now());
-    return remaining.isNegative ? Duration.zero : remaining;
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
   }
 
   Future<void> load() async {
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen((results) {
+      final hasConnection = results.any((r) => r != ConnectivityResult.none);
+      if (_isOnline != hasConnection) {
+        final wasOffline = !_isOnline;
+        _isOnline = hasConnection;
+        notifyListeners();
+        if (wasOffline && _isOnline) {
+          _flushPendingTransactions().catchError((e) {
+            debugPrint('Failed to flush pending transactions: $e');
+          });
+        }
+      }
+    });
+    final initialResult = await Connectivity().checkConnectivity();
+    _isOnline = initialResult.any((r) => r != ConnectivityResult.none);
+
     final prefs = await SharedPreferences.getInstance();
-    _coins = prefs.getInt(_keyCoins) ?? 0;
-    _isMegaChestClaimed = prefs.getBool(_keyMegaChestClaimed) ?? false;
     _isOnboardingCompleted = prefs.getBool(_keyOnboardingCompleted) ?? false;
+    _profilePhotoUrl = await GamePrefs.getProfilePhotoUrl();
 
-    final dailyRewardClaimedAt = prefs.getString(_keyDailyRewardClaimedAt);
-    _dailyRewardClaimedAt = dailyRewardClaimedAt == null
-        ? null
-        : DateTime.tryParse(dailyRewardClaimedAt);
-
-    _spinFreeSpins = prefs.getInt(_keySpinFreeSpins) ?? 1;
-    final spinCooldownEnd = prefs.getString(_keySpinCooldownEnd);
-    _spinCooldownEnd =
-        spinCooldownEnd == null ? null : DateTime.tryParse(spinCooldownEnd);
-
-    // Reset spin if cooldown expired
-    if (_spinCooldownEnd != null && DateTime.now().isAfter(_spinCooldownEnd!)) {
-      _spinFreeSpins = 1;
-      _spinCooldownEnd = null;
-      await prefs.setInt(_keySpinFreeSpins, 1);
-      await prefs.remove(_keySpinCooldownEnd);
-    }
-
-    _totalCoinsEarned = prefs.getInt(_keyTotalCoinsEarned) ?? 0;
-    _gamesPlayed = prefs.getInt(_keyGamesPlayed) ?? 0;
-    _offersCompleted = prefs.getInt(_keyOffersCompleted) ?? 0;
-
-    final lastActiveDate = prefs.getString(_keyLastActiveDate);
-    _lastActiveDate =
-        lastActiveDate == null ? null : DateTime.tryParse(lastActiveDate);
-    _consecutiveDays = prefs.getInt(_keyConsecutiveDays) ?? 0;
-    await _updateConsecutiveDays(prefs);
-
-    _isLoaded = true;
-    _syncDailyRewardTimer();
-    _syncSpinTimer();
-    notifyListeners();
-  }
-
-  Future<void> _updateConsecutiveDays(SharedPreferences prefs) async {
-    final today = DateTime.now();
-    final last = _lastActiveDate;
-    if (last == null) {
-      _consecutiveDays = 1;
-    } else {
-      final diff = DateTime(today.year, today.month, today.day)
-          .difference(DateTime(last.year, last.month, last.day))
-          .inDays;
-      if (diff == 0) {
-        // same day, keep count
-      } else if (diff == 1) {
-        _consecutiveDays++;
+    _spinFreeSpins = prefs.getInt(_keySpinFreeSpins) ?? 5;
+    final spinCooldownEnd = prefs.getInt(_keySpinCooldownEnd);
+    if (spinCooldownEnd != null) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final remainingMs = spinCooldownEnd - now;
+      if (remainingMs > 0) {
+        _spinCooldownRemaining = Duration(milliseconds: remainingMs);
+        _syncSpinCooldownTimer();
       } else {
-        _consecutiveDays = 1;
+        _spinCooldownRemaining = Duration.zero;
+        if (_spinFreeSpins == 0) {
+          _spinFreeSpins = 3;
+          prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
+        }
       }
     }
-    _lastActiveDate = today;
-    await prefs.setInt(_keyConsecutiveDays, _consecutiveDays);
-    await prefs.setString(_keyLastActiveDate, today.toIso8601String());
+
+    bool authSuccess = false;
+    if (supabaseEnabled) {
+      try {
+        final user = await _authService.signInAnonymously();
+        authSuccess = user != null;
+        _isAuthenticated = authSuccess;
+        if (user != null) {
+          debugPrint('✅ Anonymous auth success: uid=${user.id}');
+        } else {
+          debugPrint('⚠️ Anonymous auth returned null user');
+        }
+      } catch (e) {
+        debugPrint('❌ Anonymous auth failed: ' + e.toString());
+        _isAuthenticated = false;
+      }
+    }
+
+    _coins = await GamePrefs.getCoins();
+
+    if (supabaseEnabled) {
+      _balanceSub = _coinService.userDataStream.listen(
+        (data) {
+          if (data.isEmpty) return;
+          final serverBalance = data['balance'] as int? ?? _coins;
+          // Only apply stream balance updates that increase the local balance.
+          // This prevents server updates from reverting optimistic local credits
+          // while an addCoins/spendCoins operation is in-flight or recently failed.
+          if (_pendingCoinOps == 0 && serverBalance > _coins) {
+            _coins = serverBalance;
+            GamePrefs.saveCoins(_coins);
+          }
+          _totalCoinsEarned = data['total_earned'] as int? ?? _totalCoinsEarned;
+          _gamesPlayed = data['games_played'] as int? ?? _gamesPlayed;
+          _offersCompleted =
+              data['offers_completed'] as int? ?? _offersCompleted;
+          _consecutiveDays =
+              data['consecutive_days'] as int? ?? _consecutiveDays;
+          _displayName = data['display_name'] as String? ?? _displayName;
+          _profilePhotoUrl =
+              data['profile_photo_url'] as String? ?? _profilePhotoUrl;
+          GamePrefs.saveProfilePhotoUrl(_profilePhotoUrl);
+          notifyListeners();
+        },
+        onError: (e) {
+          debugPrint('User data stream error: ' + e.toString());
+        },
+      );
+    }
+
+    if (supabaseEnabled && authSuccess) {
+      await _refreshSpinState();
+    }
+
+    _flushPendingTransactions().catchError((e) {
+      debugPrint('Failed to flush pending transactions on load: $e');
+    });
+
+    _refreshDailyRewardCooldown();
+
+    _isLoaded = true;
+    notifyListeners();
   }
 
-  Future<void> refreshCoins() async {
+  Future<void> _refreshDailyRewardCooldown() async {
+    if (supabaseEnabled && _isOnline && _isAuthenticated) {
+      try {
+        final remaining = await _rewardService.getDailyRewardCooldown();
+        _dailyRewardRemaining = remaining;
+        _syncDailyRewardTimer();
+        notifyListeners();
+        return;
+      } catch (e) {
+        debugPrint('Failed to refresh daily reward cooldown from server: $e');
+      }
+    }
+
+    // Local fallback
     final prefs = await SharedPreferences.getInstance();
-    _coins = prefs.getInt(_keyCoins) ?? 0;
+    final claimedAt = prefs.getInt(_keyDailyRewardClaimedAt);
+    if (claimedAt != null) {
+      final lastClaimed = DateTime.fromMillisecondsSinceEpoch(claimedAt);
+      final cooldownEnd = lastClaimed.add(const Duration(hours: 24));
+      final remaining = cooldownEnd.difference(DateTime.now());
+      _dailyRewardRemaining = remaining.isNegative ? Duration.zero : remaining;
+    } else {
+      _dailyRewardRemaining = Duration.zero;
+    }
+    _syncDailyRewardTimer();
     notifyListeners();
+  }
+
+  Future<void> _refreshSpinState() async {
+    if (!supabaseEnabled || !_isOnline) return;
+    try {
+      final state = await _coinService.getSpinState();
+      _spinFreeSpins = (state['spins_remaining'] as num?)?.toInt() ?? 3;
+      final cooldownMs = (state['cooldown_end'] as num?)?.toInt() ?? 0;
+      if (cooldownMs > 0) {
+        _spinCooldownRemaining = Duration(milliseconds: cooldownMs);
+        _syncSpinCooldownTimer();
+        final prefs = await SharedPreferences.getInstance();
+        final cooldownEnd = DateTime.now().millisecondsSinceEpoch + cooldownMs;
+        await prefs.setInt(_keySpinCooldownEnd, cooldownEnd);
+      } else {
+        _spinCooldownRemaining = Duration.zero;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_keySpinCooldownEnd);
+        if (_spinFreeSpins == 0) {
+          _spinFreeSpins = 3;
+          await prefs.setInt(_keySpinFreeSpins, 3);
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to refresh spin state: ' + e.toString());
+    }
+  }
+
+  Future<void> updateDisplayName(String name) async {
+    if (!supabaseEnabled || !_isOnline) return;
+    try {
+      await _coinService.updateDisplayName(name);
+      _displayName = name;
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = 'Failed to update name: ' + e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProfilePhoto(String? url) async {
+    _profilePhotoUrl = url;
+    notifyListeners();
+    await GamePrefs.saveProfilePhotoUrl(url);
+
+    if (!supabaseEnabled || !_isOnline || !_isAuthenticated) return;
+    try {
+      await _coinService.updateProfilePhoto(url);
+    } catch (e) {
+      _errorMessage = 'Failed to update profile photo: ' + e.toString();
+      notifyListeners();
+    }
   }
 
   Future<void> setOnboardingCompleted(bool value) async {
@@ -147,128 +283,357 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> saveCoins(int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    _coins = value;
-    await prefs.setInt(_keyCoins, value);
-    notifyListeners();
+  Future<void> refreshCoins() async {
+    try {
+      final data = await _coinService.getUserData();
+      if (data.isNotEmpty) {
+        _coins = data['balance'] as int? ?? _coins;
+        _totalCoinsEarned = data['total_earned'] as int? ?? _totalCoinsEarned;
+        _gamesPlayed = data['games_played'] as int? ?? _gamesPlayed;
+        _offersCompleted = data['offers_completed'] as int? ?? _offersCompleted;
+        _consecutiveDays = data['consecutive_days'] as int? ?? _consecutiveDays;
+        _displayName = data['display_name'] as String? ?? _displayName;
+        await GamePrefs.saveCoins(_coins);
+        notifyListeners();
+      }
+    } catch (e) {
+      _errorMessage = 'Failed to refresh data: ' + e.toString();
+      notifyListeners();
+    }
   }
 
-  Future<int> addCoins(int value) async {
-    final total = _coins + value;
+  Future<int> addCoins(int value, {String source = 'in_app'}) async {
+    _coins += value;
     _totalCoinsEarned += value;
-    await saveCoins(total);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyTotalCoinsEarned, _totalCoinsEarned);
-    return total;
-  }
-
-  Future<void> incrementGamesPlayed() async {
-    _gamesPlayed++;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyGamesPlayed, _gamesPlayed);
+    _pendingCoinOps++;
     notifyListeners();
+
+    final txId = _generateUuidV4();
+
+    if (!supabaseEnabled || !_isOnline || !_isAuthenticated) {
+      await GamePrefs.saveCoins(_coins);
+      await PendingTransactionService.enqueue({
+        'type': 'credit',
+        'amount': value,
+        'source': source,
+        'txId': txId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      _pendingCoinOps--;
+      return _coins;
+    }
+    try {
+      final newBalance =
+          await _coinService.creditCoins(value, source: source, txId: txId);
+      _coins = newBalance;
+      notifyListeners();
+      await GamePrefs.saveCoins(_coins);
+      _pendingCoinOps--;
+      return _coins;
+    } catch (e) {
+      await GamePrefs.saveCoins(_coins);
+      await PendingTransactionService.enqueue({
+        'type': 'credit',
+        'amount': value,
+        'source': source,
+        'txId': txId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      _errorMessage = 'Failed to sync coins to server: ' + e.toString();
+      notifyListeners();
+      _pendingCoinOps--;
+      return _coins;
+    }
   }
 
-  Future<void> incrementOffersCompleted() async {
-    _offersCompleted++;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyOffersCompleted, _offersCompleted);
+  /// Optimistically add coins locally without calling the backend.
+  /// Use this when the backend has already been updated directly
+  /// (e.g. via GameService.submitGameResult).
+  void optimisticAddCoins(int value) {
+    _coins += value;
     notifyListeners();
+    GamePrefs.saveCoins(_coins);
   }
 
-  Future<bool> spendCoins(int value) async {
+  Future<bool> spendCoins(int value, {String rewardTitle = 'redeem'}) async {
     if (_coins < value) return false;
-    await saveCoins(_coins - value);
-    return true;
+
+    _coins -= value;
+    _pendingCoinOps++;
+    notifyListeners();
+
+    final txId = _generateUuidV4();
+
+    if (!supabaseEnabled || !_isOnline || !_isAuthenticated) {
+      await GamePrefs.saveCoins(_coins);
+      await PendingTransactionService.enqueue({
+        'type': 'spend',
+        'amount': value,
+        'rewardTitle': rewardTitle,
+        'txId': txId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      _pendingCoinOps--;
+      return true;
+    }
+
+    try {
+      final newBalance = await _coinService.spendCoins(value,
+          rewardTitle: rewardTitle, txId: txId);
+      _coins = newBalance;
+      notifyListeners();
+      await GamePrefs.saveCoins(_coins);
+      _pendingCoinOps--;
+      return true;
+    } catch (e) {
+      _coins += value; // Revert optimistic deduction
+      _pendingCoinOps--;
+      await GamePrefs.saveCoins(_coins);
+      await PendingTransactionService.enqueue({
+        'type': 'spend',
+        'amount': value,
+        'rewardTitle': rewardTitle,
+        'txId': txId,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      });
+      _errorMessage = 'Failed to spend coins: ' + e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> claimDailyReward() async {
     if (isDailyRewardCoolingDown) return false;
 
-    final prefs = await SharedPreferences.getInstance();
-    _dailyRewardClaimedAt = DateTime.now();
-    _coins += dailyRewardAmount;
-
-    await prefs.setString(
-      _keyDailyRewardClaimedAt,
-      _dailyRewardClaimedAt!.toIso8601String(),
-    );
-    await prefs.setInt(_keyCoins, _coins);
-
-    _syncDailyRewardTimer();
-    notifyListeners();
-    return true;
-  }
-
-  Future<bool> claimMegaChest() async {
-    if (_isMegaChestClaimed) return false;
-
-    final prefs = await SharedPreferences.getInstance();
-    _isMegaChestClaimed = true;
-    _coins += megaChestRewardAmount;
-
-    await prefs.setBool(_keyMegaChestClaimed, true);
-    await prefs.setInt(_keyCoins, _coins);
-
-    notifyListeners();
-    return true;
-  }
-
-  Future<void> useSpin() async {
-    if (_spinFreeSpins <= 0) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    _spinFreeSpins--;
-    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
-
-    if (_spinFreeSpins == 0) {
-      _spinCooldownEnd = DateTime.now().add(const Duration(hours: 24));
-      await prefs.setString(
-          _keySpinCooldownEnd, _spinCooldownEnd!.toIso8601String());
+    if (supabaseEnabled && _isOnline && _isAuthenticated) {
+      try {
+        final result = await _rewardService.claimDailyReward();
+        final data = result;
+        if (data['success'] == true) {
+          final amount = data['amount'] as int? ?? 0;
+          final balance = data['balance'] as int? ?? (_coins + amount);
+          _coins = balance;
+          _totalCoinsEarned += amount;
+          _consecutiveDays =
+              data['consecutive_days'] as int? ?? _consecutiveDays;
+          notifyListeners();
+        }
+        await _refreshDailyRewardCooldown();
+        return data['success'] == true;
+      } catch (e) {
+        _errorMessage = 'Failed to claim daily reward: ' + e.toString();
+        notifyListeners();
+        return false;
+      }
     }
 
-    _syncSpinTimer();
+    // Local offline fallback
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    await prefs.setInt(_keyDailyRewardClaimedAt, now.millisecondsSinceEpoch);
+    _dailyRewardRemaining = const Duration(hours: 24);
+    _syncDailyRewardTimer();
+    _coins += 100;
+    _totalCoinsEarned += 100;
+    await GamePrefs.saveCoins(_coins);
     notifyListeners();
+    return true;
   }
 
   Future<void> addFreeSpin() async {
-    final prefs = await SharedPreferences.getInstance();
     _spinFreeSpins++;
-    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
   }
 
-  void _syncSpinTimer() {
-    _spinTimer?.cancel();
+  Future<bool> consumeLocalSpin() async {
+    if (_spinFreeSpins <= 0) return false;
+    _spinFreeSpins--;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
+    return true;
+  }
+
+  Future<bool> useSpin() async {
+    if (!supabaseEnabled || !_isOnline) return false;
+    try {
+      final result = await _coinService.useSpin();
+      if (result['success'] == true) {
+        _spinFreeSpins = result['spins_remaining'] as int? ?? 0;
+        final cooldownMs = (result['cooldown_end'] as num?)?.toInt() ?? 0;
+        if (cooldownMs > 0) {
+          _spinCooldownRemaining = Duration(milliseconds: cooldownMs);
+          _syncSpinCooldownTimer();
+          final prefs = await SharedPreferences.getInstance();
+          final cooldownEnd =
+              DateTime.now().millisecondsSinceEpoch + cooldownMs;
+          await prefs.setInt(_keySpinCooldownEnd, cooldownEnd);
+        } else {
+          _spinCooldownRemaining = Duration.zero;
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove(_keySpinCooldownEnd);
+          if (_spinFreeSpins == 0) {
+            _spinFreeSpins = 3;
+            await prefs.setInt(_keySpinFreeSpins, 3);
+          }
+        }
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = 'Failed to use spin: ' + e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void _syncSpinCooldownTimer() {
+    _spinCooldownTimer?.cancel();
     if (!isSpinOnCooldown) return;
 
-    _spinTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!isSpinOnCooldown) {
-        _spinFreeSpins = 1;
-        _spinCooldownEnd = null;
-        _spinTimer?.cancel();
+    _spinCooldownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_spinCooldownRemaining.inSeconds > 0) {
+        _spinCooldownRemaining =
+            _spinCooldownRemaining - const Duration(seconds: 1);
+      } else {
+        _spinCooldownRemaining = Duration.zero;
+        _spinCooldownTimer?.cancel();
+        // Sync from server when cooldown expires locally (fire-and-forget)
+        _refreshSpinState().catchError((e) {
+          debugPrint('Failed to refresh spin state on timer expiry: $e');
+        });
       }
-      notifyListeners();
+      try {
+        notifyListeners();
+      } catch (_) {
+        // Widget may have been disposed; ignore.
+      }
     });
   }
 
   void _syncDailyRewardTimer() {
-    _timer?.cancel();
+    _dailyRewardTimer?.cancel();
     if (!isDailyRewardCoolingDown) return;
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!isDailyRewardCoolingDown) {
-        _timer?.cancel();
+    _dailyRewardTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_dailyRewardRemaining.inSeconds > 0) {
+        _dailyRewardRemaining =
+            _dailyRewardRemaining - const Duration(seconds: 1);
+      } else {
+        _dailyRewardRemaining = Duration.zero;
+        _dailyRewardTimer?.cancel();
       }
-      notifyListeners();
+      try {
+        notifyListeners();
+      } catch (_) {
+        // Widget may have been disposed; ignore.
+      }
     });
+  }
+
+  Future<void> incrementOffersCompleted() async {
+    _offersCompleted++;
+    notifyListeners();
+
+    if (!supabaseEnabled || !_isOnline || !_isAuthenticated) {
+      return;
+    }
+    try {
+      await _coinService.incrementUserStat('offers_completed');
+    } catch (e) {
+      debugPrint('Failed to increment offers completed: ' + e.toString());
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchRedeemedRewards() async {
+    if (!supabaseEnabled || !_isOnline) return [];
+    try {
+      return await _coinService.getRedeemedRewards();
+    } catch (e) {
+      debugPrint('Failed to fetch redeemed rewards: ' + e.toString());
+      return [];
+    }
+  }
+
+  String _generateUuidV4() {
+    final random = Random();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0F) | 0x40;
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+  }
+
+  Future<void> _flushPendingTransactions() async {
+    if (!supabaseEnabled || !_isOnline || !_isAuthenticated) return;
+
+    final queue = await PendingTransactionService.getQueue();
+    if (queue.isEmpty) return;
+
+    final remaining = <Map<String, dynamic>>[];
+
+    for (final tx in queue) {
+      try {
+        final type = tx['type'] as String?;
+        switch (type) {
+          case 'credit':
+            await _coinService.creditCoins(
+              tx['amount'] as int,
+              source: tx['source'] as String,
+              txId: tx['txId'] as String,
+            );
+            break;
+          case 'spend':
+            await _coinService.spendCoins(
+              tx['amount'] as int,
+              rewardTitle: tx['rewardTitle'] as String,
+              txId: tx['txId'] as String,
+            );
+            break;
+          case 'game_result':
+            await _gameService.submitGameResult(
+              gameName: tx['gameName'] as String,
+              score: tx['score'] as int,
+              durationSeconds: tx['durationSeconds'] as int,
+              sessionId: tx['sessionId'] as String,
+              originalScore: tx['originalScore'] as int? ?? 0,
+              multiplier: tx['multiplier'] as int? ?? 1,
+            );
+            break;
+        }
+      } catch (e) {
+        final msg = e.toString().toLowerCase();
+        if (msg.contains('duplicate') ||
+            msg.contains('conflict') ||
+            msg.contains('already exists') ||
+            msg.contains('unique constraint') ||
+            msg.contains('already processed') ||
+            msg.contains('insufficient') ||
+            msg.contains('cap reached') ||
+            msg.contains('validation failed')) {
+          // Safe to discard – server already has this transaction.
+        } else {
+          remaining.add(tx);
+        }
+      }
+    }
+
+    await PendingTransactionService.setQueue(remaining);
+
+    if (queue.length != remaining.length) {
+      await refreshCoins();
+    }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _spinTimer?.cancel();
+    _dailyRewardTimer?.cancel();
+    _spinCooldownTimer?.cancel();
+    _connectivitySubscription?.cancel();
+    _balanceSub?.cancel();
     super.dispose();
   }
 }

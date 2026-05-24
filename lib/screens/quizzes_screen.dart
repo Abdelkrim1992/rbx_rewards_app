@@ -346,10 +346,24 @@ class _QuizzesScreenState extends State<QuizzesScreen>
   }
 
   void _claimQuizCoins() async {
-    await context.read<AppState>().addCoins(_coinsEarned);
-    await context.read<AppState>().incrementGamesPlayed();
+    if (_coinsEarned > 0) {
+      await context.read<AppState>().addCoins(_coinsEarned, source: 'quiz');
+    }
     if (mounted) {
       Navigator.of(context).pop(_coinsEarned);
+    }
+  }
+
+  void _playAgain() async {
+    if (_coinsEarned > 0) {
+      await context.read<AppState>().addCoins(_coinsEarned, source: 'quiz');
+    }
+    if (mounted) {
+      if (_activeCategory != null) {
+        _startQuizRound(_activeCategory!);
+      } else {
+        _backToMenu();
+      }
     }
   }
 
@@ -368,23 +382,117 @@ class _QuizzesScreenState extends State<QuizzesScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                _buildScreenHeader(),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: _buildCurrentStateView(),
-                  ),
-                ),
-              ],
+    final isPlaying = _gameState == 'PLAYING';
+    return PopScope(
+      canPop: !isPlaying,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || !isPlaying) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text(
+              'Quit Quiz?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                color: const Color(0xFF131326),
+              ),
             ),
-          ],
+            content: Text(
+              'Are you sure you want to exit? You will lose unclaimed progress.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFF4A4B60),
+                height: 1.4,
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _InteractiveCard(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F1FB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF868A9F),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InteractiveCard(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF1744).withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Quit',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildScreenHeader(),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _buildCurrentStateView(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -798,13 +906,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
           child: Column(
             children: [
               GestureDetector(
-                onTap: () {
-                  if (_activeCategory != null) {
-                    _startQuizRound(_activeCategory!);
-                  } else {
-                    _backToMenu();
-                  }
-                },
+                onTap: _playAgain,
                 child: Container(
                   width: double.infinity,
                   height: 60,
@@ -837,13 +939,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
               ),
               const SizedBox(height: 14),
               GestureDetector(
-                onTap: () async {
-                  if (_coinsEarned > 0) {
-                    await context.read<AppState>().addCoins(_coinsEarned);
-                  }
-                  await context.read<AppState>().incrementGamesPlayed();
-                  _backToMenu();
-                },
+                onTap: _claimQuizCoins,
                 child: Container(
                   width: double.infinity,
                   height: 60,
@@ -853,7 +949,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
                   ),
                   child: Center(
                     child: Text(
-                      'Back to Categories',
+                      'Claim Reward',
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,

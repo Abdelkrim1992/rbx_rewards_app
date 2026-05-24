@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/refreshable_scroll.dart';
 
 class SpinScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -28,7 +30,9 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     _WheelSegment(label: '500', sublabel: 'RBX', color: Color(0xFFB370FF)),
     _WheelSegment(label: '2K', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
     _WheelSegment(
-        label: 'JACKPOT', sublabel: 'Huge!', color: Color(0xFFFFCC44)),
+        label: 'JACKPOT',
+        sublabel: 'Huge!',
+        color: Color.fromARGB(255, 160, 122, 16)),
     _WheelSegment(label: '1K', sublabel: 'RBX', color: Color(0xFF8847F5)),
   ];
 
@@ -70,12 +74,23 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
+  int _pickWeightedSegment(Random random) {
+    final weights = [25, 25, 20, 10, 5, 15]; // 100, 300, 500, 2K, JACKPOT, 1K
+    final total = weights.fold<int>(0, (sum, w) => sum + w);
+    var roll = random.nextInt(total);
+    for (int i = 0; i < weights.length; i++) {
+      roll -= weights[i];
+      if (roll < 0) return i;
+    }
+    return 0;
+  }
+
   Future<void> _spin() async {
     final appState = context.read<AppState>();
     if (_isSpinning || appState.spinFreeSpins == 0) return;
     final random = Random();
-    final targetSegment = random.nextInt(6);
-    final baseRotations = 5 + random.nextInt(3);
+    final targetSegment = _pickWeightedSegment(random);
+    final baseRotations = 2 + random.nextInt(6);
     final segmentAngle = (2 * pi) / 6;
     final targetAngle = baseRotations * 2 * pi +
         targetSegment * segmentAngle +
@@ -92,24 +107,23 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     setState(() {
       _isSpinning = true;
     });
-    await context.read<AppState>().useSpin();
 
     _pulseController.stop();
 
     _controller.reset();
     _controller.forward().then((_) async {
-      final prize = segments[targetSegment].label;
+      final prizeIndex =
+          (segments.length - 1 - targetSegment) % segments.length;
+      final prize = segments[prizeIndex].label;
       final reward = _prizeToCoins(prize);
 
-      await context.read<AppState>().addCoins(reward);
-      await context.read<AppState>().incrementGamesPlayed();
       if (!mounted) return;
 
       setState(() {
         _isSpinning = false;
       });
       _pulseController.repeat(reverse: true);
-      _showWinDialog(prize);
+      _showWinDialog(prize, reward);
     });
   }
 
@@ -126,12 +140,28 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _showWinDialog(String prize) {
+  void _showWinDialog(String prize, int reward) {
     showDialog(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
-      builder: (context) => SpinRewardDialog(prize: prize),
+      builder: (context) => SpinRewardDialog(
+        prize: prize,
+        reward: reward,
+        onClaim: () async {
+          final appState = context.read<AppState>();
+          // Always consume locally and award coins; server sync is best-effort.
+          final consumed = await appState.consumeLocalSpin();
+          if (!consumed) {
+            throw Exception('No spins remaining.');
+          }
+          await appState.addCoins(reward, source: 'spin');
+          // Best-effort server sync in background
+          try {
+            await appState.useSpin();
+          } catch (_) {}
+        },
+      ),
     ).then((_) {
       // Cooldown is managed by AppState; no local timer needed
     });
@@ -141,410 +171,503 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final freeSpins = appState.spinFreeSpins;
-    final isCooldown = appState.isSpinOnCooldown;
     final cooldownRemaining = appState.spinCooldownRemaining;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Nav bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: SizedBox(
-                height: 44,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        onTap: widget.onBack,
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: AppColors.purple,
-                            size: 18,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (!_isSpinning) {
+          widget.onBack();
+          return;
+        }
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text(
+              'Leave Spin?',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w800,
+                fontSize: 22,
+                color: const Color(0xFF131326),
+              ),
+            ),
+            content: Text(
+              'Your spin is in progress. Are you sure you want to leave?',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: const Color(0xFF4A4B60),
+                height: 1.4,
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, false),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F1FB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF868A9F),
+                            fontSize: 14,
                           ),
                         ),
                       ),
                     ),
-                    const Text(
-                      'Spin & Win',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF131326),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx, true),
+                      child: Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF1744).withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Leave',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          widget.onBack();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Nav bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: SizedBox(
+                  height: 44,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: GestureDetector(
+                          onTap: widget.onBack,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySoft,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: AppColors.purple,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'Spin & Win',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF131326),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppLayout.screenPadding),
-                child: Column(
-                  children: [
-                    // 3D Wheel Container
-                    SizedBox(
-                      height: wheelSize + 60,
-                      child: Stack(
-                        alignment: Alignment.topCenter,
-                        children: [
-                          // Perspective Shadow
-                          Positioned(
-                            top: 50,
-                            child: Transform(
-                              transform: Matrix4.identity()
-                                ..setEntry(3, 2, 0.001)
-                                ..rotateX(1.1),
-                              alignment: Alignment.center,
-                              child: Container(
-                                width: wheelSize * 0.9,
-                                height: wheelSize * 0.9,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withOpacity(0.2),
-                                      blurRadius: 40,
-                                      spreadRadius: 10,
+              Expanded(
+                child: RefreshableScrollView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppLayout.screenPadding),
+                  child: Column(
+                    children: [
+                      // 3D Wheel Container
+                      SizedBox(
+                        height: wheelSize + 60,
+                        child: Stack(
+                          alignment: Alignment.topCenter,
+                          children: [
+                            // Perspective Shadow
+                            Positioned(
+                              top: 50,
+                              child: Transform(
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.001)
+                                  ..rotateX(1.1),
+                                alignment: Alignment.center,
+                                child: Container(
+                                  width: wheelSize * 0.9,
+                                  height: wheelSize * 0.9,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            AppColors.primary.withOpacity(0.2),
+                                        blurRadius: 40,
+                                        spreadRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            // The Main Wheel with 3D Tilt
+                            Positioned(
+                              top: 30,
+                              child: Transform(
+                                transform: Matrix4.identity()
+                                  ..setEntry(3, 2, 0.001)
+                                  ..rotateX(-0.35), // The 3D tilt
+                                alignment: Alignment.center,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Wheel Base/Depth Effect
+                                    Container(
+                                      width: wheelSize + 10,
+                                      height: wheelSize + 10,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            const Color(0xFF4A2BC2),
+                                            const Color(0xFF2E1B7A),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Rotating Part
+                                    AnimatedBuilder(
+                                      animation: _controller,
+                                      builder: (context, child) {
+                                        final value =
+                                            _isSpinning || _controller.value > 0
+                                                ? _animation.value
+                                                : 0.0;
+                                        return Transform.rotate(
+                                          angle: value,
+                                          child: child,
+                                        );
+                                      },
+                                      child: SizedBox(
+                                        width: wheelSize,
+                                        height: wheelSize,
+                                        child: Stack(
+                                          children: [
+                                            Positioned.fill(
+                                              child: CustomPaint(
+                                                painter:
+                                                    _WheelPainter(segments),
+                                              ),
+                                            ),
+                                            ...List.generate(segments.length,
+                                                (i) {
+                                              final segmentAngle =
+                                                  (2 * pi) / segments.length;
+                                              final startAngle =
+                                                  i * segmentAngle - pi / 2;
+                                              final textAngle =
+                                                  startAngle + segmentAngle / 2;
+
+                                              final center = wheelSize / 2;
+                                              final imgRadius = center * 0.42;
+                                              final imgX = center +
+                                                  imgRadius * cos(textAngle);
+                                              final imgY = center +
+                                                  imgRadius * sin(textAngle);
+
+                                              return Positioned(
+                                                left: imgX - 15,
+                                                top: imgY - 12,
+                                                child: Transform.rotate(
+                                                  angle: textAngle + pi / 2,
+                                                  child: Image.asset(
+                                                    AppAssets.goldRbxCoin,
+                                                    width: 25,
+                                                    height: 25,
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Center SPIN button (Fixed, not rotating)
+                                    GestureDetector(
+                                      onTap: _spin,
+                                      child: AnimatedBuilder(
+                                        animation: _pulseAnimation,
+                                        builder: (context, child) {
+                                          return Transform.scale(
+                                            scale:
+                                                _isSpinning || (freeSpins == 0)
+                                                    ? 1.0
+                                                    : _pulseAnimation.value,
+                                            child: child,
+                                          );
+                                        },
+                                        child: Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                            gradient: const RadialGradient(
+                                              colors: [
+                                                Colors.white,
+                                                Color(0xFFF8F9FF)
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.2),
+                                                blurRadius: 15,
+                                                offset: const Offset(0, 8),
+                                              ),
+                                              BoxShadow(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.3),
+                                                blurRadius: 2,
+                                                spreadRadius: 1,
+                                              ),
+                                            ],
+                                          ),
+                                          child: Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  _isSpinning
+                                                      ? '...'
+                                                      : (freeSpins == 0)
+                                                          ? _formatDuration(
+                                                              cooldownRemaining)
+                                                          : 'SPIN',
+                                                  style: TextStyle(
+                                                    fontSize: (freeSpins == 0)
+                                                        ? 14
+                                                        : 16,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: (freeSpins == 0)
+                                                        ? Colors.grey
+                                                        : AppColors.primary,
+                                                    letterSpacing: 1,
+                                                  ),
+                                                ),
+                                                if (!_isSpinning &&
+                                                    !(freeSpins == 0))
+                                                  const Icon(Icons.touch_app,
+                                                      size: 14,
+                                                      color: AppColors
+                                                          .primaryText),
+                                                if (!_isSpinning &&
+                                                    (freeSpins == 0))
+                                                  const Icon(Icons.lock_clock,
+                                                      size: 14,
+                                                      color: Colors.grey),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
-                          ),
 
-                          // The Main Wheel with 3D Tilt
-                          Positioned(
-                            top: 30,
-                            child: Transform(
-                              transform: Matrix4.identity()
-                                ..setEntry(3, 2, 0.001)
-                                ..rotateX(-0.35), // The 3D tilt
-                              alignment: Alignment.center,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Wheel Base/Depth Effect
-                                  Container(
-                                    width: wheelSize + 10,
-                                    height: wheelSize + 10,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          const Color(0xFF4A2BC2),
-                                          const Color(0xFF2E1B7A),
-                                        ],
-                                      ),
+                            // Top Indicator
+                            Positioned(
+                              top: 5,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
                                     ),
-                                  ),
-
-                                  // Rotating Part
-                                  AnimatedBuilder(
-                                    animation: _controller,
-                                    builder: (context, child) {
-                                      final value =
-                                          _isSpinning || _controller.value > 0
-                                              ? _animation.value
-                                              : 0.0;
-                                      return Transform.rotate(
-                                        angle: value,
-                                        child: child,
-                                      );
-                                    },
-                                    child: SizedBox(
-                                      width: wheelSize,
-                                      height: wheelSize,
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: CustomPaint(
-                                              painter: _WheelPainter(segments),
-                                            ),
-                                          ),
-                                          ...List.generate(segments.length,
-                                              (i) {
-                                            final segmentAngle =
-                                                (2 * pi) / segments.length;
-                                            final startAngle =
-                                                i * segmentAngle - pi / 2;
-                                            final textAngle =
-                                                startAngle + segmentAngle / 2;
-
-                                            final center = wheelSize / 2;
-                                            final imgRadius = center * 0.42;
-                                            final imgX = center +
-                                                imgRadius * cos(textAngle);
-                                            final imgY = center +
-                                                imgRadius * sin(textAngle);
-
-                                            return Positioned(
-                                              left: imgX - 10,
-                                              top: imgY - 10,
-                                              child: Transform.rotate(
-                                                angle: textAngle + pi / 2,
-                                                child: Image.asset(
-                                                  AppAssets.goldRbxCoin,
-                                                  width: 20,
-                                                  height: 20,
-                                                ),
-                                              ),
-                                            );
-                                          }),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Center SPIN button (Fixed, not rotating)
-                                  GestureDetector(
-                                    onTap: _spin,
-                                    child: AnimatedBuilder(
-                                      animation: _pulseAnimation,
-                                      builder: (context, child) {
-                                        return Transform.scale(
-                                          scale: _isSpinning ||
-                                                  (isCooldown && freeSpins == 0)
-                                              ? 1.0
-                                              : _pulseAnimation.value,
-                                          child: child,
-                                        );
-                                      },
+                                  ],
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Icon(Icons.location_on,
+                                        color: AppColors.primary, size: 44),
+                                    Positioned(
+                                      top: 8,
                                       child: Container(
-                                        width: 80,
-                                        height: 80,
-                                        decoration: BoxDecoration(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
                                           color: Colors.white,
                                           shape: BoxShape.circle,
-                                          gradient: const RadialGradient(
-                                            colors: [
-                                              Colors.white,
-                                              Color(0xFFF8F9FF)
-                                            ],
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.2),
-                                              blurRadius: 15,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                            BoxShadow(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.3),
-                                              blurRadius: 2,
-                                              spreadRadius: 1,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                _isSpinning
-                                                    ? '...'
-                                                    : (isCooldown &&
-                                                            freeSpins == 0)
-                                                        ? _formatDuration(
-                                                            cooldownRemaining)
-                                                        : 'SPIN',
-                                                style: TextStyle(
-                                                  fontSize: (isCooldown &&
-                                                          freeSpins == 0)
-                                                      ? 14
-                                                      : 16,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: (isCooldown &&
-                                                          freeSpins == 0)
-                                                      ? Colors.grey
-                                                      : AppColors.primary,
-                                                  letterSpacing: 1,
-                                                ),
-                                              ),
-                                              if (!_isSpinning &&
-                                                  !(isCooldown &&
-                                                      freeSpins == 0))
-                                                const Icon(Icons.touch_app,
-                                                    size: 14,
-                                                    color:
-                                                        AppColors.primaryText),
-                                              if (!_isSpinning &&
-                                                  (isCooldown &&
-                                                      freeSpins == 0))
-                                                const Icon(Icons.lock_clock,
-                                                    size: 14,
-                                                    color: Colors.grey),
-                                            ],
-                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+                      // Free spins info
+                      Text(
+                        'Free Spins: $freeSpins',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF131326),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Watch Ad button
+                      GestureDetector(
+                        onTapDown: (_) => setState(() => _adButtonScale = 0.95),
+                        onTapUp: (_) async {
+                          setState(() => _adButtonScale = 1.0);
+                          await context.read<AppState>().addFreeSpin();
+                        },
+                        onTapCancel: () => setState(() => _adButtonScale = 1.0),
+                        child: AnimatedScale(
+                          scale: _adButtonScale,
+                          duration: const Duration(milliseconds: 100),
+                          child: Container(
+                            height: 52,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.play_circle_fill,
+                                    color: Colors.white, size: 22),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Watch Ad for Extra Spin',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                          // Top Indicator
-                          Positioned(
-                            top: 5,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Icon(Icons.location_on,
-                                      color: AppColors.primary, size: 44),
-                                  Positioned(
-                                    top: 8,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                      // How to Play Section
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'How to Spin & Win',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF131326),
                             ),
+                          ),
+                          const SizedBox(height: 10),
+                          _HowToStep(
+                            icon: Icons.auto_awesome,
+                            title: 'Try Your Luck',
+                            description: 'Spin daily to win up to 5,000 RBX.',
+                            color: const Color(0xFF9B5CFF),
+                          ),
+                          const SizedBox(height: 8),
+                          _HowToStep(
+                            icon: Icons.play_circle_outline,
+                            title: 'Get More Spins',
+                            description:
+                                'Watch a short video to get another chance.',
+                            color: const Color(0xFF6B4BF4),
+                          ),
+                          const SizedBox(height: 8),
+                          _HowToStep(
+                            icon: Icons.account_balance_wallet_outlined,
+                            title: 'Collect & Redeem',
+                            description: 'Exchange coins for real items.',
+                            color: const Color(0xFF4A2BC2),
                           ),
                         ],
                       ),
-                    ),
-
-                    const SizedBox(height: 8),
-                    // Free spins info
-                    Text(
-                      'Free Spins: $freeSpins',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF131326),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Watch Ad button
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _adButtonScale = 0.95),
-                      onTapUp: (_) async {
-                        setState(() => _adButtonScale = 1.0);
-                        await context.read<AppState>().addFreeSpin();
-                      },
-                      onTapCancel: () => setState(() => _adButtonScale = 1.0),
-                      child: AnimatedScale(
-                        scale: _adButtonScale,
-                        duration: const Duration(milliseconds: 100),
-                        child: Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withOpacity(0.3),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.play_circle_fill,
-                                  color: Colors.white, size: 22),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Watch Ad for Extra Spin',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // How to Play Section
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'How to Spin & Win',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF131326),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        _HowToStep(
-                          icon: Icons.auto_awesome,
-                          title: 'Try Your Luck',
-                          description: 'Spin daily to win up to 5,000 RBX.',
-                          color: const Color(0xFF9B5CFF),
-                        ),
-                        const SizedBox(height: 8),
-                        _HowToStep(
-                          icon: Icons.play_circle_outline,
-                          title: 'Get More Spins',
-                          description:
-                              'Watch a short video to get another chance.',
-                          color: const Color(0xFF6B4BF4),
-                        ),
-                        const SizedBox(height: 8),
-                        _HowToStep(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: 'Collect & Redeem',
-                          description: 'Exchange coins for real items.',
-                          color: const Color(0xFF4A2BC2),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -706,14 +829,14 @@ class _WheelPainter extends CustomPainter {
           text: segments[i].label,
           style: TextStyle(
             color: segments[i].color == const Color(0xFFFFCC44)
-                ? const Color(0xFF5C3D00)
+                ? const Color.fromARGB(255, 50, 33, 0)
                 : Colors.white,
-            fontSize: segments[i].label.length > 3 ? 10 : 14,
+            fontSize: segments[i].label.length > 3 ? 13 : 14,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.5,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 offset: const Offset(0, 1),
                 blurRadius: 2,
               ),
@@ -782,8 +905,15 @@ class _TrianglePainter extends CustomPainter {
 
 class SpinRewardDialog extends StatefulWidget {
   final String prize;
+  final int reward;
+  final Future<void> Function() onClaim;
 
-  const SpinRewardDialog({super.key, required this.prize});
+  const SpinRewardDialog({
+    super.key,
+    required this.prize,
+    required this.reward,
+    required this.onClaim,
+  });
 
   @override
   State<SpinRewardDialog> createState() => _SpinRewardDialogState();
@@ -811,6 +941,8 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
   final List<_ConfettiParticle> _particles = [];
   bool _disposed = false;
   bool _animationComplete = false;
+  bool _isClaiming = false;
+  String? _claimError;
 
   @override
   void initState() {
@@ -1229,7 +1361,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  isJackpot ? '+5,000 RBX' : '+${widget.prize} RBX',
+                  '+${widget.reward} RBX',
                   style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
@@ -1243,7 +1375,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
           const SizedBox(height: 6),
 
           Text(
-            'Coins added to your balance',
+            'Tap claim to add to your balance',
             style: TextStyle(
               fontSize: 13,
               color: Colors.grey[500],
@@ -1252,33 +1384,79 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
           ),
           const SizedBox(height: 20),
 
+          if (_claimError != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                _claimError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.redAccent,
+                ),
+              ),
+            ),
+
           // Claim button — premium styled
           _InteractiveCard(
-            onTap: () => Navigator.of(context).pop(),
+            onTap: _isClaiming
+                ? null
+                : () async {
+                    setState(() {
+                      _isClaiming = true;
+                      _claimError = null;
+                    });
+                    try {
+                      await widget.onClaim();
+                      if (mounted) Navigator.of(context).pop();
+                    } catch (e) {
+                      if (mounted) {
+                        setState(() {
+                          _isClaiming = false;
+                          _claimError =
+                              e.toString().replaceFirst('Exception: ', '');
+                        });
+                      }
+                    }
+                  },
             child: Container(
               width: double.infinity,
               height: 52,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                gradient: _isClaiming ? null : AppColors.primaryGradient,
+                color: _isClaiming ? const Color(0xFFE2E2F5) : null,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                boxShadow: _isClaiming
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
               ),
               alignment: Alignment.center,
-              child: const Text(
-                'Claim Reward',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                  color: Colors.white,
-                  letterSpacing: 0.3,
-                ),
-              ),
+              child: _isClaiming
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.purple),
+                      ),
+                    )
+                  : const Text(
+                      'Claim Reward',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -1363,9 +1541,9 @@ class _InteractiveCardState extends State<_InteractiveCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) {
+      onTap: () {
         setState(() => _scale = 1.0);
-        if (widget.onTap != null) widget.onTap!();
+        widget.onTap?.call();
       },
       onTapCancel: () => setState(() => _scale = 1.0),
       child: AnimatedScale(

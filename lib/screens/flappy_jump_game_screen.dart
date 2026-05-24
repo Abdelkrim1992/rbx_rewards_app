@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flame/game.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
+import '../widgets/ad_reward_dialog.dart';
 
 // --- Vector 3D Helper ---
 class Vector3D {
@@ -318,9 +320,7 @@ class FlappyJumpGame extends FlameGame {
       HapticFeedback.vibrate();
     }
 
-    // Save High Score
-    GamePrefs.saveFlappyHighScore(score);
-    GamePrefs.incrementFlappyPlayed();
+    // High scores and stats are tracked server-side via game_sessions/game_stats
 
     // Spawn explosion particles
     final screenPos = _projectPoint(playerPos);
@@ -1204,10 +1204,14 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   int _coins = 0;
   int _displayedCoins = 0;
   int _highScore = 0;
+  String? _sessionId;
+  DateTime? _gameStartTime;
 
   // Confetti / Coin claim animation state
   bool _showCoinClaimAnimation = false;
   bool _hasClaimedReward = false;
+  bool _adWatched = false;
+  int _originalCoinsEarned = 0;
   late AnimationController _claimAnimController;
   final List<_GameClaimCoin> _flyingCoins = [];
   final math.Random _random = math.Random();
@@ -1242,12 +1246,10 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   }
 
   Future<void> _loadLocalData() async {
-    final coins = await GamePrefs.getCoins();
-    final highScore = await GamePrefs.getFlappyHighScore();
+    final appState = context.read<AppState>();
     setState(() {
-      _coins = coins;
-      _displayedCoins = coins;
-      _highScore = highScore;
+      _coins = appState.coins;
+      _displayedCoins = appState.coins;
     });
   }
 
@@ -1264,9 +1266,34 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
       return;
     }
 
+    _showCoinClaimAnimation = true;
+
     final currentCoins = context.read<AppState>().coins;
-    final newTotal = await context.read<AppState>().addCoins(_game.coinsEarned);
-    await context.read<AppState>().incrementGamesPlayed();
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+
+    final finalScore = _originalCoinsEarned > 0
+        ? _originalCoinsEarned * (_adWatched ? 2 : 1)
+        : _game.coinsEarned;
+
+    // Always credit coins locally first so the user never loses earned rewards.
+    context.read<AppState>().optimisticAddCoins(finalScore);
+
+    // Try to sync to server in the background; don't block the reward on this.
+    try {
+      await GameService().submitGameResult(
+        gameName: 'flappy_jump',
+        score: finalScore,
+        durationSeconds: duration.clamp(1, 3600),
+        sessionId: _sessionId ?? 'flappy_${GameService().generateSessionId()}',
+        originalScore:
+            _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned,
+        multiplier: _adWatched ? 2 : 1,
+      );
+    } catch (e) {
+      debugPrint('Failed to submit game result: $e');
+    }
 
     if (!mounted) {
       return;
@@ -1274,11 +1301,12 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
 
     _prepareFlyingCoins();
 
+    final newTotal = currentCoins + _game.coinsEarned;
+
     setState(() {
       _coins = newTotal;
       _displayedCoins = currentCoins;
       _hasClaimedReward = true;
-      _showCoinClaimAnimation = true;
     });
 
     if (!_game.isMuted) {
@@ -1317,15 +1345,23 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
     }
   }
 
+  void _startGame() {
+    _sessionId = GameService().generateSessionId();
+    _gameStartTime = DateTime.now();
+    _game.startGame();
+  }
+
   void _playAgainFromGameOver() {
     _claimAnimController.reset();
     _flyingCoins.clear();
     setState(() {
       _showCoinClaimAnimation = false;
       _hasClaimedReward = false;
+      _adWatched = false;
+      _originalCoinsEarned = 0;
       _displayedCoins = _coins;
     });
-    _game.startGame();
+    _startGame();
   }
 
   void _updateFlyingCoins() {
@@ -1362,38 +1398,65 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0C0D26),
-      body: Stack(
-        children: [
-          // 1. Interactive Flame Game Widget with custom Tap detection
-          GestureDetector(
-            onTap: _game.jump,
-            behavior: HitTestBehavior.opaque,
-            child: GameWidget(game: _game),
-          ),
-
-          // 2. HUD Game overlay (always visible once playing)
-          if (_game.hasStarted && !_game.isGameOver) _buildHudOverlay(),
-
-          // 3. Menu overlay (shown before game starts)
-          if (!_game.hasStarted) _buildMenuOverlay(),
-
-          // 4. Pause screen overlay
-          if (_game.paused) _buildPauseOverlay(),
-
-          // 5. Game Over screen overlay
-          if (_game.isGameOver) _buildGameOverOverlay(),
-
-          // 6. Flying Coins Claim animation layer
-          if (_showCoinClaimAnimation)
-            IgnorePointer(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: _GameCoinClaimPainter(_flyingCoins),
+    final isPlaying = _game.hasStarted && !_game.isGameOver;
+    return PopScope(
+      canPop: !isPlaying,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || !isPlaying) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Leave Game?'),
+            content: const Text('Your progress will be lost. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
               ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Leave'),
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0C0D26),
+        body: Stack(
+          children: [
+            // 1. Interactive Flame Game Widget with custom Tap detection
+            GestureDetector(
+              onTap: _game.jump,
+              behavior: HitTestBehavior.opaque,
+              child: GameWidget(game: _game),
             ),
-        ],
+
+            // 2. HUD Game overlay (always visible once playing)
+            if (_game.hasStarted && !_game.isGameOver) _buildHudOverlay(),
+
+            // 3. Menu overlay (shown before game starts)
+            if (!_game.hasStarted) _buildMenuOverlay(),
+
+            // 4. Pause screen overlay
+            if (_game.paused) _buildPauseOverlay(),
+
+            // 5. Game Over screen overlay
+            if (_game.isGameOver) _buildGameOverOverlay(),
+
+            // 6. Flying Coins Claim animation layer
+            if (_showCoinClaimAnimation)
+              IgnorePointer(
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: _GameCoinClaimPainter(_flyingCoins),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1675,7 +1738,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
 
             // Play Button
             GestureDetector(
-              onTap: _game.startGame,
+              onTap: _startGame,
               child: Container(
                 width: double.infinity,
                 height: 58,
@@ -1769,7 +1832,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
 
               // Restart Button
               _buildPauseActionBtn(
-                onTap: _game.startGame,
+                onTap: _startGame,
                 text: 'RESTART',
                 isPrimary: false,
                 icon: Icons.refresh,
@@ -1942,6 +2005,67 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 width: 320,
                 child: Column(
                   children: [
+                    // Watch Ad for 2x (shown before claiming)
+                    if (_game.coinsEarned > 0 &&
+                        !_hasClaimedReward &&
+                        !_adWatched)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => AdRewardDialog(
+                                onRewardGranted: () {
+                                  setState(() {
+                                    _originalCoinsEarned = _game.coinsEarned;
+                                    _game.coinsEarned *= 2;
+                                    _adWatched = true;
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
+                              ),
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFFFFCC44).withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.play_circle,
+                                      color: Colors.white, size: 20),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Watch Ad for 2x Coins',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
                     // Claim button (Always first if earned > 0)
                     if (_game.coinsEarned > 0 && !_hasClaimedReward)
                       GestureDetector(

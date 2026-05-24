@@ -19,8 +19,6 @@ class _ChestScreenState extends State<ChestScreen>
   Timer? _timer;
   int _secondsRemaining = 0; // Active/Openable by default
 
-  int _balance = 0;
-
   // Idle floating animation
   late AnimationController _floatController;
   late Animation<double> _floatAnimation;
@@ -29,7 +27,6 @@ class _ChestScreenState extends State<ChestScreen>
   void initState() {
     super.initState();
     _loadChestStatus();
-    _loadBalance();
 
     _floatController = AnimationController(
       vsync: this,
@@ -51,14 +48,6 @@ class _ChestScreenState extends State<ChestScreen>
       _timer?.cancel();
       _startTimer();
     }
-  }
-
-  Future<void> _loadBalance() async {
-    final coins = await GamePrefs.getCoins();
-    if (!mounted) return;
-    setState(() {
-      _balance = coins;
-    });
   }
 
   void _startTimer() {
@@ -94,7 +83,6 @@ class _ChestScreenState extends State<ChestScreen>
         _timer?.cancel();
         _startTimer();
       }
-      _loadBalance();
     });
   }
 
@@ -531,175 +519,213 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.all(20),
-      child: AnimatedBuilder(
-        animation: Listenable.merge(
-            [_shakeController, _openController, _rewardController]),
-        builder: (context, _) {
-          return SizedBox(
-            width: 300,
-            height: 450,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Coin Burst Animation (rendered behind the reward popup, coming out of the chest)
-                if (!_showReward)
-                  Positioned.fill(
-                    child: CoinBurstWidget(isTriggered: _burstCoins),
-                  ),
+    return PopScope(
+      canPop: _isClaiming,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop || _isClaiming) return;
+        final shouldLeave = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Quit Chest?'),
+            content:
+                const Text('You will lose your chest reward. Are you sure?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Quit'),
+              ),
+            ],
+          ),
+        );
+        if (shouldLeave == true && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(20),
+        child: AnimatedBuilder(
+          animation: Listenable.merge(
+              [_shakeController, _openController, _rewardController]),
+          builder: (context, _) {
+            return SizedBox(
+              width: 300,
+              height: 450,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Coin Burst Animation (rendered behind the reward popup, coming out of the chest)
+                  if (!_showReward)
+                    Positioned.fill(
+                      child: CoinBurstWidget(isTriggered: _burstCoins),
+                    ),
 
-                // Chest with open animation
-                if (!_showReward)
-                  Positioned(
-                    top: 100,
-                    child: Transform.rotate(
-                      angle: _shakeAnim.value,
-                      child: SizedBox(
-                        width: 240,
-                        height: 240,
-                        child: CustomPaint(
-                          painter: ChestPainter(openAmount: _openAnim.value),
+                  // Chest with open animation
+                  if (!_showReward)
+                    Positioned(
+                      top: 100,
+                      child: Transform.rotate(
+                        angle: _shakeAnim.value,
+                        child: SizedBox(
+                          width: 240,
+                          height: 240,
+                          child: CustomPaint(
+                            painter: ChestPainter(openAmount: _openAnim.value),
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                // Reward card
-                if (_showReward)
-                  Center(
-                    child: Opacity(
-                      opacity: _rewardOpacity.value.clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: _rewardScale.value.clamp(0.0, 1.5),
-                        child: Container(
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFFD700).withOpacity(0.3),
-                                blurRadius: 30,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🎉', style: TextStyle(fontSize: 40)),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Congratulations!',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF131326),
+                  // Reward card
+                  if (_showReward)
+                    Center(
+                      child: Opacity(
+                        opacity: _rewardOpacity.value.clamp(0.0, 1.0),
+                        child: Transform.scale(
+                          scale: _rewardScale.value.clamp(0.0, 1.5),
+                          child: Container(
+                            padding: const EdgeInsets.all(28),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFFFFD700).withOpacity(0.3),
+                                  blurRadius: 30,
+                                  offset: const Offset(0, 10),
                                 ),
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8F9FA),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFF1F5F9)),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('🎉',
+                                    style: TextStyle(fontSize: 40)),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Congratulations!',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF131326),
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      AppAssets.goldRbxCoin,
-                                      width: 28,
-                                      height: 28,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.monetization_on,
-                                        color: Color(0xFFFFCC44),
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '+$_earnedCoins RBX',
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.primary,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              _InteractiveCard(
-                                onTap: _isClaiming
-                                    ? null
-                                    : () async {
-                                        setState(() {
-                                          _isClaiming = true;
-                                        });
-                                        await context
-                                            .read<AppState>()
-                                            .addCoins(_earnedCoins);
-                                        await context
-                                            .read<AppState>()
-                                            .incrementGamesPlayed();
-                                        if (!context.mounted) return;
-                                        Navigator.of(context).pop(_earnedCoins);
-                                      },
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 52,
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 12),
                                   decoration: BoxDecoration(
-                                    gradient: _isClaiming
-                                        ? null
-                                        : AppColors.primaryGradient,
-                                    color: _isClaiming
-                                        ? Colors.white.withOpacity(0.5)
-                                        : null,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: _isClaiming
-                                        ? null
-                                        : [
-                                            BoxShadow(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 6),
-                                            ),
-                                          ],
+                                    color: const Color(0xFFF8F9FA),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                        color: const Color(0xFFF1F5F9)),
                                   ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    _isClaiming
-                                        ? 'Claiming...'
-                                        : 'Claim Reward',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.3,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        AppAssets.goldRbxCoin,
+                                        width: 28,
+                                        height: 28,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(
+                                          Icons.monetization_on,
+                                          color: Color(0xFFFFCC44),
+                                          size: 28,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        '+$_earnedCoins RBX',
+                                        style: const TextStyle(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          color: AppColors.primary,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                _InteractiveCard(
+                                  onTap: _isClaiming
+                                      ? null
+                                      : () async {
+                                          setState(() {
+                                            _isClaiming = true;
+                                          });
+                                          try {
+                                            debugPrint(
+                                                '[Chest] Claiming $_earnedCoins coins...');
+                                            await context
+                                                .read<AppState>()
+                                                .addCoins(_earnedCoins,
+                                                    source: 'chest');
+                                            debugPrint(
+                                                '[Chest] Claim succeeded.');
+                                          } catch (e, st) {
+                                            debugPrint(
+                                                '[Chest] Claim error: $e\n$st');
+                                          }
+                                          if (!context.mounted) return;
+                                          Navigator.of(context)
+                                              .pop(_earnedCoins);
+                                        },
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      gradient: _isClaiming
+                                          ? null
+                                          : AppColors.primaryGradient,
+                                      color: _isClaiming
+                                          ? Colors.white.withOpacity(0.5)
+                                          : null,
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: _isClaiming
+                                          ? null
+                                          : [
+                                              BoxShadow(
+                                                color: AppColors.primary
+                                                    .withOpacity(0.3),
+                                                blurRadius: 12,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                            ],
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      _isClaiming
+                                          ? 'Claiming...'
+                                          : 'Claim Reward',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: 0.3,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
