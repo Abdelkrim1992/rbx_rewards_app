@@ -8,6 +8,7 @@ import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ad_reward_dialog.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class MathQuestion {
   final String text;
@@ -45,6 +46,7 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   int _userCoins = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
+  bool _isQuitting = false;
 
   // Active question details
   late MathQuestion _currentQuestion;
@@ -318,95 +320,20 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   Widget build(BuildContext context) {
     final isPlaying = _gameState == 'PLAYING';
     return PopScope(
-      canPop: !isPlaying,
+      canPop: !isPlaying || _isQuitting,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop || !isPlaying) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: Text(
-              'Quit Quiz?',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-                color: const Color(0xFF131326),
-              ),
-            ),
-            content: Text(
+        if (didPop || !isPlaying || _isQuitting) return;
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Quiz?',
+          message:
               'Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: const Color(0xFF4A4B60),
-                height: 1.4,
-              ),
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            actions: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _InteractiveCard(
-                      onTap: () => Navigator.pop(ctx, false),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1FB),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF868A9F),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _InteractiveCard(
-                      onTap: () => Navigator.pop(ctx, true),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF1744).withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Quit',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         );
-        if (shouldLeave == true && mounted) {
-          Navigator.of(context).pop();
+        if (shouldLeave && mounted) {
+          setState(() => _isQuitting = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) Navigator.of(context).pop();
+          });
         }
       },
       child: Scaffold(
@@ -455,100 +382,18 @@ class _MathQuizScreenState extends State<MathQuizScreen>
             Align(
               alignment: Alignment.centerLeft,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   if (_gameState == 'PLAYING') {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: Colors.white,
-                        surfaceTintColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        title: Text(
-                          'Quit Quiz?',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 22,
-                            color: const Color(0xFF131326),
-                          ),
-                        ),
-                        content: Text(
+                    final shouldLeave = await showQuitConfirmationDialog(
+                      context,
+                      title: 'Quit Quiz?',
+                      message:
                           'Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: const Color(0xFF4A4B60),
-                            height: 1.4,
-                          ),
-                        ),
-                        actionsPadding:
-                            const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        actions: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () => Navigator.pop(ctx),
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F1FB),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Cancel',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF868A9F),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    Navigator.pop(context);
-                                  },
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFF5252),
-                                          Color(0xFFFF1744)
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFFF1744)
-                                              .withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Quit',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
                     );
+                    if (shouldLeave && context.mounted) {
+                      setState(() => _isQuitting = true);
+                      Navigator.of(context).pop();
+                    }
                   } else {
                     Navigator.of(context).pop();
                   }
@@ -1115,37 +960,6 @@ class _MathQuizScreenState extends State<MathQuizScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InteractiveCard extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-
-  const _InteractiveCard({required this.child, this.onTap});
-
-  @override
-  State<_InteractiveCard> createState() => _InteractiveCardState();
-}
-
-class _InteractiveCardState extends State<_InteractiveCard> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        if (widget.onTap != null) widget.onTap!();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: widget.child,
       ),
     );
   }

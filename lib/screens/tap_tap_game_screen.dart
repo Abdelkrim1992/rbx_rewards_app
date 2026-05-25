@@ -260,13 +260,19 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
 
           if (!mounted) return;
-          _submitClaimedCoins(finalScore, duration).catchError((e) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to save game reward')),
-            );
-            debugPrint('Failed to submit tap tap result: $e');
-          });
+          if (finalScore > 0) {
+            _submitClaimedCoins(finalScore, duration).catchError((e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to save game reward')),
+              );
+              debugPrint('Failed to submit tap tap result: $e');
+            });
+          } else {
+            if (mounted) {
+              Navigator.of(context).pop(finalScore);
+            }
+          }
         }
       }
 

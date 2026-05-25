@@ -20,10 +20,6 @@ class GameService {
   String? get _userId => _client?.auth.currentUser?.id;
 
   String _extractErrorMessage(dynamic data, String fallback) {
-    if (data is Map<String, dynamic>) {
-      final error = data['error'] ?? data['message'];
-      if (error is String && error.isNotEmpty) return error;
-    }
     if (data is Map) {
       final error = data['error'] ?? data['message'];
       if (error is String && error.isNotEmpty) return error;
@@ -140,7 +136,20 @@ class GameService {
         }
 
         final fallback = await _creditGameCoins(amount: score, txId: txId);
-        if (fallback['success'] == true) return fallback;
+        if (fallback['success'] == true) {
+          // Best-effort insert so leaderboard/session metadata isn't lost
+          try {
+            await _client!.from('game_sessions').insert({
+              'id': sessionId,
+              'user_id': _userId!,
+              'game_name': gameName,
+              'score': score,
+              'duration_seconds': durationSeconds,
+              'validated': false,
+            });
+          } catch (_) {}
+          return fallback;
+        }
 
         return {
           'success': false,
@@ -158,7 +167,15 @@ class GameService {
       }
       return {'success': true};
     } catch (e) {
-      if (queueOnFailure) {
+      final msg = e.toString().toLowerCase();
+      final nonRetryable = msg.contains('validation failed') ||
+          msg.contains('unknown game') ||
+          msg.contains('score rate too high') ||
+          msg.contains('duplicate') ||
+          msg.contains('already exists') ||
+          msg.contains('already processed') ||
+          msg.contains('insufficient');
+      if (queueOnFailure && !nonRetryable) {
         await PendingTransactionService.enqueue({
           'type': 'game_result',
           'gameName': gameName,
@@ -173,8 +190,8 @@ class GameService {
       return {
         'success': false,
         'error': e.toString(),
-        'queued': queueOnFailure,
-        'retryable': true,
+        'queued': queueOnFailure && !nonRetryable,
+        'retryable': !nonRetryable,
       };
     }
   }

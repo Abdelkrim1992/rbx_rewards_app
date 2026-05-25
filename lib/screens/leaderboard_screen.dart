@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -15,15 +16,40 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
+class _LeaderboardScreenState extends State<LeaderboardScreen>
+    with WidgetsBindingObserver {
   List<_LeaderboardEntry> _entries = [];
   bool _isLoading = true;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadLeaderboard();
+    _startRefreshTimer();
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadLeaderboard();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadLeaderboard();
+    }
   }
 
   Future<void> _loadLeaderboard() async {
@@ -81,10 +107,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final userEntry = _entries.isNotEmpty
         ? _entries.firstWhere(
             (e) => e.isUser,
-            orElse: () => _entries.length > 4
-                ? _entries[4]
-                : const _LeaderboardEntry(
-                    rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true),
+            orElse: () => const _LeaderboardEntry(
+                rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true),
           )
         : const _LeaderboardEntry(
             rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true);
@@ -293,7 +317,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${userEntry.coins} RBX earned this week',
+                                '${userEntry.coins} RBX earned',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,

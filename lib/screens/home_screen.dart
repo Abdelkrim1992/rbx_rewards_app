@@ -514,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Opacity(
                                   opacity: isDailyClaimed ? 0.7 : 1.0,
                                   child: Image.network(
-                                    AppAssets.purpleGiftBox,
+                                    AppAssets.dailyRewardImage,
                                     fit: BoxFit.contain,
                                     errorBuilder: (_, __, ___) => const Icon(
                                       Icons.card_giftcard,

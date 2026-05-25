@@ -13,6 +13,8 @@ import 'services/auth_service.dart';
 import 'services/coin_service.dart';
 import 'services/reward_service.dart';
 import 'state/app_state.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/quit_confirmation_dialog.dart';
 
 Future<void> main() async {
@@ -167,7 +169,11 @@ class _AppNavigatorState extends State<AppNavigator> {
           message: 'Are you sure you want to exit RBX Rewards?',
         );
         if (shouldQuit && mounted) {
-          SystemNavigator.pop();
+          if (!kIsWeb && Platform.isAndroid) {
+            SystemNavigator.pop();
+          } else if (!kIsWeb) {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: screen,

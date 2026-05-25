@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 import '../widgets/chest_painter.dart';
 import '../widgets/coin_burst.dart';
 import '../widgets/game_prefs.dart';
-import '../widgets/quit_confirmation_dialog.dart';
 
 class ChestScreen extends StatefulWidget {
   const ChestScreen({super.key});
@@ -109,15 +108,8 @@ class _ChestScreenState extends State<ChestScreen>
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
-                        onTap: () async {
-                          final shouldLeave = await showQuitConfirmationDialog(
-                            context,
-                            title: 'Quit Chest?',
-                            message: 'Are you sure you want to go back?',
-                          );
-                          if (shouldLeave && context.mounted) {
-                            Navigator.pop(context);
-                          }
+                        onTap: () {
+                          Navigator.pop(context);
                         },
                         child: Container(
                           width: 44,
@@ -529,20 +521,7 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _isClaiming,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop || _isClaiming) return;
-        final shouldLeave = await showQuitConfirmationDialog(
-          context,
-          title: 'Quit Chest?',
-          message: 'You will lose your chest reward. Are you sure?',
-        );
-        if (shouldLeave && mounted) {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Dialog(
+    return Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
         insetPadding: const EdgeInsets.all(20),
@@ -723,7 +702,7 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
             );
           },
         ),
-      ),
+      
     );
   }
 }

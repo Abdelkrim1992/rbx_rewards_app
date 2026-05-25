@@ -1294,7 +1294,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
             .read<AppState>()
             .syncBalanceFromServer(result['balance'] as int);
       } else {
-        _showCoinClaimAnimation = false;
+        setState(() {
+          _showCoinClaimAnimation = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -1306,7 +1308,9 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showCoinClaimAnimation = false;
+      setState(() {
+        _showCoinClaimAnimation = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to save game reward')),
       );

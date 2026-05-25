@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// to be retried when the device comes back online.
 class PendingTransactionService {
   static const String _keyQueue = 'pending_transactions';
+  static Future<void>? _lastEnqueue;
 
   static Future<List<Map<String, dynamic>>> getQueue() async {
     final prefs = await SharedPreferences.getInstance();
@@ -29,12 +30,21 @@ class PendingTransactionService {
   }
 
   static Future<void> enqueue(Map<String, dynamic> tx) async {
-    final queue = await getQueue();
-    final txId = tx['txId'] as String?;
-    if (txId != null && queue.any((item) => item['txId'] == txId)) {
-      return; // Already queued; skip duplicate.
-    }
-    queue.add(tx);
-    await setQueue(queue);
+    final previous = _lastEnqueue;
+    _lastEnqueue = Future(() async {
+      try {
+        await previous;
+      } catch (_) {
+        // Previous enqueue failed; continue with this one.
+      }
+      final queue = await getQueue();
+      final txId = tx['txId'] as String?;
+      if (txId != null && queue.any((item) => item['txId'] == txId)) {
+        return; // Already queued; skip duplicate.
+      }
+      queue.add(tx);
+      await setQueue(queue);
+    });
+    await _lastEnqueue;
   }
 }

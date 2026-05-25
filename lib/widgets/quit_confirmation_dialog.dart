@@ -34,22 +34,21 @@ Future<bool> showQuitConfirmationDialog(
         Row(
           children: [
             Expanded(
-              child: GestureDetector(
-                onTap: () => Navigator.pop(ctx, false),
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F1FB),
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  backgroundColor: const Color(0xFFF1F1FB),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Cancel',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF868A9F),
-                      fontSize: 14,
-                    ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF868A9F),
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -67,7 +66,7 @@ Future<bool> showQuitConfirmationDialog(
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFF1744).withValues(alpha: 0.3),
+                        color: const Color(0xFFFF1744).withOpacity(0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
