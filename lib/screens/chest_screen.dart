@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/chest_painter.dart';
 import '../widgets/coin_burst.dart';
 import '../widgets/game_prefs.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class ChestScreen extends StatefulWidget {
   const ChestScreen({super.key});
@@ -108,7 +109,16 @@ class _ChestScreenState extends State<ChestScreen>
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () async {
+                          final shouldLeave = await showQuitConfirmationDialog(
+                            context,
+                            title: 'Quit Chest?',
+                            message: 'Are you sure you want to go back?',
+                          );
+                          if (shouldLeave && context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
                         child: Container(
                           width: 44,
                           height: 44,
@@ -523,25 +533,12 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
       canPop: _isClaiming,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || _isClaiming) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Quit Chest?'),
-            content:
-                const Text('You will lose your chest reward. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Chest?',
+          message: 'You will lose your chest reward. Are you sure?',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },

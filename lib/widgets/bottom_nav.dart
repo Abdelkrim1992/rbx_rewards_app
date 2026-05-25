@@ -14,11 +14,11 @@ class RbxBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      _NavItem(icon: AppAssets.navHome, label: 'Home'),
-      _NavItem(icon: AppAssets.navGames, label: 'Games'),
-      _NavItem(icon: AppAssets.navOffers, label: 'Offers'),
-      _NavItem(icon: AppAssets.navRewards, label: 'Rewards'),
-      _NavItem(icon: AppAssets.navProfile, label: 'Profile'),
+      const _NavItem(icon: AppAssets.navHome, label: 'Home'),
+      const _NavItem(icon: AppAssets.navGames, label: 'Games'),
+      const _NavItem(icon: AppAssets.navOffers, label: 'Offers'),
+      const _NavItem(icon: AppAssets.navRewards, label: 'Rewards'),
+      const _NavItem(icon: AppAssets.navProfile, label: 'Profile'),
     ];
 
     return Container(

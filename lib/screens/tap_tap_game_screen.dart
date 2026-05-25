@@ -6,6 +6,7 @@ import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ad_reward_dialog.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class TapTapGameScreen extends StatefulWidget {
   const TapTapGameScreen({super.key});
@@ -58,8 +59,33 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   // Concentric 3D UI states
   final List<_BgElement> _bgElements = [];
   final List<_RippleEffect> _ripples = [];
+
   double _tiltX = 0.0;
   double _tiltY = 0.0;
+
+  Future<void> _submitClaimedCoins(int finalScore, int duration) async {
+    final result = await GameService().submitGameResult(
+      gameName: 'tap_tap',
+      score: finalScore,
+      durationSeconds: duration.clamp(1, 3600),
+      sessionId: _sessionId ?? GameService().generateSessionId(),
+      originalScore: _originalCoinsEarned,
+      multiplier: _adWatched ? 2 : 1,
+    );
+    if (!mounted) return;
+    if (result['success'] == true && result['balance'] != null) {
+      context.read<AppState>().syncBalanceFromServer(result['balance'] as int);
+      Navigator.of(context).pop(finalScore);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error'] as String? ?? 'Failed to save game reward',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -227,32 +253,20 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           _isClaiming = false;
           _ticker?.stop();
 
-          // Submit game result to server
+          // Submit game result to server - this handles coin crediting and database save
           final duration = _gameStartTime != null
               ? DateTime.now().difference(_gameStartTime!).inSeconds
               : 1;
           final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
-          // Always credit coins locally first so the user never loses earned rewards.
-          context.read<AppState>().optimisticAddCoins(finalScore);
 
-          GameService()
-              .submitGameResult(
-                gameName: 'tap_tap',
-                score: finalScore,
-                durationSeconds: duration.clamp(1, 3600),
-                sessionId:
-                    _sessionId ?? 'tap_${GameService().generateSessionId()}',
-                originalScore: _originalCoinsEarned,
-                multiplier: _adWatched ? 2 : 1,
-              )
-              .then((_) {})
-              .catchError((e) {
+          if (!mounted) return;
+          _submitClaimedCoins(finalScore, duration).catchError((e) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to save game reward')),
+            );
             debugPrint('Failed to submit tap tap result: $e');
           });
-
-          if (mounted) {
-            Navigator.of(context).pop(finalScore);
-          }
         }
       }
 
@@ -427,8 +441,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     });
 
     // Create 15 flying coins
-    final Offset target =
-        const Offset(200, 40); // Top-right app header general direction
+    const Offset target =
+        Offset(200, 40); // Top-right app header general direction
     for (int i = 0; i < 15; i++) {
       final double controlX =
           startCenter.dx + (_random.nextDouble() - 0.5) * 300;
@@ -479,24 +493,13 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Leave Game?'),
-            content: const Text('Your progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Leave'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Game?',
+          message:
+              'Are you sure you want to exit? You will lose unclaimed progress.',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -554,7 +557,22 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                           Align(
                             alignment: Alignment.centerLeft,
                             child: GestureDetector(
-                              onTap: () => Navigator.of(context).pop(),
+                              onTap: () async {
+                                if (isPlaying) {
+                                  final shouldLeave =
+                                      await showQuitConfirmationDialog(
+                                    context,
+                                    title: 'Quit Game?',
+                                    message:
+                                        'Are you sure you want to exit? You will lose unclaimed progress.',
+                                  );
+                                  if (shouldLeave && context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                } else {
+                                  Navigator.of(context).pop();
+                                }
+                              },
                               child: Container(
                                 width: 44,
                                 height: 44,
@@ -934,7 +952,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
           const SizedBox(height: 30),
 
           // Features/Rules Row
-          Row(
+          const Row(
             children: [
               _InstructionStep(
                 icon: Icons.timer,
@@ -942,14 +960,14 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                 desc: 'Race against time',
                 color: Colors.blue,
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _InstructionStep(
                 icon: Icons.bolt,
                 title: 'Combos',
                 desc: 'Tap fast to scale points',
                 color: Colors.orange,
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               _InstructionStep(
                 icon: Icons.currency_bitcoin,
                 title: 'RBX Coins',
@@ -1023,8 +1041,8 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                   Container(
                     width: 76,
                     height: 76,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDF6E2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFDF6E2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -1151,9 +1169,9 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                             ],
                           ),
                           alignment: Alignment.center,
-                          child: Row(
+                          child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
+                            children: [
                               Icon(Icons.play_circle,
                                   color: Colors.white, size: 22),
                               SizedBox(width: 8),

@@ -38,7 +38,7 @@ class ProfileScreen extends StatelessWidget {
     final appState = context.watch<AppState>();
     final level = _calculateLevel(appState.totalCoinsEarned);
     final xpCurrent = _xpForCurrentLevel(appState.totalCoinsEarned);
-    final xpGoal = 1000;
+    const xpGoal = 1000;
     final xpProgress = (xpCurrent / xpGoal).clamp(0.0, 1.0);
 
     return Scaffold(
@@ -551,7 +551,7 @@ class _SettingsLink extends StatelessWidget {
             ),
           ),
           if (hasDivider)
-            Divider(
+            const Divider(
               height: 1,
               color: AppColors.divider,
               indent: 16,
@@ -856,7 +856,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                   Container(
                     width: 42,
                     height: 42,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: AppColors.primaryGradient,
                       shape: BoxShape.circle,
                     ),
@@ -878,8 +878,8 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F2F8),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF1F2F8),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.close,

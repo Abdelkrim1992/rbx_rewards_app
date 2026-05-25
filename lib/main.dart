@@ -13,6 +13,7 @@ import 'services/auth_service.dart';
 import 'services/coin_service.dart';
 import 'services/reward_service.dart';
 import 'state/app_state.dart';
+import 'widgets/quit_confirmation_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -160,25 +161,13 @@ class _AppNavigatorState extends State<AppNavigator> {
           _backFromSpin();
           return;
         }
-        final shouldQuit = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Quit App?'),
-            content: const Text('Are you sure you want to exit RBX Rewards?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
+        final shouldQuit = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit App?',
+          message: 'Are you sure you want to exit RBX Rewards?',
         );
-        if (shouldQuit == true && mounted) {
-          Navigator.of(context).pop();
+        if (shouldQuit && mounted) {
+          SystemNavigator.pop();
         }
       },
       child: screen,

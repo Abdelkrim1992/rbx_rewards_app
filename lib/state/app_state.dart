@@ -144,7 +144,7 @@ class AppState extends ChangeNotifier {
           debugPrint('⚠️ Anonymous auth returned null user');
         }
       } catch (e) {
-        debugPrint('❌ Anonymous auth failed: ' + e.toString());
+        debugPrint('❌ Anonymous auth failed: $e');
         _isAuthenticated = false;
       }
     }
@@ -176,7 +176,7 @@ class AppState extends ChangeNotifier {
           notifyListeners();
         },
         onError: (e) {
-          debugPrint('User data stream error: ' + e.toString());
+          debugPrint('User data stream error: $e');
         },
       );
     }
@@ -246,7 +246,7 @@ class AppState extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      debugPrint('Failed to refresh spin state: ' + e.toString());
+      debugPrint('Failed to refresh spin state: $e');
     }
   }
 
@@ -257,7 +257,7 @@ class AppState extends ChangeNotifier {
       _displayName = name;
       notifyListeners();
     } catch (e) {
-      _errorMessage = 'Failed to update name: ' + e.toString();
+      _errorMessage = 'Failed to update name: $e';
       notifyListeners();
     }
   }
@@ -271,7 +271,7 @@ class AppState extends ChangeNotifier {
     try {
       await _coinService.updateProfilePhoto(url);
     } catch (e) {
-      _errorMessage = 'Failed to update profile photo: ' + e.toString();
+      _errorMessage = 'Failed to update profile photo: $e';
       notifyListeners();
     }
   }
@@ -284,10 +284,14 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshCoins() async {
+    if (_pendingCoinOps > 0) return;
     try {
       final data = await _coinService.getUserData();
       if (data.isNotEmpty) {
-        _coins = data['balance'] as int? ?? _coins;
+        final serverBalance = data['balance'] as int? ?? _coins;
+        if (serverBalance > _coins) {
+          _coins = serverBalance;
+        }
         _totalCoinsEarned = data['total_earned'] as int? ?? _totalCoinsEarned;
         _gamesPlayed = data['games_played'] as int? ?? _gamesPlayed;
         _offersCompleted = data['offers_completed'] as int? ?? _offersCompleted;
@@ -297,7 +301,7 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      _errorMessage = 'Failed to refresh data: ' + e.toString();
+      _errorMessage = 'Failed to refresh data: $e';
       notifyListeners();
     }
   }
@@ -339,20 +343,35 @@ class AppState extends ChangeNotifier {
         'txId': txId,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
-      _errorMessage = 'Failed to sync coins to server: ' + e.toString();
+      _errorMessage = 'Failed to sync coins to server: $e';
       notifyListeners();
       _pendingCoinOps--;
       return _coins;
     }
   }
 
-  /// Optimistically add coins locally without calling the backend.
-  /// Use this when the backend has already been updated directly
-  /// (e.g. via GameService.submitGameResult).
   void optimisticAddCoins(int value) {
     _coins += value;
+    _totalCoinsEarned += value;
+    _pendingCoinOps++;
     notifyListeners();
     GamePrefs.saveCoins(_coins);
+  }
+
+  void syncBalanceFromServer(int serverBalance) {
+    if (serverBalance > _coins) {
+      _coins = serverBalance;
+      GamePrefs.saveCoins(_coins);
+    }
+    if (_pendingCoinOps > 0) _pendingCoinOps--;
+    notifyListeners();
+  }
+
+  void releaseOptimisticOp() {
+    if (_pendingCoinOps > 0) {
+      _pendingCoinOps--;
+      notifyListeners();
+    }
   }
 
   Future<bool> spendCoins(int value, {String rewardTitle = 'redeem'}) async {
@@ -396,7 +415,7 @@ class AppState extends ChangeNotifier {
         'txId': txId,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
-      _errorMessage = 'Failed to spend coins: ' + e.toString();
+      _errorMessage = 'Failed to spend coins: $e';
       notifyListeners();
       return false;
     }
@@ -421,7 +440,7 @@ class AppState extends ChangeNotifier {
         await _refreshDailyRewardCooldown();
         return data['success'] == true;
       } catch (e) {
-        _errorMessage = 'Failed to claim daily reward: ' + e.toString();
+        _errorMessage = 'Failed to claim daily reward: $e';
         notifyListeners();
         return false;
       }
@@ -484,7 +503,7 @@ class AppState extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _errorMessage = 'Failed to use spin: ' + e.toString();
+      _errorMessage = 'Failed to use spin: $e';
       notifyListeners();
       return false;
     }
@@ -544,7 +563,7 @@ class AppState extends ChangeNotifier {
     try {
       await _coinService.incrementUserStat('offers_completed');
     } catch (e) {
-      debugPrint('Failed to increment offers completed: ' + e.toString());
+      debugPrint('Failed to increment offers completed: $e');
     }
   }
 
@@ -553,7 +572,7 @@ class AppState extends ChangeNotifier {
     try {
       return await _coinService.getRedeemedRewards();
     } catch (e) {
-      debugPrint('Failed to fetch redeemed rewards: ' + e.toString());
+      debugPrint('Failed to fetch redeemed rewards: $e');
       return [];
     }
   }
@@ -565,6 +584,17 @@ class AppState extends ChangeNotifier {
     bytes[8] = (bytes[8] & 0x3F) | 0x80;
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+  }
+
+  bool _shouldDiscardPendingTxError(String msg) {
+    return msg.contains('duplicate') ||
+        msg.contains('conflict') ||
+        msg.contains('already exists') ||
+        msg.contains('unique constraint') ||
+        msg.contains('already processed') ||
+        msg.contains('insufficient') ||
+        msg.contains('cap reached') ||
+        msg.contains('validation failed');
   }
 
   Future<void> _flushPendingTransactions() async {
@@ -594,26 +624,29 @@ class AppState extends ChangeNotifier {
             );
             break;
           case 'game_result':
-            await _gameService.submitGameResult(
+            final result = await _gameService.submitGameResult(
               gameName: tx['gameName'] as String,
               score: tx['score'] as int,
               durationSeconds: tx['durationSeconds'] as int,
               sessionId: tx['sessionId'] as String,
               originalScore: tx['originalScore'] as int? ?? 0,
               multiplier: tx['multiplier'] as int? ?? 1,
+              queueOnFailure: false,
             );
+            if (result['success'] != true) {
+              final msg =
+                  (result['error'] as String? ?? 'game submission failed')
+                      .toLowerCase();
+              final retryable = result['retryable'] == true;
+              if (!_shouldDiscardPendingTxError(msg) && retryable) {
+                remaining.add(tx);
+              }
+            }
             break;
         }
       } catch (e) {
         final msg = e.toString().toLowerCase();
-        if (msg.contains('duplicate') ||
-            msg.contains('conflict') ||
-            msg.contains('already exists') ||
-            msg.contains('unique constraint') ||
-            msg.contains('already processed') ||
-            msg.contains('insufficient') ||
-            msg.contains('cap reached') ||
-            msg.contains('validation failed')) {
+        if (_shouldDiscardPendingTxError(msg)) {
           // Safe to discard – server already has this transaction.
         } else {
           remaining.add(tx);

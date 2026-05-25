@@ -663,13 +663,13 @@ class _QuizzesScreenState extends State<QuizzesScreen>
       key: const ValueKey('MENU'),
       children: [
         const SizedBox(height: 24),
-        Padding(
+        const Padding(
           padding:
-              const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+              EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Available Quizzes',
                 style: TextStyle(
                   fontSize: 20,

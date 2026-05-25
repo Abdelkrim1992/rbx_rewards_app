@@ -285,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     // Welcome greeting
                     const Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: Row(
                         children: [
@@ -533,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Quick Actions header
                     const Padding(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
                         title: 'Quick Actions',

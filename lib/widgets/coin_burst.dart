@@ -174,7 +174,7 @@ class CoinBurstPainter extends CustomPainter {
           MathVector3(math.cos(angle) * radius, math.sin(angle) * radius, 0));
     }
 
-    final holeRadius = radius * 0.35;
+    const holeRadius = radius * 0.35;
     for (int i = 0; i < 4; i++) {
       double angle = (i * math.pi / 2) + (math.pi / 4);
       holeVerts.add(MathVector3(
@@ -288,10 +288,11 @@ class CoinBurstPainter extends CustomPainter {
       for (int i = 0; i < outer.length; i++) {
         double px = outer[i].x * 0.8;
         double py = outer[i].y * 0.8;
-        if (i == 0)
+        if (i == 0) {
           embossPath.moveTo(px, py);
-        else
+        } else {
           embossPath.lineTo(px, py);
+        }
       }
       embossPath.close();
       canvas.drawPath(

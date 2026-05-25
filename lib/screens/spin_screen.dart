@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/refreshable_scroll.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class SpinScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -53,7 +53,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _animation = AlwaysStoppedAnimation(0.0);
+    _animation = const AlwaysStoppedAnimation(0.0);
   }
 
   @override
@@ -91,7 +91,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     final random = Random();
     final targetSegment = _pickWeightedSegment(random);
     final baseRotations = 2 + random.nextInt(6);
-    final segmentAngle = (2 * pi) / 6;
+    const segmentAngle = (2 * pi) / 6;
     final targetAngle = baseRotations * 2 * pi +
         targetSegment * segmentAngle +
         segmentAngle / 2;
@@ -184,91 +184,12 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
           widget.onBack();
           return;
         }
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: Text(
-              'Leave Spin?',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-                color: const Color(0xFF131326),
-              ),
-            ),
-            content: Text(
-              'Your spin is in progress. Are you sure you want to leave?',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: const Color(0xFF4A4B60),
-                height: 1.4,
-              ),
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            actions: [
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx, false),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1FB),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF868A9F),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx, true),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF1744).withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Leave',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Spin?',
+          message: 'Your spin is in progress. Are you sure you want to leave?',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           widget.onBack();
         }
       },
@@ -371,14 +292,14 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                     Container(
                                       width: wheelSize + 10,
                                       height: wheelSize + 10,
-                                      decoration: BoxDecoration(
+                                      decoration: const BoxDecoration(
                                         shape: BoxShape.circle,
                                         gradient: LinearGradient(
                                           begin: Alignment.topCenter,
                                           end: Alignment.bottomCenter,
                                           colors: [
-                                            const Color(0xFF4A2BC2),
-                                            const Color(0xFF2E1B7A),
+                                            Color(0xFF4A2BC2),
+                                            Color(0xFF2E1B7A),
                                           ],
                                         ),
                                       ),
@@ -547,7 +468,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
-                                    Icon(Icons.location_on,
+                                    const Icon(Icons.location_on,
                                         color: AppColors.primary, size: 44),
                                     Positioned(
                                       top: 8,
@@ -603,13 +524,13 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.play_circle_fill,
+                                Icon(Icons.play_circle_fill,
                                     color: Colors.white, size: 22),
-                                const SizedBox(width: 8),
-                                const Text(
+                                SizedBox(width: 8),
+                                Text(
                                   'Watch Ad for Extra Spin',
                                   style: TextStyle(
                                     fontSize: 15,
@@ -626,10 +547,10 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                       const SizedBox(height: 16),
 
                       // How to Play Section
-                      Column(
+                      const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'How to Spin & Win',
                             style: TextStyle(
                               fontSize: 17,
@@ -637,27 +558,27 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                               color: Color(0xFF131326),
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          SizedBox(height: 10),
                           _HowToStep(
                             icon: Icons.auto_awesome,
                             title: 'Try Your Luck',
                             description: 'Spin daily to win up to 5,000 RBX.',
-                            color: const Color(0xFF9B5CFF),
+                            color: Color(0xFF9B5CFF),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           _HowToStep(
                             icon: Icons.play_circle_outline,
                             title: 'Get More Spins',
                             description:
                                 'Watch a short video to get another chance.',
-                            color: const Color(0xFF6B4BF4),
+                            color: Color(0xFF6B4BF4),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                           _HowToStep(
                             icon: Icons.account_balance_wallet_outlined,
                             title: 'Collect & Redeem',
                             description: 'Exchange coins for real items.',
-                            color: const Color(0xFF4A2BC2),
+                            color: Color(0xFF4A2BC2),
                           ),
                         ],
                       ),

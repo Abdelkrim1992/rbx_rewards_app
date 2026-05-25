@@ -40,12 +40,21 @@ class _RewardsScreenState extends State<RewardsScreen> {
     return int.tryParse(cost.replaceAll(',', '')) ?? 0;
   }
 
+  String _sanitizeRewardTitle(String title) {
+    // Replace $ with USD and remove other potentially problematic characters
+    return title
+        .replaceAll(r'$', 'USD ')
+        .replaceAll(RegExp(r'[^\w\s-]'), '')
+        .trim();
+  }
+
   Future<void> _redeemReward(_RewardData reward) async {
     final cost = _parseRewardCost(reward.cost);
     final appState = context.read<AppState>();
     final balance = appState.coins;
 
     if (balance < cost) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -67,9 +76,9 @@ class _RewardsScreenState extends State<RewardsScreen> {
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
-    // Show success popup
+    // Show success popup immediately after confirmation
     if (mounted) {
       showDialog(
         context: context,
@@ -79,11 +88,19 @@ class _RewardsScreenState extends State<RewardsScreen> {
       );
     }
 
-    final success = await appState.spendCoins(cost, rewardTitle: reward.title);
+    // Sanitize the reward title for backend
+    final sanitizedTitle = _sanitizeRewardTitle(reward.title);
+
+    // Perform the redemption in the background
+    final success = await appState.spendCoins(cost, rewardTitle: sanitizedTitle);
+    
+    if (!mounted) return;
+
     if (!success) {
-      if (!mounted) return;
-      // Close the dialog if it failed
+      // Close the success dialog
       Navigator.of(context).pop();
+      
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -97,53 +114,54 @@ class _RewardsScreenState extends State<RewardsScreen> {
       return;
     }
 
+    // Reload history in the background (dialog is still open)
     await _loadHistory();
   }
 
   @override
   Widget build(BuildContext context) {
     final rewards = [
-      _RewardData(
+      const _RewardData(
         assetPath: 'assets/images/robux_coins.png',
         title: '1,000 RBX Coins',
         description: 'Instant coin boost to your balance',
         cost: '500',
-        bgColor: const Color(0xFFFFCC44),
+        bgColor: Color(0xFFFFCC44),
       ),
-      _RewardData(
+      const _RewardData(
         assetPath: 'assets/images/open_chest_quick_actions.png',
         title: 'Premium Chest',
         description: 'Mystery loot box with random rewards',
         cost: '1,500',
-        bgColor: const Color(0xFF9B5CFF),
+        bgColor: Color(0xFF9B5CFF),
       ),
-      _RewardData(
+      const _RewardData(
         assetPath: 'assets/images/robux_coins.png',
         title: '5,000 RBX Coins',
         description: 'Big coin pack for serious grinders',
         cost: '2,000',
-        bgColor: const Color(0xFF2ECC71),
+        bgColor: Color(0xFF2ECC71),
       ),
-      _RewardData(
+      const _RewardData(
         icon: Icons.card_giftcard,
         title: 'Roblox Gift Card \$5',
         description: 'Official Roblox digital gift card',
         cost: '10,000',
-        bgColor: const Color(0xFF1A1A2E),
+        bgColor: Color(0xFF1A1A2E),
       ),
-      _RewardData(
+      const _RewardData(
         assetPath: 'assets/images/profile_image.png',
         title: 'Avatar Skin Pack',
         description: 'Exclusive premium avatar skins',
         cost: '3,000',
-        bgColor: const Color(0xFFFF6B6B),
+        bgColor: Color(0xFFFF6B6B),
       ),
-      _RewardData(
+      const _RewardData(
         icon: Icons.card_giftcard,
         title: 'Roblox Gift Card \$10',
         description: 'Official Roblox digital gift card',
         cost: '20,000',
-        bgColor: const Color(0xFF6A2FD8),
+        bgColor: Color(0xFF6A2FD8),
       ),
     ];
 
@@ -828,10 +846,10 @@ class _RedeemConfirmDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Are you sure you want to redeem',
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppColors.secondaryText,

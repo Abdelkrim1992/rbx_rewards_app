@@ -83,10 +83,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             (e) => e.isUser,
             orElse: () => _entries.length > 4
                 ? _entries[4]
-                : _LeaderboardEntry(
+                : const _LeaderboardEntry(
                     rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true),
           )
-        : _LeaderboardEntry(
+        : const _LeaderboardEntry(
             rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true);
     final userBonus = _bonusForRank(userEntry.rank);
 
@@ -552,7 +552,7 @@ class _LeaderboardListItem extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: AppColors.primaryGradient,
               shape: BoxShape.circle,
             ),

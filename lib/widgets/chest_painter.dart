@@ -60,7 +60,7 @@ class ChestPainter extends CustomPainter {
     canvas.drawRRect(
         bodyRect,
         Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [purpleLight, purpleMid, purpleDark],
@@ -178,7 +178,7 @@ class ChestPainter extends CustomPainter {
     canvas.drawPath(
         lidPath,
         Paint()
-          ..shader = LinearGradient(
+          ..shader = const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [purpleLight, purpleMid, purpleDark],

@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
 import '../widgets/ad_reward_dialog.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class FlipCardGameScreen extends StatefulWidget {
   const FlipCardGameScreen({super.key});
@@ -24,7 +25,7 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
 
   // Game Metrics
   int _matchesFound = 0;
-  int _totalPairs = 8;
+  final int _totalPairs = 8;
   int _moves = 0;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
@@ -256,21 +257,40 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
         : 1;
     final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
 
-    // Always credit coins locally first so the user never loses earned rewards.
-    context.read<AppState>().optimisticAddCoins(finalScore);
-
-    // Try to sync to server in the background; don't block the reward on this.
-    try {
-      await GameService().submitGameResult(
-        gameName: 'flip_card',
-        score: finalScore,
-        durationSeconds: duration.clamp(1, 3600),
-        sessionId: _sessionId ?? 'flip_${GameService().generateSessionId()}',
-        originalScore: _originalCoinsEarned,
-        multiplier: _adWatched ? 2 : 1,
-      );
-    } catch (e) {
-      debugPrint('Failed to submit flip card result: $e');
+    if (finalScore > 0) {
+      if (!mounted) return;
+      try {
+        final result = await GameService().submitGameResult(
+          gameName: 'flip_card',
+          score: finalScore,
+          durationSeconds: duration.clamp(1, 3600),
+          sessionId: _sessionId ?? GameService().generateSessionId(),
+          originalScore: _originalCoinsEarned,
+          multiplier: _adWatched ? 2 : 1,
+        );
+        if (!mounted) return;
+        if (result['success'] == true && result['balance'] != null) {
+          context
+              .read<AppState>()
+              .syncBalanceFromServer(result['balance'] as int);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result['error'] as String? ?? 'Failed to save game reward',
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save game reward')),
+        );
+        debugPrint('Failed to submit flip card result: $e');
+        return;
+      }
     }
 
     if (mounted) {
@@ -293,24 +313,13 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Leave Game?'),
-            content: const Text('Your progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Leave'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Game?',
+          message:
+              'Are you sure you want to exit? You will lose unclaimed progress.',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -1024,10 +1033,10 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
                           ),
                         ],
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Icon(Icons.play_circle,
                                 color: Colors.white, size: 20),
                             SizedBox(width: 6),

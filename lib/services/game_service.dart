@@ -19,6 +19,53 @@ class GameService {
 
   String? get _userId => _client?.auth.currentUser?.id;
 
+  String _extractErrorMessage(dynamic data, String fallback) {
+    if (data is Map<String, dynamic>) {
+      final error = data['error'] ?? data['message'];
+      if (error is String && error.isNotEmpty) return error;
+    }
+    if (data is Map) {
+      final error = data['error'] ?? data['message'];
+      if (error is String && error.isNotEmpty) return error;
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return fallback;
+  }
+
+  Future<Map<String, dynamic>> _creditGameCoins({
+    required int amount,
+    required String txId,
+  }) async {
+    final resp = await _client!.functions.invoke(
+      'credit-coins',
+      body: {
+        'amount': amount,
+        'source': 'game',
+        'txId': txId,
+      },
+    );
+
+    if (resp.status != 200) {
+      return {
+        'success': false,
+        'error': _extractErrorMessage(resp.data, 'Failed to credit game coins'),
+        'retryable': resp.status >= 500 || resp.status == 429,
+      };
+    }
+
+    if (resp.data is Map<String, dynamic>) {
+      final data = Map<String, dynamic>.from(resp.data as Map<String, dynamic>);
+      data['credited'] = amount;
+      return data;
+    }
+    if (resp.data is Map) {
+      final data = Map<String, dynamic>.from(resp.data as Map);
+      data['credited'] = amount;
+      return data;
+    }
+    return {'success': true, 'credited': amount};
+  }
+
   /// Generate a unique UUID v4 session ID.
   String generateSessionId() {
     final random = Random();
@@ -42,6 +89,7 @@ class GameService {
     required String sessionId,
     int originalScore = 0,
     int multiplier = 1,
+    bool queueOnFailure = true,
   }) async {
     if (_userId == null) {
       return {
@@ -49,6 +97,7 @@ class GameService {
         'error': 'Not authenticated',
       };
     }
+    final txId = 'game_$sessionId';
     try {
       final resp = await _client!.functions.invoke(
         'add-game-coins',
@@ -56,6 +105,7 @@ class GameService {
           'amount': score,
           'gameName': gameName,
           'sessionId': sessionId,
+          'txId': txId,
           'durationSeconds': durationSeconds,
           if (originalScore > 0) 'originalScore': originalScore,
           if (multiplier > 1) 'multiplier': multiplier,
@@ -63,29 +113,68 @@ class GameService {
       );
 
       if (resp.status != 200) {
-        final error = resp.data['error'] ?? 'Failed to submit game result';
-        throw Exception(error);
+        final error = _extractErrorMessage(
+          resp.data,
+          'Failed to submit game result',
+        );
+        final status = resp.status;
+        final retryable = status >= 500 || status == 429;
+
+        if (queueOnFailure && retryable) {
+          await PendingTransactionService.enqueue({
+            'type': 'game_result',
+            'gameName': gameName,
+            'score': score,
+            'durationSeconds': durationSeconds,
+            'sessionId': sessionId,
+            'originalScore': originalScore,
+            'multiplier': multiplier,
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+          });
+          return {
+            'success': false,
+            'error': error,
+            'queued': true,
+            'retryable': true,
+          };
+        }
+
+        final fallback = await _creditGameCoins(amount: score, txId: txId);
+        if (fallback['success'] == true) return fallback;
+
+        return {
+          'success': false,
+          'error': fallback['error'] ?? error,
+          'queued': false,
+          'retryable': fallback['retryable'] ?? retryable,
+        };
       }
 
-      return resp.data as Map<String, dynamic>;
+      if (resp.data is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(resp.data as Map<String, dynamic>);
+      }
+      if (resp.data is Map) {
+        return Map<String, dynamic>.from(resp.data as Map);
+      }
+      return {'success': true};
     } catch (e) {
-      // Queue for later retry so the user never loses a game submission.
-      await PendingTransactionService.enqueue({
-        'type': 'game_result',
-        'gameName': gameName,
-        'score': score,
-        'durationSeconds': durationSeconds,
-        'sessionId': sessionId,
-        'originalScore': originalScore,
-        'multiplier': multiplier,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      // Return optimistic success so game UIs don't break.
+      if (queueOnFailure) {
+        await PendingTransactionService.enqueue({
+          'type': 'game_result',
+          'gameName': gameName,
+          'score': score,
+          'durationSeconds': durationSeconds,
+          'sessionId': sessionId,
+          'originalScore': originalScore,
+          'multiplier': multiplier,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        });
+      }
       return {
-        'success': true,
-        'balance': 0,
-        'coinsEarned': score,
-        'queued': true,
+        'success': false,
+        'error': e.toString(),
+        'queued': queueOnFailure,
+        'retryable': true,
       };
     }
   }

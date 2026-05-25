@@ -49,7 +49,15 @@ Deno.serve(async (req) => {
 
   const uid = user.id;
   const body = await req.json();
-  const { amount, gameName, sessionId, durationSeconds, originalScore, multiplier } = body;
+  const { amount, gameName, sessionId, durationSeconds, originalScore, multiplier, txId: clientTxId } = body;
+
+  // Ensure the user row exists (covers legacy accounts created before trigger setup).
+  const { error: userUpsertError } = await supabase
+    .from("users")
+    .upsert({ id: uid }, { onConflict: "id", ignoreDuplicates: true });
+  if (userUpsertError) {
+    return errorResponse(`Failed to initialize user profile: ${userUpsertError.message}`, 500);
+  }
 
   if (!amount || amount <= 0) {
     return errorResponse("Invalid amount", 400);
@@ -86,7 +94,9 @@ Deno.serve(async (req) => {
     return errorResponse(feasibility.reason || "Session validation failed", 400);
   }
 
-  const txId = `game_${crypto.randomUUID()}`;
+  const txId = (typeof clientTxId === "string" && clientTxId.length > 0)
+    ? clientTxId
+    : `game_${sessionId}`;
 
   // Atomic session processing via single RPC (prevents double-crediting race condition)
   const { data: result, error: processError } = await supabase.rpc("process_game_session", {

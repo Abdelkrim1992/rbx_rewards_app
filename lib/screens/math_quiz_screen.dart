@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/game_prefs.dart';
 import '../widgets/ad_reward_dialog.dart';
 
 class MathQuestion {
@@ -42,7 +41,7 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
   bool _adWatched = false;
-  int _highScore = 0;
+  final int _highScore = 0;
   int _userCoins = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
@@ -240,18 +239,38 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     _loadHighScoreAndCoins();
   }
 
-  Future<void> _syncQuizResult(int finalScore, int duration) async {
+  Future<bool> _syncQuizResult(int finalScore, int duration) async {
     try {
-      await GameService().submitGameResult(
+      final result = await GameService().submitGameResult(
         gameName: 'math_quiz',
         score: finalScore,
         durationSeconds: duration.clamp(1, 3600),
-        sessionId: _sessionId ?? 'math_${GameService().generateSessionId()}',
+        sessionId: _sessionId ?? GameService().generateSessionId(),
         originalScore: _originalCoinsEarned,
         multiplier: _adWatched ? 2 : 1,
       );
+      if (!mounted) return false;
+      if (result['success'] == true && result['balance'] != null) {
+        context
+            .read<AppState>()
+            .syncBalanceFromServer(result['balance'] as int);
+        return true;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['error'] as String? ?? 'Failed to save game reward',
+          ),
+        ),
+      );
+      return false;
     } catch (e) {
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save game reward')),
+      );
       debugPrint('Failed to submit quiz result: $e');
+      return false;
     }
   }
 
@@ -261,11 +280,9 @@ class _MathQuizScreenState extends State<MathQuizScreen>
         : 1;
     final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
 
-    // Always credit coins locally first so the user never loses earned rewards.
-    context.read<AppState>().optimisticAddCoins(finalScore);
-
-    // Try to sync to server in the background; don't block the reward on this.
-    await _syncQuizResult(finalScore, duration);
+    if (!mounted) return;
+    final saved = await _syncQuizResult(finalScore, duration);
+    if (!saved) return;
 
     if (mounted) {
       Navigator.of(context).pop(finalScore);
@@ -279,8 +296,9 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
 
     if (finalScore > 0) {
-      context.read<AppState>().optimisticAddCoins(finalScore);
-      await _syncQuizResult(finalScore, duration);
+      if (!mounted) return;
+      final saved = await _syncQuizResult(finalScore, duration);
+      if (!saved) return;
     }
 
     if (mounted) {
@@ -909,10 +927,10 @@ class _MathQuizScreenState extends State<MathQuizScreen>
                           ),
                         ],
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             Icon(Icons.play_circle,
                                 color: Colors.white, size: 20),
                             SizedBox(width: 6),

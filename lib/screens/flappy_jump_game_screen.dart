@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
 import '../widgets/ad_reward_dialog.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 // --- Vector 3D Helper ---
 class Vector3D {
@@ -610,13 +611,13 @@ class FlappyJumpGame extends FlameGame {
     // 1. Draw beautiful Dark Synthwave background sky gradient
     final Rect backgroundRect = Rect.fromLTWH(0, 0, size.x, size.y);
     final Paint backgroundPaint = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          const Color(0xFF0C0D26), // Deep Space Blue
-          const Color(0xFF19163D), // Synthwave Violet
-          const Color(0xFF331652), // Pinky Purple
+          Color(0xFF0C0D26), // Deep Space Blue
+          Color(0xFF19163D), // Synthwave Violet
+          Color(0xFF331652), // Pinky Purple
         ],
       ).createShader(backgroundRect);
     canvas.drawRect(backgroundRect, backgroundPaint);
@@ -841,10 +842,10 @@ class FlappyJumpGame extends FlameGame {
 
     // Colors & Shader Design
     // Neon glow styles
-    final neonMagenta = const Color(0xFFFF007F);
-    final neonPurple = const Color(0xFF6E3AFF);
-    final neonDark = const Color(0xFF1D0E3D);
-    final neonCyan = const Color(0xFF00FFCC);
+    const neonMagenta = Color(0xFFFF007F);
+    const neonPurple = Color(0xFF6E3AFF);
+    const neonDark = Color(0xFF1D0E3D);
+    const neonCyan = Color(0xFF00FFCC);
 
     final frontPaint = Paint()
       ..shader = LinearGradient(
@@ -964,9 +965,9 @@ class FlappyJumpGame extends FlameGame {
     if (!anyOnScreen) return;
 
     // Render gold faces and neon outline
-    final goldTop = const Color(0xFFFFDE6B);
-    final goldBase = const Color(0xFFF5C842);
-    final neonCyan = const Color(0xFF00FFCC);
+    const goldTop = Color(0xFFFFDE6B);
+    const goldBase = Color(0xFFF5C842);
+    const neonCyan = Color(0xFF00FFCC);
 
     final path = Path()..moveTo(proj[0].dx, proj[0].dy);
     for (int i = 1; i < proj.length; i++) {
@@ -1051,7 +1052,7 @@ class FlappyJumpGame extends FlameGame {
     final wingPaint = Paint()
       ..shader = const LinearGradient(
         colors: [Color(0xFF00FFCC), Color(0xFF6E3AFF)],
-      ).createShader(Rect.fromLTWH(-35, -20, 70, 40));
+      ).createShader(const Rect.fromLTWH(-35, -20, 70, 40));
 
     final wingStroke = Paint()
       ..color = const Color(0xFF00FFCC)
@@ -1203,7 +1204,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   // Game data state
   int _coins = 0;
   int _displayedCoins = 0;
-  int _highScore = 0;
+  final int _highScore = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
 
@@ -1277,22 +1278,40 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
         ? _originalCoinsEarned * (_adWatched ? 2 : 1)
         : _game.coinsEarned;
 
-    // Always credit coins locally first so the user never loses earned rewards.
-    context.read<AppState>().optimisticAddCoins(finalScore);
-
-    // Try to sync to server in the background; don't block the reward on this.
     try {
-      await GameService().submitGameResult(
+      final result = await GameService().submitGameResult(
         gameName: 'flappy_jump',
         score: finalScore,
         durationSeconds: duration.clamp(1, 3600),
-        sessionId: _sessionId ?? 'flappy_${GameService().generateSessionId()}',
+        sessionId: _sessionId ?? GameService().generateSessionId(),
         originalScore:
             _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned,
         multiplier: _adWatched ? 2 : 1,
       );
+      if (!mounted) return;
+      if (result['success'] == true && result['balance'] != null) {
+        context
+            .read<AppState>()
+            .syncBalanceFromServer(result['balance'] as int);
+      } else {
+        _showCoinClaimAnimation = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['error'] as String? ?? 'Failed to save game reward',
+            ),
+          ),
+        );
+        return;
+      }
     } catch (e) {
+      if (!mounted) return;
+      _showCoinClaimAnimation = false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save game reward')),
+      );
       debugPrint('Failed to submit game result: $e');
+      return;
     }
 
     if (!mounted) {
@@ -1403,24 +1422,13 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Leave Game?'),
-            content: const Text('Your progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Leave'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Game?',
+          message:
+              'Are you sure you want to exit? You will lose unclaimed progress.',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -1572,7 +1580,16 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: () async {
+                      final shouldLeave = await showQuitConfirmationDialog(
+                        context,
+                        title: 'Quit Game?',
+                        message: 'Are you sure you want to go back?',
+                      );
+                      if (shouldLeave && context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
                     child: Container(
                       width: 44,
                       height: 44,
@@ -1841,7 +1858,17 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
 
               // Exit Button
               _buildPauseActionBtn(
-                onTap: () => Navigator.of(context).pop(),
+                onTap: () async {
+                  final shouldLeave = await showQuitConfirmationDialog(
+                    context,
+                    title: 'Quit Game?',
+                    message:
+                        'Are you sure you want to exit? You will lose unclaimed progress.',
+                  );
+                  if (shouldLeave && context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                },
                 text: 'QUIT',
                 isPrimary: false,
                 icon: Icons.exit_to_app,
@@ -2313,9 +2340,9 @@ class _GameCoinClaimPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final goldTop = const Color(0xFFFFDE6B);
-    final goldBase = const Color(0xFFF5C842);
-    final goldStroke = const Color(0xFFFF9E00);
+    const goldTop = Color(0xFFFFDE6B);
+    const goldBase = Color(0xFFF5C842);
+    const goldStroke = Color(0xFFFF9E00);
 
     for (var coin in coins) {
       if (coin.progress <= 0.0 || coin.progress >= 1.0) continue;
@@ -2327,7 +2354,7 @@ class _GameCoinClaimPainter extends CustomPainter {
       double scaleX = math.cos(coin.progress * 10 * math.pi);
       canvas.scale(scaleX.abs(), 1.0);
 
-      final double coinRad = 16.0;
+      const double coinRad = 16.0;
       final path = Path()
         ..addOval(Rect.fromCircle(center: Offset.zero, radius: coinRad));
 

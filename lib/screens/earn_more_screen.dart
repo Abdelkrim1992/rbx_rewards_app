@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import 'chest_screen.dart';
 import 'quizzes_screen.dart';
 import '../widgets/refreshable_scroll.dart';
+import '../widgets/quit_confirmation_dialog.dart';
 
 class EarnMoreScreen extends StatefulWidget {
   final Function(int)? onNavTap;
@@ -112,7 +113,16 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () async {
+                          final shouldLeave = await showQuitConfirmationDialog(
+                            context,
+                            title: 'Quit Earn More?',
+                            message: 'Are you sure you want to go back?',
+                          );
+                          if (shouldLeave && context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
                         child: Container(
                           width: 44,
                           height: 44,
@@ -292,24 +302,12 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
       canPop: _adFinished,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || _adFinished) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Quit Ad?'),
-            content: const Text('You will lose your ad reward. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Ad?',
+          message: 'You will lose your ad reward. Are you sure?',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -512,11 +510,12 @@ class _SurveyDialogState extends State<SurveyDialog> {
   }
 
   void _claimSurveyReward() async {
-    await context.read<AppState>().addCoins(250, source: 'survey');
-    await context.read<AppState>().incrementOffersCompleted();
-    if (mounted) {
-      Navigator.of(context).pop(250);
-    }
+    // Close dialog immediately
+    Navigator.of(context).pop(250);
+
+    // Process coins in background
+    context.read<AppState>().addCoins(250, source: 'survey');
+    context.read<AppState>().incrementOffersCompleted();
   }
 
   @override
@@ -528,25 +527,12 @@ class _SurveyDialogState extends State<SurveyDialog> {
       canPop: isFinished,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || isFinished) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Quit Survey?'),
-            content:
-                const Text('Your survey progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Survey?',
+          message: 'Your survey progress will be lost. Are you sure?',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -710,8 +696,8 @@ class _SurveyDialogState extends State<SurveyDialog> {
                 // Complete card
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F8EB),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE3F8EB),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -801,11 +787,13 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
     setState(() {
       _claimed = true;
     });
-    await context.read<AppState>().addCoins(_reward, source: 'scratch');
-    await context.read<AppState>().incrementOffersCompleted();
-    if (mounted) {
-      Navigator.of(context).pop(_reward);
-    }
+
+    // Close dialog immediately
+    Navigator.of(context).pop(_reward);
+
+    // Process coins in background
+    context.read<AppState>().addCoins(_reward, source: 'scratch');
+    context.read<AppState>().incrementOffersCompleted();
   }
 
   @override
@@ -814,25 +802,12 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
       canPop: _claimed,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || _claimed) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Quit Scratch?'),
-            content:
-                const Text('Your scratch progress will be lost. Are you sure?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Quit'),
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Scratch?',
+          message: 'Your scratch progress will be lost. Are you sure?',
         );
-        if (shouldLeave == true && mounted) {
+        if (shouldLeave && mounted) {
           Navigator.of(context).pop();
         }
       },

@@ -71,11 +71,11 @@ class OnboardingScreen extends StatelessWidget {
                   ),
                   const Spacer(flex: 1),
                   // Subtitle
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 40),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
-                      child: const Text(
+                      child: Text(
                         'Play mini games, spin the wheel,\nand collect reward coins.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -89,8 +89,8 @@ class OnboardingScreen extends StatelessWidget {
                   ),
                   const Spacer(flex: 4),
                   // Feature cards
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
+                  const Padding(
+                    padding: EdgeInsets.symmetric(
                         horizontal: AppLayout.screenPadding),
                     child: IntrinsicHeight(
                       child: Row(
@@ -102,13 +102,13 @@ class OnboardingScreen extends StatelessWidget {
                             title: 'Play Games',
                             subtitle: 'Fun mini games to earn coins',
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           _FeatureCard(
                             imagePath: 'assets/images/second_feature_card.jpeg',
                             title: 'Spin & Win',
                             subtitle: 'Spin the wheel for big prizes',
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           _FeatureCard(
                             imagePath: 'assets/images/thirty_feature_card.jpeg',
                             title: 'Unlock Rewards',

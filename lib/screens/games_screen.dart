@@ -17,29 +17,29 @@ class GamesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final games = [
-      _GameData(
+      const _GameData(
         imageUrl: AppAssets.tapTapGame,
         title: 'Tap Tap',
         coins: '+200',
-        bgColor: const Color(0xFFEAF3FF),
+        bgColor: Color(0xFFEAF3FF),
       ),
-      _GameData(
+      const _GameData(
         imageUrl: AppAssets.quizMasterGame,
         title: 'Math Quiz',
         coins: '+200',
-        bgColor: const Color(0xFFE3F8EB),
+        bgColor: Color(0xFFE3F8EB),
       ),
-      _GameData(
+      const _GameData(
         imageUrl: AppAssets.flappyJumpGame,
         title: 'Flappy Jump',
         coins: '+200',
-        bgColor: const Color(0xFFFFF3E3),
+        bgColor: Color(0xFFFFF3E3),
       ),
-      _GameData(
+      const _GameData(
         imageUrl: AppAssets.memoryMatchGame,
         title: 'Flip Cards',
         coins: '+200',
-        bgColor: const Color(0xFFFFE8F0),
+        bgColor: Color(0xFFFFE8F0),
       ),
     ];
 
@@ -111,9 +111,9 @@ class GamesScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
+                                children: [
                                   Icon(
                                     Icons.emoji_events,
                                     color: Colors.white,

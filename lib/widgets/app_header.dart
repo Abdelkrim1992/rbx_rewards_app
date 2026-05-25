@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../screens/profile_screen.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
@@ -70,14 +69,10 @@ class RbxAppHeader extends StatelessWidget {
           ),
           GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProfileScreen(
-                    onNavTap: onNavTap ?? (_) {},
-                  ),
-                ),
-              );
+              // Use the navigation callback to switch to profile tab (index 4)
+              if (onNavTap != null) {
+                onNavTap!(4);
+              }
             },
             child: Container(
               width: 46,
