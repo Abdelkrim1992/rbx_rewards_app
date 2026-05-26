@@ -125,7 +125,7 @@ class _AppNavigatorState extends State<AppNavigator>
   }
 
   void _startLoadingTimer() {
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         setState(() => _showLoadingOverlay = false);
       }
