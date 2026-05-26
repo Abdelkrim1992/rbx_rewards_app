@@ -44,38 +44,17 @@ class AppColors {
 }
 
 class AppAssets {
-  // Figma remote assets (7-day expiry)
-  static const String heroIllustration =
-      'https://www.figma.com/api/mcp/asset/a52090da-83a4-4bf9-8b86-0b1f96d18452';
-  static const String gamepadIcon =
-      'https://www.figma.com/api/mcp/asset/ef690607-7ba6-4db4-a851-b0dbca513fa0';
-  static const String prizeWheelIcon =
-      'https://www.figma.com/api/mcp/asset/9317869a-2a98-4f56-ae36-d822a541fd90';
-  static const String treasureChestIcon =
-      'https://www.figma.com/api/mcp/asset/6ffe8337-cad6-4012-9285-ac241b3ea726';
   static const String onboardingHero =
       'assets/images/onboarding_screen_main_image.jpeg';
 
   // Home screen
   static const String rbxLogo = 'assets/images/logo_image.jpeg';
-  static const String userAvatar =
-      'https://www.figma.com/api/mcp/asset/d61aa950-a3dd-42d9-a9a1-0cc4aed49d80';
-  static const String wavingHand =
-      'https://www.figma.com/api/mcp/asset/e32c7142-4714-4ff9-adef-c64da6cb1c12';
   static const String goldRbxCoin = 'assets/images/robux_coins.png';
   static const String balanceWidgetImage =
       'assets/images/balance_widget_image.png';
-  static const String arrowRight =
-      'https://www.figma.com/api/mcp/asset/ea4bc6b7-3caa-4c49-9268-b6b6a4edf5d1';
-  static const String purpleGiftBox =
-      'https://www.figma.com/api/mcp/asset/9b9b8b26-0dd1-4994-a5fb-f6756ecbee9c';
   static const String dailyRewardImage = 'assets/images/daily_reward_image.png';
   static const String chestIcon = 'assets/images/open_chest_quick_actions.png';
   static const String spinWheelIcon = 'assets/images/spin_quick_action.png';
-  static const String missionsIcon =
-      'https://www.figma.com/api/mcp/asset/5fc9ce63-b939-4173-897c-114beeb03910';
-  static const String clipboardIcon =
-      'https://www.figma.com/api/mcp/asset/4f4ca268-c30e-4253-992e-5fba9647ace9';
   static const String tapTapGame = 'assets/images/tap_tap_mini_game.jpeg';
   static const String quizMasterGame = 'assets/images/math_quiz_mini_game.jpeg';
   static const String quizMasterQuickActions =
@@ -89,15 +68,15 @@ class AppAssets {
 
   // Nav icons
   static const String navHome =
-      'https://www.figma.com/api/mcp/asset/d38cd333-4ae6-4ee4-b55b-0a03213a164b';
+      'assets/icons/home-nav.svg';
   static const String navGames =
-      'https://www.figma.com/api/mcp/asset/58ef2751-2206-44b4-afa9-253df4b996ce';
+      'assets/icons/games-nav.svg';
   static const String navOffers =
       'https://cdn3d.iconscout.com/3d/premium/thumb/gift-box-6848695-5608666.png';
   static const String navRewards =
-      'https://www.figma.com/api/mcp/asset/4e879785-63b3-48dc-9f5f-8c6550dc4fb8';
+      'assets/icons/rewards-nav.svg';
   static const String navProfile =
-      'https://www.figma.com/api/mcp/asset/459482cf-86a7-4e07-bb3b-09ecf20414df';
+      'assets/icons/profile-nav.svg';
 
   // Profile screen
   static const String profileAvatar = 'assets/images/profile_image.png';

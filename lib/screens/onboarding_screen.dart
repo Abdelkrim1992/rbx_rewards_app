@@ -21,7 +21,8 @@ class OnboardingScreen extends StatelessWidget {
                   Flexible(
                     flex: 50,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20)
+                      padding: const EdgeInsets.symmetric(
+                              horizontal: AppLayout.screenPadding)
                           .copyWith(top: 40),
                       child: Image.asset(
                         AppAssets.onboardingHero,
@@ -40,7 +41,7 @@ class OnboardingScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // const Spacer(flex: 3),
+                  const Spacer(flex: 3),
                   // Title
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -51,7 +52,7 @@ class OnboardingScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         text: const TextSpan(
                           style: TextStyle(
-                            fontSize: 35,
+                            fontSize: 32,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF141620),
                             letterSpacing: -0.7,
@@ -72,7 +73,8 @@ class OnboardingScreen extends StatelessWidget {
                   const Spacer(flex: 1),
                   // Subtitle
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 40),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: AppLayout.screenPadding),
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
@@ -94,31 +96,39 @@ class OnboardingScreen extends StatelessWidget {
                         horizontal: AppLayout.screenPadding),
                     child: IntrinsicHeight(
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _FeatureCard(
-                            imagePath: 'assets/images/first_feature_card.jpeg',
-                            title: 'Play Games',
-                            subtitle: 'Fun mini games to earn coins',
+                          Expanded(
+                            child: _FeatureCard(
+                              imagePath:
+                                  'assets/images/first_feature_card.jpeg',
+                              title: 'Play Games',
+                              subtitle: 'Fun mini games to earn coins',
+                            ),
                           ),
-                          SizedBox(width: 8),
-                          _FeatureCard(
-                            imagePath: 'assets/images/second_feature_card.jpeg',
-                            title: 'Spin & Win',
-                            subtitle: 'Spin the wheel for big prizes',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _FeatureCard(
+                              imagePath:
+                                  'assets/images/second_feature_card.jpeg',
+                              title: 'Spin & Win',
+                              subtitle: 'Spin the wheel for big prizes',
+                            ),
                           ),
-                          SizedBox(width: 8),
-                          _FeatureCard(
-                            imagePath: 'assets/images/thirty_feature_card.jpeg',
-                            title: 'Unlock Rewards',
-                            subtitle: 'Redeem coins for amazing rewards',
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _FeatureCard(
+                              imagePath:
+                                  'assets/images/thirty_feature_card.jpeg',
+                              title: 'Unlock Rewards',
+                              subtitle: 'Redeem coins for amazing rewards',
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const Spacer(flex: 2),
+                  const Spacer(flex: 5),
                 ],
               ),
             ),
@@ -181,7 +191,7 @@ class _GetStartedButtonState extends State<_GetStartedButton>
           );
         },
         child: Container(
-          width: 320,
+          width: double.infinity,
           height: 55,
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
@@ -199,11 +209,10 @@ class _GetStartedButtonState extends State<_GetStartedButton>
             child: Text(
               'Get Started',
               style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: 0.45
-              ),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: 0.45),
             ),
           ),
         ),
@@ -225,85 +234,82 @@ class _FeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 100,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.cardBorder),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F141432),
-              blurRadius: 24,
-              offset: Offset(0, 8),
-              spreadRadius: -8,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0D000000),
-                        blurRadius: 1,
-                        offset: Offset(0, 1),
-                      )
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.asset(
-                      imagePath,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.star,
-                          color: AppColors.primary, size: 24),
-                    ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F141432),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+            spreadRadius: -8,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0D000000),
+                      blurRadius: 1,
+                      offset: Offset(0, 1),
+                    )
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.asset(
+                    imagePath,
+                    width: 55,
+                    height: 55,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.star,
+                        color: AppColors.primary, size: 24),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              title,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF181A24),
+              letterSpacing: -0.1,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: Text(
+              subtitle,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF181A24),
-                letterSpacing: -0.1,
+                fontSize: 10,
+                color: Color(0xFF8E93A2),
+                height: 1.3,
               ),
-              maxLines: 2,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Color(0xFF8E93A2),
-                  height: 1.3,
-                ),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

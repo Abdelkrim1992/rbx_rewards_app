@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/loading_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/spin_screen.dart';
@@ -135,7 +136,7 @@ class _AppNavigatorState extends State<AppNavigator> {
     final appState = context.watch<AppState>();
 
     if (!appState.isLoaded) {
-      return const SizedBox.shrink();
+      return const LoadingScreen();
     }
 
     if (!appState.isOnboardingCompleted) {

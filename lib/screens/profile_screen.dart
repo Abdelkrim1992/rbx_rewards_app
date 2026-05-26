@@ -25,20 +25,16 @@ class ProfileScreen extends StatelessWidget {
 
   const ProfileScreen({super.key, required this.onNavTap});
 
-  int _calculateLevel(int totalCoins) {
-    return (totalCoins / 1000).floor() + 1;
-  }
-
   int _xpForCurrentLevel(int totalCoins) {
-    return totalCoins % 1000;
+    return totalCoins % 5000;
   }
 
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final level = _calculateLevel(appState.totalCoinsEarned);
+    final level = appState.level;
     final xpCurrent = _xpForCurrentLevel(appState.totalCoinsEarned);
-    const xpGoal = 1000;
+    const xpGoal = 5000;
     final xpProgress = (xpCurrent / xpGoal).clamp(0.0, 1.0);
 
     return Scaffold(
@@ -110,32 +106,37 @@ class ProfileScreen extends StatelessWidget {
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: ClipOval(
-                                              child: appState.profilePhotoUrl != null
+                                              child: appState.profilePhotoUrl !=
+                                                      null
                                                   ? Image.network(
                                                       appState.profilePhotoUrl!,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (_, __, ___) =>
-                                                          Container(
-                                                        color:
-                                                            const Color(0xFFEEEEEF),
+                                                      errorBuilder:
+                                                          (_, __, ___) =>
+                                                              Container(
+                                                        color: const Color(
+                                                            0xFFEEEEEF),
                                                         child: const Icon(
                                                           Icons.person,
                                                           size: 40,
-                                                          color: AppColors.purple,
+                                                          color:
+                                                              AppColors.purple,
                                                         ),
                                                       ),
                                                     )
                                                   : Image.network(
                                                       AppAssets.profileAvatar,
                                                       fit: BoxFit.cover,
-                                                      errorBuilder: (_, __, ___) =>
-                                                          Container(
-                                                        color:
-                                                            const Color(0xFFEEEEEF),
+                                                      errorBuilder:
+                                                          (_, __, ___) =>
+                                                              Container(
+                                                        color: const Color(
+                                                            0xFFEEEEEF),
                                                         child: const Icon(
                                                           Icons.person,
                                                           size: 40,
-                                                          color: AppColors.purple,
+                                                          color:
+                                                              AppColors.purple,
                                                         ),
                                                       ),
                                                     ),
@@ -167,9 +168,8 @@ class ProfileScreen extends StatelessWidget {
                                             ),
                                           ),
                                           GestureDetector(
-                                            onTap: () =>
-                                                _showEditProfileDialog(
-                                                    context, appState),
+                                            onTap: () => _showEditProfileDialog(
+                                                context, appState),
                                             child: Container(
                                               padding: const EdgeInsets.all(6),
                                               decoration: BoxDecoration(
@@ -308,11 +308,11 @@ class ProfileScreen extends StatelessWidget {
                         crossAxisSpacing: 8,
                         childAspectRatio: 1.8,
                         children: [
-                          _StatCard(
-                            iconUrl: AppAssets.fireStreak,
-                            value: '${appState.consecutiveDays}',
-                            label: 'Day Streak',
-                          ),
+                          // _StatCard(
+                          //   iconUrl: AppAssets.fireStreak,
+                          //   value: '${appState.consecutiveDays}',
+                          //   label: 'Day Streak',
+                          // ),
                           _StatCard(
                             iconUrl: AppAssets.rbxCoinIcon,
                             value: '${appState.coins}',
@@ -323,17 +323,15 @@ class ProfileScreen extends StatelessWidget {
                             value: '${appState.totalGamesPlayed}',
                             label: 'Games Played',
                           ),
-                          _StatCard(
-                            iconUrl: AppAssets.adsWatched,
-                            value: '${appState.totalOffersCompleted}',
-                            label: 'Offers Done',
-                          ),
+                          // _StatCard(
+                          //   iconUrl: AppAssets.adsWatched,
+                          //   value: '${appState.totalOffersCompleted}',
+                          //   label: 'Offers Done',
+                          // ),
                         ],
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
-
-
 
                     // Invite Friends
                     Padding(
@@ -580,8 +578,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-
-
 class _InviteFriendsCard extends StatelessWidget {
   // Static mock data for referral system
   final String referralCode = 'RBX-7A2F';
@@ -799,8 +795,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.appState.displayName);
+    _nameController = TextEditingController(text: widget.appState.displayName);
     _selectedAvatarUrl = widget.appState.profilePhotoUrl;
     _animController = AnimationController(
       vsync: this,
@@ -839,10 +834,8 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
     return ScaleTransition(
       scale: _scaleAnim,
       child: Dialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         backgroundColor: Colors.white,
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -860,8 +853,8 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                       gradient: AppColors.primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.edit,
-                        color: Colors.white, size: 20),
+                    child:
+                        const Icon(Icons.edit, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -918,22 +911,22 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                   counterText: '',
                   filled: true,
                   fillColor: const Color(0xFFF8F9FF),
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                        color: Color(0xFFE8EAFF), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFE8EAFF), width: 1.5),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                        color: Color(0xFFE8EAFF), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFE8EAFF), width: 1.5),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF6035EE), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF6035EE), width: 1.5),
                   ),
                   prefixIcon: const Icon(Icons.person_outline,
                       color: Color(0xFF6035EE), size: 20),
@@ -973,8 +966,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                     return GestureDetector(
                       onTap: () => setState(() {
                         // Toggle off if already selected
-                        _selectedAvatarUrl =
-                            isSelected ? null : url;
+                        _selectedAvatarUrl = isSelected ? null : url;
                       }),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
@@ -1032,8 +1024,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                             color: Color(0xFFE8EAFF), width: 1.5),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text(
                         'Cancel',
@@ -1066,8 +1057,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                           shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14)),
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
                         child: _isSaving
                             ? const SizedBox(
@@ -1098,7 +1088,6 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
     );
   }
 }
-
 
 void _showHelpDialog(BuildContext context) {
   showDialog(

@@ -40,6 +40,7 @@ class AppState extends ChangeNotifier {
   int _consecutiveDays = 0;
   int _gamesPlayed = 0;
   int _offersCompleted = 0;
+  int _level = 1;
   String _displayName = 'Player';
   String? _profilePhotoUrl;
 
@@ -72,6 +73,7 @@ class AppState extends ChangeNotifier {
   int get totalGamesPlayed => _gamesPlayed;
   int get offersCompleted => _offersCompleted;
   int get totalOffersCompleted => _offersCompleted;
+  int get level => _level;
   String get displayName => _displayName;
   String? get profilePhotoUrl => _profilePhotoUrl;
 
@@ -169,6 +171,7 @@ class AppState extends ChangeNotifier {
               data['offers_completed'] as int? ?? _offersCompleted;
           _consecutiveDays =
               data['consecutive_days'] as int? ?? _consecutiveDays;
+          _level = data['level'] as int? ?? _level;
           _displayName = data['display_name'] as String? ?? _displayName;
           _profilePhotoUrl =
               data['profile_photo_url'] as String? ?? _profilePhotoUrl;
@@ -296,6 +299,7 @@ class AppState extends ChangeNotifier {
         _gamesPlayed = data['games_played'] as int? ?? _gamesPlayed;
         _offersCompleted = data['offers_completed'] as int? ?? _offersCompleted;
         _consecutiveDays = data['consecutive_days'] as int? ?? _consecutiveDays;
+        _level = data['level'] as int? ?? _level;
         _displayName = data['display_name'] as String? ?? _displayName;
         await GamePrefs.saveCoins(_coins);
         notifyListeners();
@@ -309,6 +313,7 @@ class AppState extends ChangeNotifier {
   Future<int> addCoins(int value, {String source = 'in_app'}) async {
     _coins += value;
     _totalCoinsEarned += value;
+    _level = (_totalCoinsEarned / 5000).floor() + 1;
     _pendingCoinOps++;
     notifyListeners();
 
@@ -353,6 +358,7 @@ class AppState extends ChangeNotifier {
   void optimisticAddCoins(int value) {
     _coins += value;
     _totalCoinsEarned += value;
+    _level = (_totalCoinsEarned / 5000).floor() + 1;
     _pendingCoinOps++;
     notifyListeners();
     GamePrefs.saveCoins(_coins);
@@ -433,6 +439,7 @@ class AppState extends ChangeNotifier {
           final balance = data['balance'] as int? ?? (_coins + amount);
           _coins = balance;
           _totalCoinsEarned += amount;
+          _level = (_totalCoinsEarned / 5000).floor() + 1;
           _consecutiveDays =
               data['consecutive_days'] as int? ?? _consecutiveDays;
           notifyListeners();
@@ -454,6 +461,7 @@ class AppState extends ChangeNotifier {
     _syncDailyRewardTimer();
     _coins += 100;
     _totalCoinsEarned += 100;
+    _level = (_totalCoinsEarned / 5000).floor() + 1;
     await GamePrefs.saveCoins(_coins);
     notifyListeners();
     return true;
