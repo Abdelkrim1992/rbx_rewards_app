@@ -1,16 +1,16 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Simple SharedPreferences-based queue for pending coin/game transactions
+/// Simple FlutterSecureStorage-based queue for pending coin/game transactions
 /// to be retried when the device comes back online.
 class PendingTransactionService {
   static const String _keyQueue = 'pending_transactions';
+  static const _secureStorage = FlutterSecureStorage();
   static Future<void>? _lastEnqueue;
 
   static Future<List<Map<String, dynamic>>> getQueue() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_keyQueue);
+    final jsonStr = await _secureStorage.read(key: _keyQueue);
     if (jsonStr == null || jsonStr.isEmpty) return [];
     try {
       final list = jsonDecode(jsonStr) as List<dynamic>;
@@ -21,11 +21,10 @@ class PendingTransactionService {
   }
 
   static Future<void> setQueue(List<Map<String, dynamic>> queue) async {
-    final prefs = await SharedPreferences.getInstance();
     if (queue.isEmpty) {
-      await prefs.remove(_keyQueue);
+      await _secureStorage.delete(key: _keyQueue);
     } else {
-      await prefs.setString(_keyQueue, jsonEncode(queue));
+      await _secureStorage.write(key: _keyQueue, value: jsonEncode(queue));
     }
   }
 

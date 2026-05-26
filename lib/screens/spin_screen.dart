@@ -171,7 +171,6 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final freeSpins = appState.spinFreeSpins;
-    final cooldownRemaining = appState.spinCooldownRemaining;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
@@ -409,24 +408,40 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                Text(
-                                                  _isSpinning
-                                                      ? '...'
-                                                      : (freeSpins == 0)
-                                                          ? _formatDuration(
-                                                              cooldownRemaining)
-                                                          : 'SPIN',
-                                                  style: TextStyle(
-                                                    fontSize: (freeSpins == 0)
-                                                        ? 14
-                                                        : 16,
-                                                    fontWeight: FontWeight.w900,
-                                                    color: (freeSpins == 0)
-                                                        ? Colors.grey
-                                                        : AppColors.primary,
-                                                    letterSpacing: 1,
-                                                  ),
-                                                ),
+                                                _isSpinning
+                                                    ? const Text(
+                                                        '...',
+                                                        style: TextStyle(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w900,
+                                                          color: AppColors.primary,
+                                                          letterSpacing: 1,
+                                                        ),
+                                                      )
+                                                    : (freeSpins == 0)
+                                                        ? ValueListenableBuilder<Duration>(
+                                                            valueListenable: appState.spinCooldownRemainingNotifier,
+                                                            builder: (context, cooldownRemaining, _) {
+                                                              return Text(
+                                                                _formatDuration(cooldownRemaining),
+                                                                style: const TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight: FontWeight.w900,
+                                                                  color: Colors.grey,
+                                                                  letterSpacing: 1,
+                                                                ),
+                                                              );
+                                                            },
+                                                          )
+                                                        : const Text(
+                                                            'SPIN',
+                                                            style: TextStyle(
+                                                              fontSize: 16,
+                                                              fontWeight: FontWeight.w900,
+                                                              color: AppColors.primary,
+                                                              letterSpacing: 1,
+                                                            ),
+                                                          ),
                                                 if (!_isSpinning &&
                                                     !(freeSpins == 0))
                                                   const Icon(Icons.touch_app,
@@ -614,13 +629,13 @@ class _HowToStep extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF1F2F8)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),

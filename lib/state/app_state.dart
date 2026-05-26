@@ -52,12 +52,16 @@ class AppState extends ChangeNotifier {
 
   // --- Daily reward ---
   Timer? _dailyRewardTimer;
-  Duration _dailyRewardRemaining = Duration.zero;
+  final ValueNotifier<Duration> dailyRewardRemainingNotifier = ValueNotifier(Duration.zero);
+  Duration get _dailyRewardRemaining => dailyRewardRemainingNotifier.value;
+  set _dailyRewardRemaining(Duration val) => dailyRewardRemainingNotifier.value = val;
 
   // --- Spin state (local only) ---
   int _spinFreeSpins = 3;
   Timer? _spinCooldownTimer;
-  Duration _spinCooldownRemaining = Duration.zero;
+  final ValueNotifier<Duration> spinCooldownRemainingNotifier = ValueNotifier(Duration.zero);
+  Duration get _spinCooldownRemaining => spinCooldownRemainingNotifier.value;
+  set _spinCooldownRemaining(Duration val) => spinCooldownRemainingNotifier.value = val;
 
   StreamSubscription? _connectivitySubscription;
   StreamSubscription? _balanceSub;
@@ -533,11 +537,6 @@ class AppState extends ChangeNotifier {
           debugPrint('Failed to refresh spin state on timer expiry: $e');
         });
       }
-      try {
-        notifyListeners();
-      } catch (_) {
-        // Widget may have been disposed; ignore.
-      }
     });
   }
 
@@ -552,11 +551,6 @@ class AppState extends ChangeNotifier {
       } else {
         _dailyRewardRemaining = Duration.zero;
         _dailyRewardTimer?.cancel();
-      }
-      try {
-        notifyListeners();
-      } catch (_) {
-        // Widget may have been disposed; ignore.
       }
     });
   }
@@ -586,7 +580,7 @@ class AppState extends ChangeNotifier {
   }
 
   String _generateUuidV4() {
-    final random = Random();
+    final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
     bytes[6] = (bytes[6] & 0x0F) | 0x40;
     bytes[8] = (bytes[8] & 0x3F) | 0x80;

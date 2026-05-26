@@ -52,7 +52,7 @@ class OnboardingScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                         text: const TextSpan(
                           style: TextStyle(
-                            fontSize: 32,
+                            fontSize: 35,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF141620),
                             letterSpacing: -0.7,
@@ -106,7 +106,7 @@ class OnboardingScreen extends StatelessWidget {
                               subtitle: 'Fun mini games to earn coins',
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           Expanded(
                             child: _FeatureCard(
                               imagePath:
@@ -115,7 +115,7 @@ class OnboardingScreen extends StatelessWidget {
                               subtitle: 'Spin the wheel for big prizes',
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           Expanded(
                             child: _FeatureCard(
                               imagePath:
@@ -238,14 +238,13 @@ class _FeatureCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F141432),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-            spreadRadius: -8,
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -253,7 +252,7 @@ class _FeatureCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: AspectRatio(
               aspectRatio: 1,
               child: Container(

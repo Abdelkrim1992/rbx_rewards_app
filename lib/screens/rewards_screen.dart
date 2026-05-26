@@ -92,14 +92,15 @@ class _RewardsScreenState extends State<RewardsScreen> {
     final sanitizedTitle = _sanitizeRewardTitle(reward.title);
 
     // Perform the redemption in the background
-    final success = await appState.spendCoins(cost, rewardTitle: sanitizedTitle);
-    
+    final success =
+        await appState.spendCoins(cost, rewardTitle: sanitizedTitle);
+
     if (!mounted) return;
 
     if (!success) {
       // Close the success dialog
       Navigator.of(context).pop();
-      
+
       // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -192,13 +193,13 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Redeem Rewards header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Redeem Rewards',
                             style: TextStyle(
                               fontSize: 20,
@@ -274,8 +275,15 @@ class _RewardsScreenState extends State<RewardsScreen> {
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: const Color(0xFFF8F9FA),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(15),
                             border: Border.all(color: const Color(0xFFF1F5F9)),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x1A000000),
+                                blurRadius: 2,
+                                spreadRadius: 0,
+                              ),
+                            ],
                           ),
                           child: const Row(
                             children: [
@@ -336,13 +344,13 @@ class _BalanceWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(20),
+        gradient: AppColors.dailyCardGradient,
+        borderRadius: BorderRadius.circular(15),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x226035EE),
-            blurRadius: 15,
-            offset: Offset(0, 8),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -376,7 +384,7 @@ class _BalanceWidget extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: Color(0xFF131326),
                         letterSpacing: 0,
                         height: 1.1,
                       ),
@@ -386,7 +394,7 @@ class _BalanceWidget extends StatelessWidget {
                       'Your RBX Balance',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white70,
+                        color: Color(0xFF4A4B60),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -396,14 +404,14 @@ class _BalanceWidget extends StatelessWidget {
               const SizedBox(width: 8),
               SizedBox(
                 width: 120,
-                height: 90,
+                height: 120,
                 child: Image.asset(
                   AppAssets.balanceWidgetImage,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Icon(
                       Icons.account_balance_wallet,
                       size: 60,
-                      color: Colors.white54),
+                      color: Color(0xFF4A4B60)),
                 ),
               ),
             ],
@@ -449,13 +457,13 @@ class _RewardItem extends StatelessWidget {
       height: 88,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 15,
-            offset: Offset(0, 8),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -689,13 +697,13 @@ class _RedemptionHistoryItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),

@@ -1293,13 +1293,13 @@ class _InstructionStep extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: const Color(0xFFF1F2F8)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),

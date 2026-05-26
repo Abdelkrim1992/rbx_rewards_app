@@ -61,7 +61,7 @@ class AppAssets {
       'assets/images/quiz_master_quick_actions.jpeg';
   static const String quizMasterEarnMore =
       'assets/images/quiz_master_earn_more.jpeg';
-  static const String memoryMatchGame = 'assets/images/flip_cards_mii_game.PNG';
+  static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.PNG';
   static const String goldCoin = 'assets/images/robux_coins.png';
   static const String chevronRight =
       'https://www.figma.com/api/mcp/asset/916d584b-02ff-4889-9930-e32e15172357';
@@ -83,8 +83,7 @@ class AppAssets {
   static const String fireStreak =
       'https://www.figma.com/api/mcp/asset/e37e3720-4a49-4671-a975-d17d9310d228';
   static const String rbxCoinIcon = 'assets/images/robux_coins.png';
-  static const String gamepadStat =
-      'https://www.figma.com/api/mcp/asset/cca1114d-4f18-4f05-8da3-e8beacb8f47e';
+  static const String gamepadStat = 'assets/images/games-played.png';
   static const String adsWatched =
       'https://www.figma.com/api/mcp/asset/d5592f50-706e-44b8-9184-978388a85b05';
   static const String levelBadge =

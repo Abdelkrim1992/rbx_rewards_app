@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Local preferences for app settings only.
@@ -27,15 +28,16 @@ class GamePrefs {
 
   // --- Local coin balance fallback (when Supabase is offline) ---
   static const String _keyLocalCoins = 'local_coins_balance';
+  static const _secureStorage = FlutterSecureStorage();
 
   static Future<int> getCoins() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyLocalCoins) ?? 0;
+    final valueStr = await _secureStorage.read(key: _keyLocalCoins);
+    if (valueStr == null) return 0;
+    return int.tryParse(valueStr) ?? 0;
   }
 
   static Future<void> saveCoins(int value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keyLocalCoins, value);
+    await _secureStorage.write(key: _keyLocalCoins, value: value.toString());
   }
 
   static Future<void> addCoins(int value) async {

@@ -129,7 +129,7 @@ class _OffersScreenState extends State<OffersScreen> {
           children: [
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(bottom: 20, top:12),
+                padding: const EdgeInsets.only(bottom: 20, top: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -377,12 +377,12 @@ class _FeaturedOfferCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: AppColors.primaryGradient,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.25),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),
@@ -527,13 +527,13 @@ class _OfferListItem extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: const Color(0xFFF3F4F6)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 12,
-              offset: Offset(0, 6),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),

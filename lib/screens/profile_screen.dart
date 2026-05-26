@@ -61,13 +61,13 @@ class ProfileScreen extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(15),
                           border: Border.all(color: const Color(0xFFF3F4F6)),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x0A000000),
-                              blurRadius: 15,
-                              offset: Offset(0, 8),
+                              color: Color(0x1A000000),
+                              blurRadius: 2,
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -277,9 +277,9 @@ class ProfileScreen extends StatelessWidget {
                                           color: Color(0xFF334155),
                                         ),
                                       ),
-                                      TextSpan(
+                                      const TextSpan(
                                         text: ' / $xpGoal XP',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
                                           color: Color(0xFF334155),
                                         ),
@@ -296,42 +296,42 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Stats grid
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        padding: EdgeInsets.zero,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 8,
-                        crossAxisSpacing: 8,
-                        childAspectRatio: 1.8,
-                        children: [
-                          // _StatCard(
-                          //   iconUrl: AppAssets.fireStreak,
-                          //   value: '${appState.consecutiveDays}',
-                          //   label: 'Day Streak',
-                          // ),
-                          _StatCard(
-                            iconUrl: AppAssets.rbxCoinIcon,
-                            value: '${appState.coins}',
-                            label: 'Total RBX Coins',
-                          ),
-                          _StatCard(
-                            iconUrl: AppAssets.gamepadStat,
-                            value: '${appState.totalGamesPlayed}',
-                            label: 'Games Played',
-                          ),
-                          // _StatCard(
-                          //   iconUrl: AppAssets.adsWatched,
-                          //   value: '${appState.totalOffersCompleted}',
-                          //   label: 'Offers Done',
-                          // ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(
+                    //       horizontal: AppLayout.screenPadding),
+                    //   child: GridView.count(
+                    //     crossAxisCount: 2,
+                    //     shrinkWrap: true,
+                    //     padding: EdgeInsets.zero,
+                    //     physics: const NeverScrollableScrollPhysics(),
+                    //     mainAxisSpacing: 8,
+                    //     crossAxisSpacing: 8,
+                    //     childAspectRatio: 1.8,
+                    //     children: [
+                    //       // _StatCard(
+                    //       //   iconUrl: AppAssets.fireStreak,
+                    //       //   value: '${appState.consecutiveDays}',
+                    //       //   label: 'Day Streak',
+                    //       // ),
+                    //       _StatCard(
+                    //         iconUrl: AppAssets.rbxCoinIcon,
+                    //         value: '${appState.coins}',
+                    //         label: 'Total RBX Coins',
+                    //       ),
+                    //       _StatCard(
+                    //         iconUrl: AppAssets.gamepadStat,
+                    //         value: '${appState.totalGamesPlayed}',
+                    //         label: 'Games Played',
+                    //       ),
+                    //       // _StatCard(
+                    //       //   iconUrl: AppAssets.adsWatched,
+                    //       //   value: '${appState.totalOffersCompleted}',
+                    //       //   label: 'Offers Done',
+                    //       // ),
+                    //     ],
+                    //   ),
+                    // ),
+                    // const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Invite Friends
                     Padding(
@@ -347,20 +347,20 @@ class ProfileScreen extends StatelessWidget {
                           horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(title: 'Settings & Support'),
                     ),
-                    const SizedBox(height: AppLayout.elementSpacing),
+                    const SizedBox(height: AppLayout.sectionSpacing),
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(15),
                           border: Border.all(color: const Color(0xFFF3F4F6)),
                           boxShadow: const [
                             BoxShadow(
-                              color: Color(0x0A000000),
-                              blurRadius: 15,
-                              offset: Offset(0, 8),
+                              color: Color(0x1A000000),
+                              blurRadius: 2,
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -430,13 +430,13 @@ class _StatCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 15,
-            offset: Offset(0, 8),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -590,12 +590,12 @@ class _InviteFriendsCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: const [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),

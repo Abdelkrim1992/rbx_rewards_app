@@ -664,8 +664,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
       children: [
         const SizedBox(height: 24),
         const Padding(
-          padding:
-              EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+          padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -705,10 +704,11 @@ class _QuizzesScreenState extends State<QuizzesScreen>
     return Column(
       key: const ValueKey('PLAYING'),
       children: [
+        const Spacer(),
         const SizedBox(height: 10),
         // Question Card
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Container(
             width: double.infinity,
             constraints: const BoxConstraints(minHeight: 200),
@@ -1014,13 +1014,13 @@ class _QuizCategoryItem extends StatelessWidget {
       height: 88,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 15,
-            offset: Offset(0, 8),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),

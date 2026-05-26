@@ -848,7 +848,7 @@ class FlappyJumpGame extends FlameGame {
     const neonCyan = Color(0xFF00FFCC);
 
     final frontPaint = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [neonPurple, neonMagenta],
@@ -859,7 +859,7 @@ class FlappyJumpGame extends FlameGame {
       ..style = PaintingStyle.fill;
 
     final energyFacePaint = Paint()
-      ..shader = RadialGradient(
+      ..shader = const RadialGradient(
         colors: [neonCyan, neonPurple],
       ).createShader(Rect.fromPoints(proj[3], proj[6]));
 
@@ -976,7 +976,7 @@ class FlappyJumpGame extends FlameGame {
     path.close();
 
     final goldPaint = Paint()
-      ..shader = LinearGradient(
+      ..shader = const LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [goldTop, goldBase],
@@ -2363,7 +2363,7 @@ class _GameCoinClaimPainter extends CustomPainter {
         ..addOval(Rect.fromCircle(center: Offset.zero, radius: coinRad));
 
       final paint = Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           colors: [goldTop, goldBase],
         ).createShader(Rect.fromCircle(center: Offset.zero, radius: coinRad));
 

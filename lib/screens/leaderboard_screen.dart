@@ -280,7 +280,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 2,
+                          spreadRadius: 0,
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
@@ -532,7 +539,7 @@ class _LeaderboardListItem extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: entry.isUser ? const Color(0xFFF3F4FE) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: entry.isUser
               ? AppColors.purple.withOpacity(0.3)
@@ -540,9 +547,9 @@ class _LeaderboardListItem extends StatelessWidget {
         ),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
+            color: Color(0x1A000000),
+            blurRadius: 2,
+            spreadRadius: 0,
           ),
         ],
       ),

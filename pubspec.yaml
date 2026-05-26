@@ -21,6 +21,7 @@ dependencies:
   supabase_flutter: ^2.12.4
   connectivity_plus: ^7.1.1
   uuid: ^4.4.0
+  flutter_secure_storage: ^10.3.0
 
 dev_dependencies:
   flutter_test:
@@ -40,6 +41,8 @@ flutter:
     - assets/images/robux_coins.png
     - assets/images/tap_tap_mini_game.jpeg
     - assets/images/math_quiz_mini_game.jpeg
-    - assets/images/flip_cards_mii_game.PNG
+    - assets/images/flip_cards_mini_game.PNG
     - assets/images/flappy_mini_game.jpeg
     - assets/images/logo_image.jpeg
+    - assets/images/daily_reward_image.png
+    - assets/images/games-played.png

@@ -18,19 +18,28 @@ class CoinService {
 
   String? get _userId => _client?.auth.currentUser?.id;
 
+  Stream<Map<String, dynamic>>? _userDataStreamCache;
+  String? _lastStreamUserId;
+
   /// Real-time stream of the current user's full record.
   Stream<Map<String, dynamic>> get userDataStream {
     final uid = _userId;
     if (uid == null) return Stream.value({});
 
-    return _client!
-        .from('users')
-        .stream(primaryKey: ['id'])
-        .eq('id', uid)
-        .map((rows) {
-          if (rows.isEmpty) return <String, dynamic>{};
-          return rows.first;
-        });
+    if (_userDataStreamCache == null || _lastStreamUserId != uid) {
+      _lastStreamUserId = uid;
+      _userDataStreamCache = _client!
+          .from('users')
+          .stream(primaryKey: ['id'])
+          .eq('id', uid)
+          .map((rows) {
+            if (rows.isEmpty) return <String, dynamic>{};
+            return rows.first;
+          })
+          .asBroadcastStream();
+    }
+    
+    return _userDataStreamCache!;
   }
 
   /// Get current balance (one-time fetch).

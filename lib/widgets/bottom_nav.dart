@@ -23,12 +23,10 @@ class RbxBottomNav extends StatelessWidget {
 
     return Container(
       height: 70,
-      // padding: const EdgeInsets.only(
-      //   left: AppLayout.screenPadding,
-      //   right: AppLayout.screenPadding,
-      //   // top: 10,
-      //   // bottom: 20,
-      // ),
+      padding: const EdgeInsets.only(
+        left: 5,
+        right: 5,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -49,7 +47,7 @@ class RbxBottomNav extends StatelessWidget {
               onTap: () => onTap(i),
               behavior: HitTestBehavior.opaque,
               child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 7, horizontal: 3),
+                margin: const EdgeInsets.only(top: 5, bottom: 5),
                 decoration: isActive
                     ? BoxDecoration(
                         color: AppColors.primarySoft,

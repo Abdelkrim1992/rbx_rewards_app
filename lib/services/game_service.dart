@@ -64,7 +64,7 @@ class GameService {
 
   /// Generate a unique UUID v4 session ID.
   String generateSessionId() {
-    final random = Random();
+    final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
 
     // Set version (4) and variant bits per RFC 4122

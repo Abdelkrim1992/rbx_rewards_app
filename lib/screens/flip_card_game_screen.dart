@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/game_prefs.dart';
 import '../widgets/ad_reward_dialog.dart';
 import '../widgets/quit_confirmation_dialog.dart';
 

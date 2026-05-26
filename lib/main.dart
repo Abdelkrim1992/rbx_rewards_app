@@ -88,6 +88,17 @@ class RbxRewardsApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
+      builder: (context, child) {
+        return Container(
+          color: const Color(0xFFF0F0F0), // Subtle background color outside the app area
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: ClipRect(child: child),
+            ),
+          ),
+        );
+      },
       home: const AppNavigator(),
     );
   }
@@ -100,9 +111,40 @@ class AppNavigator extends StatefulWidget {
   State<AppNavigator> createState() => _AppNavigatorState();
 }
 
-class _AppNavigatorState extends State<AppNavigator> {
+class _AppNavigatorState extends State<AppNavigator>
+    with WidgetsBindingObserver {
   int _currentTab = 0;
   bool _showSpin = false;
+  bool _showLoadingOverlay = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startLoadingTimer();
+  }
+
+  void _startLoadingTimer() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _showLoadingOverlay = false);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      setState(() => _showLoadingOverlay = true);
+      _startLoadingTimer();
+    }
+  }
 
   Future<void> _onGetStarted() async {
     await context.read<AppState>().setOnboardingCompleted(true);
@@ -139,45 +181,68 @@ class _AppNavigatorState extends State<AppNavigator> {
       return const LoadingScreen();
     }
 
+    Widget destination;
     if (!appState.isOnboardingCompleted) {
-      return OnboardingScreen(onGetStarted: _onGetStarted);
-    }
-
-    if (_showSpin) {
-      return SpinScreen(onBack: _backFromSpin);
-    }
-
-    final screen = switch (_currentTab) {
-      0 => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
-      1 => GamesScreen(onNavTap: _onNavTap),
-      2 => OffersScreen(onNavTap: _onNavTap),
-      3 => RewardsScreen(onNavTap: _onNavTap),
-      4 => ProfileScreen(onNavTap: _onNavTap),
-      _ => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
-    };
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        if (_showSpin) {
-          _backFromSpin();
-          return;
-        }
-        final shouldQuit = await showQuitConfirmationDialog(
-          context,
-          title: 'Quit App?',
-          message: 'Are you sure you want to exit RBX Rewards?',
-        );
-        if (shouldQuit && mounted) {
-          if (!kIsWeb && Platform.isAndroid) {
-            SystemNavigator.pop();
-          } else if (!kIsWeb) {
-            Navigator.of(context).pop();
+      destination = OnboardingScreen(
+        key: const ValueKey('onboarding'),
+        onGetStarted: _onGetStarted,
+      );
+    } else if (_showSpin) {
+      destination = SpinScreen(
+        key: const ValueKey('spin'),
+        onBack: _backFromSpin,
+      );
+    } else {
+      final screen = switch (_currentTab) {
+        0 => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
+        1 => GamesScreen(onNavTap: _onNavTap),
+        2 => OffersScreen(onNavTap: _onNavTap),
+        3 => RewardsScreen(onNavTap: _onNavTap),
+        4 => ProfileScreen(onNavTap: _onNavTap),
+        _ => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
+      };
+      destination = PopScope(
+        key: ValueKey('tab_$_currentTab'),
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          if (_showSpin) {
+            _backFromSpin();
+            return;
           }
-        }
-      },
-      child: screen,
+          final shouldQuit = await showQuitConfirmationDialog(
+            context,
+            title: 'Quit App?',
+            message: 'Are you sure you want to exit RBX Rewards?',
+          );
+          if (shouldQuit && mounted) {
+            if (!kIsWeb && Platform.isAndroid) {
+              SystemNavigator.pop();
+            } else if (!kIsWeb) {
+              Navigator.of(context).pop();
+            }
+          }
+        },
+        child: screen,
+      );
+    }
+
+    if (_showLoadingOverlay) {
+      return Stack(
+        children: [
+          Offstage(child: destination),
+          const LoadingScreen(),
+        ],
+      );
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: child,
+      ),
+      child: destination,
     );
   }
 }

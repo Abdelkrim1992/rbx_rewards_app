@@ -524,6 +524,7 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     return Column(
       key: const ValueKey('PLAYING'),
       children: [
+        const Spacer(),
         const SizedBox(height: 10),
 
         // Giant Rounded Purple Question Card

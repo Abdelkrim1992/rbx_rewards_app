@@ -7,7 +7,6 @@ import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:scratcher/scratcher.dart';
 import '../state/app_state.dart';
-import 'chest_screen.dart';
 import 'quizzes_screen.dart';
 import '../widgets/refreshable_scroll.dart';
 import '../widgets/quit_confirmation_dialog.dart';
@@ -362,7 +361,7 @@ class _WatchAdDialogState extends State<WatchAdDialog> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(15),
                   border: Border.all(
                       color: Colors.white.withOpacity(0.1), width: 1.5),
                 ),
@@ -848,18 +847,18 @@ class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
                 width: double.infinity,
                 height: 190,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: const Color(0xFFECEBFC), width: 2),
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: Color(0x1A000000),
+                      blurRadius: 2,
+                      spreadRadius: 0,
                     )
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(15),
                   child: Scratcher(
                     key: scratchKey,
                     brushSize: 40,
@@ -1010,13 +1009,13 @@ class _EarnRowCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: const Color(0xFFF3F4F6), width: 1.5),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),

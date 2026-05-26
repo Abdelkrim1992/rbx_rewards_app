@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primary.withValues(alpha: 0.2),
@@ -228,13 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final isDailyClaimed = appState.isDailyRewardCoolingDown;
-    final timeUntilNextClaim = appState.dailyRewardRemaining;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -315,13 +312,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(15),
                             boxShadow: const [
                               BoxShadow(
                                 color: Color(0x1A000000),
-                                blurRadius: 10,
+                                blurRadius: 2,
                                 spreadRadius: 0,
-                                offset: Offset(0, 4),
+                                // offset: Offset(0,1),
                               ),
                             ],
                           ),
@@ -401,13 +398,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: AppColors.dailyCardGradient,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: const [
                             BoxShadow(
-                              color: const Color.fromARGB(0, 179, 167, 222)
-                                  .withValues(alpha: 0.15),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
+                              color: Color(0x1A000000),
+                              blurRadius: 2,
+                              spreadRadius: 0,
                             ),
                           ],
                         ),
@@ -484,19 +480,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   color: AppColors.primary),
                                             if (isDailyClaimed)
                                               const SizedBox(width: 6),
-                                            Text(
-                                              isDailyClaimed
-                                                  ? 'Ends ${_formatDuration(timeUntilNextClaim)}'
-                                                  : 'Claim Now',
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w800,
-                                                color: isDailyClaimed
-                                                    ? AppColors.primary
-                                                    : Colors.white,
-                                                letterSpacing: 0.3,
-                                              ),
-                                            ),
+                                            isDailyClaimed
+                                                ? ValueListenableBuilder<Duration>(
+                                                    valueListenable: appState.dailyRewardRemainingNotifier,
+                                                    builder: (context, timeUntilNextClaim, _) {
+                                                      return Text(
+                                                        'Ends ${_formatDuration(timeUntilNextClaim)}',
+                                                        style: const TextStyle(
+                                                          fontSize: 13,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: AppColors.primary,
+                                                          letterSpacing: 0.3,
+                                                        ),
+                                                      );
+                                                    },
+                                                  )
+                                                : const Text(
+                                                    'Claim Now',
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: Colors.white,
+                                                      letterSpacing: 0.3,
+                                                    ),
+                                                  ),
                                           ],
                                         ),
                                       ),
@@ -955,12 +962,12 @@ class _QuickActionCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 12, 10, 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(15),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x14000000),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Color(0x1A000000),
+                blurRadius: 2,
+                spreadRadius: 0,
               ),
             ],
           ),
@@ -1044,18 +1051,18 @@ class _EarnMoreVerticalCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 15,
-              offset: Offset(0, 8),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
           border: Border.all(color: const Color(0xFFF3F4F6)),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1204,13 +1211,13 @@ class _HomeOfferListItem extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(15),
           border: Border.all(color: const Color(0xFFF3F4F6)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 12,
-              offset: Offset(0, 6),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),
@@ -1356,8 +1363,6 @@ class _HomeOfferListItem extends StatelessWidget {
   }
 }
 
-
-
 class _VipPassCard extends StatelessWidget {
   final VoidCallback? onTap;
 
@@ -1371,12 +1376,12 @@ class _VipPassCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x331A1A2E),
-              blurRadius: 12,
-              offset: Offset(0, 6),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),
@@ -1470,17 +1475,17 @@ class _GameCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x14000000),
-              blurRadius: 12,
-              offset: Offset(0, 6),
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(15),
           child: Column(
             children: [
               Container(
@@ -1549,15 +1554,17 @@ class _GameCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            coins,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.purple,
+                          Flexible(
+                            child: Text(
+                              coins,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.purple,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            softWrap: false,
-                            overflow: TextOverflow.visible,
                           ),
                           const SizedBox(width: 4),
                           Image.asset(
