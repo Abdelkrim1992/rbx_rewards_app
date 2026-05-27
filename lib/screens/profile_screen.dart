@@ -333,13 +333,6 @@ class ProfileScreen extends StatelessWidget {
                     // ),
                     // const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Invite Friends
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: _InviteFriendsCard(),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Settings & Support
                     const Padding(
@@ -578,195 +571,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _InviteFriendsCard extends StatelessWidget {
-  // Static mock data for referral system
-  final String referralCode = 'RBX-7A2F';
-  final int friendsJoined = 3;
-  final int coinsEarnedFromReferrals = 500;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.people, color: Colors.white, size: 24),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Refer & Earn',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Earn 10% from friends\' offerwall earnings forever',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.85),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-
-          // Referral Code Box
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'YOUR CODE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white.withOpacity(0.7),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      referralCode,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    final messenger = ScaffoldMessenger.of(context);
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Referral code copied!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Copy',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Stats row
-          Row(
-            children: [
-              Expanded(
-                child: _ReferralStat(
-                  value: '$friendsJoined',
-                  label: 'Friends Joined',
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 40,
-                color: Colors.white.withOpacity(0.2),
-              ),
-              Expanded(
-                child: _ReferralStat(
-                  value: '+$coinsEarnedFromReferrals',
-                  label: 'RBX Earned',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReferralStat extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _ReferralStat({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.8),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 void _showEditProfileDialog(BuildContext context, AppState appState) {
   showDialog(
@@ -1100,7 +904,7 @@ void _showHelpDialog(BuildContext context) {
         '2. Complete offers and surveys\n'
         '3. Claim your daily reward every 24h\n'
         '4. Spin the wheel for bonus coins\n'
-        '5. Invite friends for +500 RBX each\n\n'
+        ''
         'Reach higher levels by earning more coins!',
       ),
       actions: [
