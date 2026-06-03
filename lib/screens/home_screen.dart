@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/refreshable_scroll.dart';
+import '../widgets/two_tier_reward_dialog.dart';
+import '../widgets/congratulations_dialog.dart';
+import '../utils/reward_helper.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
@@ -35,151 +40,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return "$hours:$minutes:$seconds";
   }
 
-  void _showRewardPopup() {
-    showDialog(
+  Future<void> _completeClaim() async {
+    await showRewardChoice(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primarySoft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.card_giftcard,
-                    size: 40,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Daily Reward!',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF131326),
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'You have earned',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF868A9F),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8F9FA),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF1F5F9)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AppAssets.goldRbxCoin,
-                        width: 28,
-                        height: 28,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.monetization_on,
-                          color: Color(0xFFFFCC44),
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        '+100 RBX',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-                _InteractiveCard(
-                  onTap: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Awesome!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+      featureName: 'Daily Reward',
+      baseReward: 100,
+      quickPlacement: AdPlacement.dailyReward,
+      premiumPlacement: AdPlacement.dailyReward,
+      onSuccess: (coins) async {
+        await context.read<AppState>().claimDailyReward(amount: coins);
       },
     );
-  }
-
-  Future<void> _completeClaim() async {
-    final success = await context.read<AppState>().claimDailyReward();
-    if (!mounted) return;
-    if (success) {
-      _showRewardPopup();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to claim daily reward. Please try again.'),
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   void _claimDaily() {
@@ -195,37 +66,42 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => const SurveyDialog(),
     );
 
-    if (!mounted) return;
-    if (coinsEarned != null && coinsEarned > 0) {
-      await context.read<AppState>().refreshCoins();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Successfully claimed +250 RBX Coins! 📋'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    if (!mounted || coinsEarned == null || coinsEarned <= 0) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Survey Reward',
+      baseReward: coinsEarned,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.miniGameCompletion,
+      onSuccess: (coins) async {
+        await context.read<AppState>().addCoins(coins, source: 'survey');
+        await context.read<AppState>().incrementOffersCompleted();
+      },
+    );
   }
 
   Future<void> _showScratchDialog() async {
+    // Step 1: Animation plays (scratch card reveal)
     final coinsEarned = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       builder: (context) => const ScratchRewardDialog(),
     );
 
-    if (!mounted) return;
-    if (coinsEarned != null && coinsEarned > 0) {
-      await context.read<AppState>().refreshCoins();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scratch reward claimed +$coinsEarned RBX Coins! 🎁'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    if (!mounted || coinsEarned == null || coinsEarned <= 0) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Scratch Card Reward',
+      baseReward: coinsEarned,
+      quickPlacement: AdPlacement.scratchCard,
+      premiumPlacement: AdPlacement.doubleReward,
+      onSuccess: (coins) async {
+        await context.read<AppState>().addCoins(coins, source: 'scratch');
+        await context.read<AppState>().incrementOffersCompleted();
+      },
+    );
   }
 
   @override
@@ -834,14 +710,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
-
-                    // VIP Pass Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: _VipPassCard(onTap: () {}),
-                    ),
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -1363,93 +1231,6 @@ class _HomeOfferListItem extends StatelessWidget {
   }
 }
 
-class _VipPassCard extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const _VipPassCard({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return _InteractiveCard(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 2,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(
-                Icons.diamond,
-                color: Colors.white,
-                size: 26,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'VIP Pass',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Remove ads + 2x coins for \$4.99/week',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.6),
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Upgrade',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _GameCard extends StatelessWidget {
   final String imageUrl;

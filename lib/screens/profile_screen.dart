@@ -595,6 +595,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
   late Animation<double> _scaleAnim;
   String? _selectedAvatarUrl;
   bool _isSaving = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -620,17 +621,42 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
   }
 
   Future<void> _save() async {
-    setState(() => _isSaving = true);
-    final newName = _nameController.text.trim();
-    // Update name if changed and not empty
-    if (newName.isNotEmpty && newName != widget.appState.displayName) {
-      await widget.appState.updateDisplayName(newName);
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final newName = _nameController.text.trim();
+      
+      // Validate username is not empty
+      if (newName.isEmpty) {
+        setState(() {
+          _errorMessage = 'Username cannot be empty';
+          _isSaving = false;
+        });
+        return;
+      }
+      
+      // Update name if changed
+      if (newName != widget.appState.displayName) {
+        await widget.appState.updateDisplayName(newName);
+      }
+      
+      // Update photo if changed
+      if (_selectedAvatarUrl != widget.appState.profilePhotoUrl) {
+        await widget.appState.updateProfilePhoto(_selectedAvatarUrl);
+      }
+      
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _isSaving = false;
+        });
+      }
     }
-    // Update photo if changed
-    if (_selectedAvatarUrl != widget.appState.profilePhotoUrl) {
-      await widget.appState.updateProfilePhoto(_selectedAvatarUrl);
-    }
-    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -701,6 +727,12 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
               TextField(
                 controller: _nameController,
                 maxLength: 20,
+                onChanged: (_) {
+                  // Clear error when user types
+                  if (_errorMessage != null) {
+                    setState(() => _errorMessage = null);
+                  }
+                },
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -737,6 +769,17 @@ class _EditProfileDialogState extends State<_EditProfileDialog>
                 ),
                 textCapitalization: TextCapitalization.words,
               ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
               const SizedBox(height: 22),
 
               // Avatar section

@@ -7,6 +7,8 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ad_reward_dialog.dart';
 import '../widgets/quit_confirmation_dialog.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 
 class TapTapGameScreen extends StatefulWidget {
   const TapTapGameScreen({super.key});
@@ -20,6 +22,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   // Game states
   bool _hasStarted = false;
   bool _isGameOver = false;
+  bool _isGameFailed = false;
   int _score = 0;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
@@ -55,6 +58,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
   final List<_FlyingCoin> _flyingCoins = [];
   bool _isClaiming = false;
   bool _adWatched = false;
+  static int _claimCount = 0;
 
   // Concentric 3D UI states
   final List<_BgElement> _bgElements = [];
@@ -153,6 +157,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     setState(() {
       _hasStarted = true;
       _isGameOver = false;
+      _isGameFailed = false;
       _score = 0;
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
@@ -187,10 +192,10 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
       if (!_isGameOver) {
         // 1. Timer logic
         _timerProgress -= dt / 15.0; // 15 seconds game
-        if (_timerProgress <= 0) {
+        if (_timerProgress <= 0 && !_isGameOver) {
           _timerProgress = 0;
           _isGameOver = true;
-          _endGame();
+          Future.microtask(_endGame);
         }
         _timeLeftSeconds = (15 * _timerProgress).ceil();
 
@@ -305,12 +310,31 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     });
   }
 
-  void _endGame() {
-    _originalCoinsEarned = (_score * 0.5).ceil(); // 1 coin for every 2 taps
-    if (_maxCombo > 10) {
-      _originalCoinsEarned += (_maxCombo * 0.5).round(); // Combo bonus!
+  Future<void> _endGame() async {
+    final finalIsFailed = _score < 30;
+    
+    if (finalIsFailed) {
+      _originalCoinsEarned = 0;
+    } else {
+      _originalCoinsEarned = (_score * 0.5).ceil(); // 1 coin for every 2 taps
+      if (_maxCombo > 10) {
+        _originalCoinsEarned += (_maxCombo * 0.5).round(); // Combo bonus!
+      }
     }
-    _coinsEarned = _originalCoinsEarned;
+    
+    if (!finalIsFailed) {
+      _claimCount++;
+      if (_claimCount % 3 == 0) {
+        await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.dailyReward);
+        if (!mounted) return;
+      }
+    }
+
+    setState(() {
+      _isGameFailed = finalIsFailed;
+      _coinsEarned = _originalCoinsEarned;
+    });
+
     _endDialogController.reset();
     _endDialogController.forward();
   }
@@ -440,8 +464,9 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     );
   }
 
-  void _triggerClaimCoins(Offset startCenter) {
+  Future<void> _triggerClaimCoins(Offset startCenter) async {
     if (_isClaiming) return;
+
     setState(() {
       _isClaiming = true;
     });
@@ -920,16 +945,10 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
             ),
             child: Column(
               children: [
-                Image.asset(
-                  AppAssets.tapTapGame,
-                  width: 110,
-                  height: 110,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.touch_app,
-                    size: 90,
-                    color: AppColors.primary,
-                  ),
+                Icon(
+                  Icons.touch_app,
+                  size: 90,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -943,7 +962,7 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Tap the central 3D crystal as fast as you can. Build combos to supercharge your multipliers and claim massive RBX Coin prizes!',
+                  'Tap the central 3D crystal as fast as you can. Build combos to supercharge your score! You need at least 30 points in 15 seconds to claim your reward.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -975,10 +994,10 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
               ),
               SizedBox(width: 10),
               _InstructionStep(
-                icon: Icons.currency_bitcoin,
-                title: 'RBX Coins',
-                desc: 'Claim at end',
-                color: AppColors.purple,
+                icon: Icons.flag,
+                title: 'Target: 30',
+                desc: 'Earn 30 pts to win',
+                color: Colors.red,
               ),
             ],
           ),
@@ -1043,30 +1062,46 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Beautiful Trophy Header
+                  // Beautiful Trophy or Error Header
                   Container(
                     width: 76,
                     height: 76,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFDF6E2),
+                    decoration: BoxDecoration(
+                      color: _isGameFailed
+                          ? const Color(0xFFFDE8E8)
+                          : const Color(0xFFFDF6E2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.emoji_events,
-                      color: Color(0xFFFFCC44),
+                    child: Icon(
+                      _isGameFailed ? Icons.error_outline : Icons.emoji_events,
+                      color: _isGameFailed
+                          ? Colors.red
+                          : const Color(0xFFFFCC44),
                       size: 44,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    "TIME'S UP!",
-                    style: TextStyle(
+                  Text(
+                    _isGameFailed ? "FAILED!" : "TIME'S UP!",
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
                       color: Color(0xFF131326),
                       letterSpacing: -0.5,
                     ),
                   ),
+                  if (_isGameFailed) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      "Target is 30 points to earn coins.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4A4B60),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
 
                   // Score breakdown table
@@ -1074,16 +1109,16 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Total Taps',
+                        'Total Points',
                         style:
                             TextStyle(fontSize: 14, color: Color(0xFF868A9F)),
                       ),
                       Text(
-                        '$_score',
-                        style: const TextStyle(
+                        '$_score / 30',
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF131326),
+                          color: _isGameFailed ? Colors.red : const Color(0xFF131326),
                         ),
                       ),
                     ],
@@ -1107,63 +1142,62 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                       ),
                     ],
                   ),
-                  const Divider(height: 24, color: Color(0xFFEEEEEF)),
 
-                  // Big Reward display
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AppAssets.goldCoin,
-                        width: 32,
-                        height: 32,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.monetization_on,
-                          size: 32,
-                          color: Color(0xFFFFCC44),
+                  if (!_isGameFailed) ...[
+                    const Divider(height: 24, color: Color(0xFFEEEEEF)),
+
+                    // Big Reward display
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          AppAssets.goldCoin,
+                          width: 32,
+                          height: 32,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.monetization_on,
+                            size: 32,
+                            color: Color(0xFFFFCC44),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '+$_coinsEarned RBX',
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                          letterSpacing: -0.5,
+                        const SizedBox(width: 10),
+                        Text(
+                          '+$_coinsEarned RBX',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.primary,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
 
-                  // 2x Ad button (shown only if not yet watched)
-                  if (!_adWatched)
+                  // 2x Ad button (shown only if not yet watched and not failed)
+                  if (!_isGameFailed && !_adWatched && context.watch<AdState>().canShowOptionalAd)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: GestureDetector(
                         onTap: _isClaiming
                             ? null
-                            : () {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (_) => AdRewardDialog(
-                                    onRewardGranted: () {
-                                      setState(() {
-                                        _coinsEarned = _originalCoinsEarned * 2;
-                                        _adWatched = true;
-                                      });
-                                    },
-                                  ),
-                                );
+                            : () async {
+                                final adState = context.read<AdState>();
+                                await adState.showInterstitialAfterClaim(AdPlacement.dailyReward);
+                                adState.recordOptionalAdWatched();
+                                if (!mounted) return;
+                                setState(() {
+                                  _coinsEarned = _originalCoinsEarned * 2;
+                                  _adWatched = true;
+                                });
                               },
                         child: Container(
                           width: double.infinity,
                           height: 52,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
+                              colors: [Color(0xFFFF8C00), Color(0xFFFF8C00)],
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
@@ -1196,30 +1230,56 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     ),
 
                   // Action buttons
-                  Builder(builder: (btnContext) {
-                    return SizedBox(
+                  if (!_isGameFailed)
+                    Builder(builder: (btnContext) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (_isClaiming) return;
+
+                            // Find absolute coordinate of button to launch coins from
+                            final RenderBox box =
+                                btnContext.findRenderObject() as RenderBox;
+                            final Offset localCenter =
+                                Offset(box.size.width / 2, box.size.height / 2);
+                            final Offset globalCenter =
+                                box.localToGlobal(localCenter);
+
+                            // Get coordinates relative to base stack context
+                            final RenderBox screenBox =
+                                context.findRenderObject() as RenderBox;
+                            final Offset overlayCenter =
+                                screenBox.globalToLocal(globalCenter);
+
+                            _triggerClaimCoins(overlayCenter);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            _isClaiming ? 'Claiming...' : 'Claim Reward',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      );
+                    })
+                  else
+                    // Prominent Try Again button
+                    SizedBox(
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_isClaiming) return;
-
-                          // Find absolute coordinate of button to launch coins from
-                          final RenderBox box =
-                              btnContext.findRenderObject() as RenderBox;
-                          final Offset localCenter =
-                              Offset(box.size.width / 2, box.size.height / 2);
-                          final Offset globalCenter =
-                              box.localToGlobal(localCenter);
-
-                          // Get coordinates relative to base stack context
-                          final RenderBox screenBox =
-                              context.findRenderObject() as RenderBox;
-                          final Offset overlayCenter =
-                              screenBox.globalToLocal(globalCenter);
-
-                          _triggerClaimCoins(overlayCenter);
-                        },
+                        onPressed: _startGame,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           elevation: 0,
@@ -1227,17 +1287,16 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Text(
-                          _isClaiming ? 'Claiming...' : 'Claim & Exit',
-                          style: const TextStyle(
+                        child: const Text(
+                          'Try Again',
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
                       ),
-                    );
-                  }),
+                    ),
 
                   const SizedBox(height: 10),
                   SizedBox(
@@ -1246,16 +1305,20 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
                     child: TextButton(
                       onPressed: () {
                         if (_isClaiming) return;
-                        _startGame();
+                        if (_isGameFailed) {
+                          Navigator.of(context).pop();
+                        } else {
+                          _startGame();
+                        }
                       },
                       style: TextButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
-                        'Play Again',
-                        style: TextStyle(
+                      child: Text(
+                        _isGameFailed ? 'Exit Game' : 'Play Again',
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppColors.purple,

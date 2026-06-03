@@ -9,6 +9,8 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ad_reward_dialog.dart';
 import '../widgets/quit_confirmation_dialog.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 
 class FlipCardGameScreen extends StatefulWidget {
   const FlipCardGameScreen({super.key});
@@ -34,6 +36,7 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
   int _maxCombo = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
+  static int _claimCount = 0;
 
   // Timer
   int _secondsLeft = 90;
@@ -150,15 +153,15 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
         timer.cancel();
         return;
       }
-      setState(() {
-        if (_secondsLeft > 0) {
+      if (_secondsLeft > 0) {
+        setState(() {
           _secondsLeft--;
           _timerProgress = _secondsLeft / 90.0;
-        } else {
-          timer.cancel();
-          _triggerGameOver();
-        }
-      });
+        });
+      } else {
+        timer.cancel();
+        _triggerGameOver();
+      }
     });
   }
 
@@ -226,7 +229,7 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
     }
   }
 
-  void _triggerGameOver() {
+  Future<void> _triggerGameOver() async {
     _gameTimer?.cancel();
 
     // Scoring: base 50 per match + time bonus + combo bonus
@@ -245,6 +248,13 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
     });
 
     _loadHighScoreAndCoins();
+
+    // Show interstitial before the result popup appears
+    _claimCount++;
+    if (_claimCount % 3 == 0 && mounted) {
+      await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.dailyReward);
+    }
+    if (!mounted) return;
 
     _matchPopController.reset();
     _matchPopController.forward();
@@ -998,23 +1008,19 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
           child: Column(
             children: [
               // Watch Ad for 2x
-              if (_coinsEarned > 0 && !_adWatched)
+              if (_coinsEarned > 0 && !_adWatched && context.watch<AdState>().canShowOptionalAd)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => AdRewardDialog(
-                          onRewardGranted: () {
-                            setState(() {
-                              _coinsEarned = _originalCoinsEarned * 2;
-                              _adWatched = true;
-                            });
-                          },
-                        ),
-                      );
+                    onTap: () async {
+                      final adState = context.read<AdState>();
+                      await adState.showInterstitialAfterClaim(AdPlacement.dailyReward);
+                      adState.recordOptionalAdWatched();
+                      if (!mounted) return;
+                      setState(() {
+                        _coinsEarned = _originalCoinsEarned * 2;
+                        _adWatched = true;
+                      });
                     },
                     child: Container(
                       width: double.infinity,

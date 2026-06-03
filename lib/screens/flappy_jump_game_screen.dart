@@ -10,6 +10,8 @@ import '../theme/app_theme.dart';
 import '../widgets/game_prefs.dart';
 import '../widgets/ad_reward_dialog.dart';
 import '../widgets/quit_confirmation_dialog.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 
 // --- Vector 3D Helper ---
 class Vector3D {
@@ -1212,17 +1214,26 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
   bool _showCoinClaimAnimation = false;
   bool _hasClaimedReward = false;
   bool _adWatched = false;
+  bool _handledGameOver = false;
   int _originalCoinsEarned = 0;
   late AnimationController _claimAnimController;
   final List<_GameClaimCoin> _flyingCoins = [];
   final math.Random _random = math.Random();
+  static int _claimCount = 0;
 
   @override
   void initState() {
     super.initState();
 
     _game = FlappyJumpGame();
-    _game.onStateChanged = () {
+    _game.onStateChanged = () async {
+      if (_game.isGameOver && !_handledGameOver && mounted) {
+        _handledGameOver = true;
+        _claimCount++;
+        if (_claimCount % 3 == 0) {
+          await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.dailyReward);
+        }
+      }
       if (mounted) setState(() {});
     };
 
@@ -1381,6 +1392,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
       _showCoinClaimAnimation = false;
       _hasClaimedReward = false;
       _adWatched = false;
+      _handledGameOver = false;
       _originalCoinsEarned = 0;
       _displayedCoins = _coins;
     });
@@ -2039,31 +2051,28 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                     // Watch Ad for 2x (shown before claiming)
                     if (_game.coinsEarned > 0 &&
                         !_hasClaimedReward &&
-                        !_adWatched)
+                        !_adWatched &&
+                        context.watch<AdState>().canShowOptionalAd)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: GestureDetector(
-                          onTap: () {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (_) => AdRewardDialog(
-                                onRewardGranted: () {
-                                  setState(() {
-                                    _originalCoinsEarned = _game.coinsEarned;
-                                    _game.coinsEarned *= 2;
-                                    _adWatched = true;
-                                  });
-                                },
-                              ),
-                            );
+                          onTap: () async {
+                            final adState = context.read<AdState>();
+                            await adState.showInterstitialAfterClaim(AdPlacement.dailyReward);
+                            adState.recordOptionalAdWatched();
+                            if (!mounted) return;
+                            setState(() {
+                              _originalCoinsEarned = _game.coinsEarned;
+                              _game.coinsEarned *= 2;
+                              _adWatched = true;
+                            });
                           },
                           child: Container(
                             width: double.infinity,
                             height: 50,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
+                                colors: [Color(0xFFFF8C00), Color(0xFFFF8C00)],
                               ),
                               borderRadius: BorderRadius.circular(14),
                               boxShadow: [
@@ -2106,7 +2115,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                           height: 54,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFFFCC44), Color(0xFFFF9E00)],
+                              colors: [Color(0xFFFFCC44), Color(0xFFFFCC44)],
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [

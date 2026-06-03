@@ -6,6 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
+import '../widgets/two_tier_reward_dialog.dart';
+import '../widgets/congratulations_dialog.dart';
+import '../utils/reward_helper.dart';
 
 class QuizQuestion {
   final String text;
@@ -282,15 +287,15 @@ class _QuizzesScreenState extends State<QuizzesScreen>
         timer.cancel();
         return;
       }
-      setState(() {
-        if (_secondsLeft > 0) {
+      if (_secondsLeft > 0) {
+        setState(() {
           _secondsLeft--;
           _timerProgress = _secondsLeft / 90.0;
-        } else {
-          timer.cancel();
-          _triggerQuizComplete();
-        }
-      });
+        });
+      } else {
+        timer.cancel();
+        _triggerQuizComplete();
+      }
     });
   }
 
@@ -345,26 +350,46 @@ class _QuizzesScreenState extends State<QuizzesScreen>
     });
   }
 
+  Future<void> _processQuizClaim(int baseReward, {required VoidCallback onComplete}) async {
+    if (baseReward <= 0) {
+      onComplete();
+      return;
+    }
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Quiz Reward',
+      baseReward: baseReward,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.miniGameCompletion,
+      onSuccess: (coins) async {
+        await context.read<AppState>().addCoins(coins, source: 'quiz');
+        onComplete();
+      },
+      onCancel: () {
+        onComplete();
+      },
+    );
+  }
+
   void _claimQuizCoins() async {
-    if (_coinsEarned > 0) {
-      await context.read<AppState>().addCoins(_coinsEarned, source: 'quiz');
-    }
-    if (mounted) {
-      Navigator.of(context).pop(_coinsEarned);
-    }
+    await _processQuizClaim(_coinsEarned, onComplete: () {
+      if (mounted) {
+        Navigator.of(context).pop(_coinsEarned);
+      }
+    });
   }
 
   void _playAgain() async {
-    if (_coinsEarned > 0) {
-      await context.read<AppState>().addCoins(_coinsEarned, source: 'quiz');
-    }
-    if (mounted) {
-      if (_activeCategory != null) {
-        _startQuizRound(_activeCategory!);
-      } else {
-        _backToMenu();
+    await _processQuizClaim(_coinsEarned, onComplete: () {
+      if (mounted) {
+        if (_activeCategory != null) {
+          _startQuizRound(_activeCategory!);
+        } else {
+          _backToMenu();
+        }
       }
-    }
+    });
   }
 
   void _backToMenu() {
@@ -662,7 +687,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
     return Column(
       key: const ValueKey('MENU'),
       children: [
-        const SizedBox(height: 24),
+        const Spacer(),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
           child: Row(
@@ -680,10 +705,11 @@ class _QuizzesScreenState extends State<QuizzesScreen>
           ),
         ),
         const SizedBox(height: 16),
-        Expanded(
+        Flexible(
+          flex: 0,
           child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(
-                AppLayout.screenPadding, 0, AppLayout.screenPadding, 40),
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
             itemCount: _categories.length,
             separatorBuilder: (_, __) => const SizedBox(height: 14),
             itemBuilder: (ctx, i) {
@@ -695,6 +721,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
             },
           ),
         ),
+        const Spacer(),
       ],
     );
   }
@@ -1120,3 +1147,4 @@ class _QuizCategoryItem extends StatelessWidget {
     );
   }
 }
+

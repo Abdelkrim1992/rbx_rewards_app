@@ -3,9 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/refreshable_scroll.dart';
 import '../widgets/quit_confirmation_dialog.dart';
+import '../widgets/two_tier_reward_dialog.dart';
+import '../widgets/congratulations_dialog.dart';
+import '../utils/reward_helper.dart';
 
 class SpinScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -23,6 +28,7 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   late Animation<double> _pulseAnimation;
   bool _isSpinning = false;
   double _adButtonScale = 1.0;
+  static int _spinCount = 0; // Track spins for ad display
 
   final List<_WheelSegment> segments = const [
     _WheelSegment(label: '100', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
@@ -140,31 +146,51 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
     }
   }
 
-  void _showWinDialog(String prize, int reward) {
-    showDialog(
+  void _showWinDialog(String prize, int reward) async {
+    // Step 1: Animation plays (SpinRewardDialog shows coin flip + reward card)
+    final claimRequested = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
       builder: (context) => SpinRewardDialog(
         prize: prize,
         reward: reward,
-        onClaim: () async {
-          final appState = context.read<AppState>();
-          // Always consume locally and award coins; server sync is best-effort.
-          final consumed = await appState.consumeLocalSpin();
-          if (!consumed) {
-            throw Exception('No spins remaining.');
-          }
-          await appState.addCoins(reward, source: 'spin');
-          // Best-effort server sync in background
-          try {
-            await appState.useSpin();
-          } catch (_) {}
-        },
       ),
-    ).then((_) {
-      // Cooldown is managed by AppState; no local timer needed
-    });
+    );
+
+    if (!mounted || claimRequested != true) {
+      _spinCount++;
+      if (_spinCount % 3 == 0 && mounted) {
+        await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.spinForced);
+      }
+      return;
+    }
+
+    final appState = context.read<AppState>();
+    await showRewardChoice(
+      context: context,
+      featureName: 'Spin Prize Reward',
+      baseReward: reward,
+      quickPlacement: AdPlacement.spinExtra,
+      premiumPlacement: AdPlacement.doubleReward,
+      onSuccess: (coins) async {
+        final consumed = await appState.consumeLocalSpin();
+        if (consumed) {
+          await appState.addCoins(coins, source: 'spin');
+          try { await appState.useSpin(); } catch (_) {}
+        }
+        _spinCount++;
+        if (_spinCount % 3 == 0 && mounted) {
+          await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.spinForced);
+        }
+      },
+      onCancel: () async {
+        _spinCount++;
+        if (_spinCount % 3 == 0 && mounted) {
+          await context.read<AdState>().showInterstitialAfterClaim(AdPlacement.spinForced);
+        }
+      },
+    );
   }
 
   @override
@@ -515,11 +541,17 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // Watch Ad button
+                      // Watch Ad button — shows real interstitial then awards free spin
                       GestureDetector(
                         onTapDown: (_) => setState(() => _adButtonScale = 0.95),
                         onTapUp: (_) async {
                           setState(() => _adButtonScale = 1.0);
+                          // Show interstitial ad first
+                          await context
+                              .read<AdState>()
+                              .showInterstitialAfterClaim(AdPlacement.spinExtra);
+                          if (!mounted) return;
+                          // Award the free spin after the ad is dismissed
                           await context.read<AppState>().addFreeSpin();
                         },
                         onTapCancel: () => setState(() => _adButtonScale = 1.0),
@@ -842,13 +874,11 @@ class _TrianglePainter extends CustomPainter {
 class SpinRewardDialog extends StatefulWidget {
   final String prize;
   final int reward;
-  final Future<void> Function() onClaim;
 
   const SpinRewardDialog({
     super.key,
     required this.prize,
     required this.reward,
-    required this.onClaim,
   });
 
   @override
@@ -878,7 +908,6 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
   bool _disposed = false;
   bool _animationComplete = false;
   bool _isClaiming = false;
-  String? _claimError;
 
   @override
   void initState() {
@@ -1005,19 +1034,10 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
     _particleController.forward();
 
     // Wait for coin animation to fully complete
-    await Future.delayed(const Duration(milliseconds: 1800));
+    await Future.delayed(const Duration(milliseconds: 2000));
     if (_disposed) return;
 
-    // Hide coin and burst
-    setState(() {
-      _animationComplete = true;
-    });
-    // Stop repeating controllers
-    _burstRotationController.stop();
-    _shimmerController.stop();
-
-    // Now slide in the reward card
-    _cardController.forward();
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -1054,77 +1074,63 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
               alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
-                if (!_animationComplete) ...[
-                  // ── Rotating light burst ──
-                  Opacity(
-                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
-                    child: Transform.rotate(
-                      angle: _burstRotation.value,
-                      child: Transform.scale(
-                        scale: _burstScale.value.clamp(0.0, 2.0),
-                        child: CustomPaint(
-                          size: const Size(320, 320),
-                          painter: _LightRaysPainter(
-                            color: isJackpot
-                                ? const Color(0xFFFFD700)
-                                : AppColors.primary,
-                          ),
+                // ── Rotating light burst ──
+                Opacity(
+                  opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                  child: Transform.rotate(
+                    angle: _burstRotation.value,
+                    child: Transform.scale(
+                      scale: _burstScale.value.clamp(0.0, 2.0),
+                      child: CustomPaint(
+                        size: const Size(320, 320),
+                        painter: _LightRaysPainter(
+                          color: isJackpot
+                              ? const Color(0xFFFFD700)
+                              : AppColors.primary,
                         ),
                       ),
                     ),
                   ),
+                ),
 
-                  // ── Circular glow ──
-                  Opacity(
-                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
-                    child: Container(
-                      width: 280,
-                      height: 280,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            (isJackpot
-                                    ? const Color(0xFFFFD700)
-                                    : AppColors.primary)
-                                .withOpacity(0.4),
-                            (isJackpot
-                                    ? const Color(0xFFFFD700)
-                                    : AppColors.primary)
-                                .withOpacity(0.0),
-                          ],
-                        ),
+                // ── Circular glow ──
+                Opacity(
+                  opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          (isJackpot
+                                  ? const Color(0xFFFFD700)
+                                  : AppColors.primary)
+                              .withOpacity(0.4),
+                          (isJackpot
+                                  ? const Color(0xFFFFD700)
+                                  : AppColors.primary)
+                              .withOpacity(0.0),
+                        ],
                       ),
                     ),
                   ),
+                ),
 
-                  // ── Confetti particles ──
-                  ..._buildParticles(),
+                // ── Confetti particles ──
+                ..._buildParticles(),
 
-                  // ── 3D Flipping Coin ──
-                  Transform.scale(
-                    scale: _coinScale.value.clamp(0.0, 2.0),
-                    child: Transform(
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.002) // perspective
-                        ..rotateY(_coinFlip.value),
-                      alignment: Alignment.center,
-                      child: _buildCoinFace(),
-                    ),
+                // ── 3D Flipping Coin ──
+                Transform.scale(
+                  scale: _coinScale.value.clamp(0.0, 2.0),
+                  child: Transform(
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, 0.002) // perspective
+                      ..rotateY(_coinFlip.value),
+                    alignment: Alignment.center,
+                    child: _buildCoinFace(),
                   ),
-                ],
-
-                // ── Reward card ──
-                if (_animationComplete)
-                  Center(
-                    child: Opacity(
-                      opacity: _cardOpacity.value.clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: _cardScale.value.clamp(0.0, 2.0),
-                        child: _buildRewardCard(isJackpot),
-                      ),
-                    ),
-                  ),
+                ),
               ],
             );
           },
@@ -1320,41 +1326,13 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
           ),
           const SizedBox(height: 20),
 
-          if (_claimError != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Text(
-                _claimError!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.redAccent,
-                ),
-              ),
-            ),
-
-          // Claim button — premium styled
+          // Claim button — pops with true, parent handles two-tier → ad → congratulations
           _InteractiveCard(
             onTap: _isClaiming
                 ? null
-                : () async {
-                    setState(() {
-                      _isClaiming = true;
-                      _claimError = null;
-                    });
-                    try {
-                      await widget.onClaim();
-                      if (mounted) Navigator.of(context).pop();
-                    } catch (e) {
-                      if (mounted) {
-                        setState(() {
-                          _isClaiming = false;
-                          _claimError =
-                              e.toString().replaceFirst('Exception: ', '');
-                        });
-                      }
-                    }
+                : () {
+                    setState(() => _isClaiming = true);
+                    Navigator.of(context).pop(true);
                   },
             child: Container(
               width: double.infinity,
@@ -1367,7 +1345,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
                     ? null
                     : [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 6),
                         ),
@@ -1490,3 +1468,4 @@ class _InteractiveCardState extends State<_InteractiveCard> {
     );
   }
 }
+

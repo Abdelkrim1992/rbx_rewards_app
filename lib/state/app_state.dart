@@ -18,6 +18,8 @@ class AppState extends ChangeNotifier {
   static const String _keySpinFreeSpins = 'spin_free_spins';
   static const String _keySpinCooldownEnd = 'spin_cooldown_end';
   static const String _keyDailyRewardClaimedAt = 'daily_reward_claimed_at';
+  static const String _keyFirstRedemptionReachedAt =
+      'first_redemption_reached_at';
 
   final bool supabaseEnabled;
   final AuthService _authService;
@@ -43,6 +45,7 @@ class AppState extends ChangeNotifier {
   int _level = 1;
   String _displayName = 'Player';
   String? _profilePhotoUrl;
+  int? _firstRedemptionReachedAt;
 
   bool _isLoaded = false;
   bool _isOnboardingCompleted = false;
@@ -52,16 +55,20 @@ class AppState extends ChangeNotifier {
 
   // --- Daily reward ---
   Timer? _dailyRewardTimer;
-  final ValueNotifier<Duration> dailyRewardRemainingNotifier = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> dailyRewardRemainingNotifier =
+      ValueNotifier(Duration.zero);
   Duration get _dailyRewardRemaining => dailyRewardRemainingNotifier.value;
-  set _dailyRewardRemaining(Duration val) => dailyRewardRemainingNotifier.value = val;
+  set _dailyRewardRemaining(Duration val) =>
+      dailyRewardRemainingNotifier.value = val;
 
   // --- Spin state (local only) ---
   int _spinFreeSpins = 3;
   Timer? _spinCooldownTimer;
-  final ValueNotifier<Duration> spinCooldownRemainingNotifier = ValueNotifier(Duration.zero);
+  final ValueNotifier<Duration> spinCooldownRemainingNotifier =
+      ValueNotifier(Duration.zero);
   Duration get _spinCooldownRemaining => spinCooldownRemainingNotifier.value;
-  set _spinCooldownRemaining(Duration val) => spinCooldownRemainingNotifier.value = val;
+  set _spinCooldownRemaining(Duration val) =>
+      spinCooldownRemainingNotifier.value = val;
 
   StreamSubscription? _connectivitySubscription;
   StreamSubscription? _balanceSub;
@@ -156,6 +163,7 @@ class AppState extends ChangeNotifier {
     }
 
     _coins = await GamePrefs.getCoins();
+    _firstRedemptionReachedAt = prefs.getInt(_keyFirstRedemptionReachedAt);
 
     if (supabaseEnabled) {
       _balanceSub = _coinService.userDataStream.listen(
@@ -319,6 +327,7 @@ class AppState extends ChangeNotifier {
     _totalCoinsEarned += value;
     _level = (_totalCoinsEarned / 5000).floor() + 1;
     _pendingCoinOps++;
+    _checkFirstRedemption();
     notifyListeners();
 
     final txId = _generateUuidV4();
@@ -364,8 +373,23 @@ class AppState extends ChangeNotifier {
     _totalCoinsEarned += value;
     _level = (_totalCoinsEarned / 5000).floor() + 1;
     _pendingCoinOps++;
+    _checkFirstRedemption();
     notifyListeners();
     GamePrefs.saveCoins(_coins);
+  }
+
+  void _checkFirstRedemption() {
+    const target = 2500;
+    if (_firstRedemptionReachedAt == null && _totalCoinsEarned >= target) {
+      _firstRedemptionReachedAt = DateTime.now().millisecondsSinceEpoch;
+      _persistFirstRedemption();
+    }
+  }
+
+  Future<void> _persistFirstRedemption() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+        _keyFirstRedemptionReachedAt, _firstRedemptionReachedAt ?? 0);
   }
 
   void syncBalanceFromServer(int serverBalance) {
@@ -431,18 +455,18 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<bool> claimDailyReward() async {
+  Future<bool> claimDailyReward({int amount = 100}) async {
     if (isDailyRewardCoolingDown) return false;
 
     if (supabaseEnabled && _isOnline && _isAuthenticated) {
       try {
-        final result = await _rewardService.claimDailyReward();
+        final result = await _rewardService.claimDailyReward(amount: amount);
         final data = result;
         if (data['success'] == true) {
-          final amount = data['amount'] as int? ?? 0;
-          final balance = data['balance'] as int? ?? (_coins + amount);
+          final serverAmount = data['amount'] as int? ?? amount;
+          final balance = data['balance'] as int? ?? (_coins + serverAmount);
           _coins = balance;
-          _totalCoinsEarned += amount;
+          _totalCoinsEarned += serverAmount;
           _level = (_totalCoinsEarned / 5000).floor() + 1;
           _consecutiveDays =
               data['consecutive_days'] as int? ?? _consecutiveDays;
@@ -463,8 +487,8 @@ class AppState extends ChangeNotifier {
     await prefs.setInt(_keyDailyRewardClaimedAt, now.millisecondsSinceEpoch);
     _dailyRewardRemaining = const Duration(hours: 24);
     _syncDailyRewardTimer();
-    _coins += 100;
-    _totalCoinsEarned += 100;
+    _coins += amount;
+    _totalCoinsEarned += amount;
     _level = (_totalCoinsEarned / 5000).floor() + 1;
     await GamePrefs.saveCoins(_coins);
     notifyListeners();

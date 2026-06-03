@@ -157,10 +157,31 @@ class CoinService {
     return List<Map<String, dynamic>>.from(data);
   }
 
+  /// Check if a username is available (case-insensitive).
+  Future<bool> isUsernameAvailable(String username) async {
+    final uid = _userId;
+    if (uid == null) throw Exception('Not authenticated');
+    
+    final result = await _client!.rpc('is_username_available', params: {
+      'p_username': username,
+      'p_exclude_user_id': uid,
+    });
+    
+    return result as bool;
+  }
+
   /// Update the user's display name.
+  /// Throws exception if username is already taken.
   Future<void> updateDisplayName(String name) async {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
+    
+    // Check if username is available
+    final available = await isUsernameAvailable(name);
+    if (!available) {
+      throw Exception('This username already exists. Try another one.');
+    }
+    
     await _client!.from('users').update({'display_name': name}).eq('id', uid);
   }
 

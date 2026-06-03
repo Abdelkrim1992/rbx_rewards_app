@@ -7,8 +7,9 @@ import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ad_reward_dialog.dart';
 import '../widgets/quit_confirmation_dialog.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 
 class MathQuestion {
   final String text;
@@ -41,12 +42,13 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   final int _totalQuestions = 10;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
-  bool _adWatched = false;
   final int _highScore = 0;
   int _userCoins = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
   bool _isQuitting = false;
+  bool _watchedRewardedAd = false;
+  static int _claimCount = 0;
 
   // Active question details
   late MathQuestion _currentQuestion;
@@ -109,11 +111,11 @@ class _MathQuizScreenState extends State<MathQuizScreen>
       _score = 0;
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
-      _adWatched = false;
       _secondsLeft = 60;
       _timerProgress = 1.0;
       _selectedAnswer = null;
       _isCorrectAnswer = null;
+      _watchedRewardedAd = false;
     });
 
     _sessionId = GameService().generateSessionId();
@@ -182,15 +184,15 @@ class _MathQuizScreenState extends State<MathQuizScreen>
         return;
       }
 
-      setState(() {
-        if (_secondsLeft > 0) {
+      if (_secondsLeft > 0) {
+        setState(() {
           _secondsLeft--;
           _timerProgress = _secondsLeft / 60.0;
-        } else {
-          timer.cancel();
-          _triggerQuizComplete();
-        }
-      });
+        });
+      } else {
+        timer.cancel();
+        _triggerQuizComplete();
+      }
     });
   }
 
@@ -249,7 +251,7 @@ class _MathQuizScreenState extends State<MathQuizScreen>
         durationSeconds: duration.clamp(1, 3600),
         sessionId: _sessionId ?? GameService().generateSessionId(),
         originalScore: _originalCoinsEarned,
-        multiplier: _adWatched ? 2 : 1,
+        multiplier: 1,
       );
       if (!mounted) return false;
       if (result['success'] == true && result['balance'] != null) {
@@ -280,11 +282,17 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     final duration = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!).inSeconds
         : 1;
-    final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+    final finalScore = _originalCoinsEarned;
 
     if (!mounted) return;
     final saved = await _syncQuizResult(finalScore, duration);
     if (!saved) return;
+
+    _claimCount++;
+    if (_claimCount % 2 == 0 && mounted) {
+      final adState = context.read<AdState>();
+      await adState.showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+    }
 
     if (mounted) {
       Navigator.of(context).pop(finalScore);
@@ -295,7 +303,7 @@ class _MathQuizScreenState extends State<MathQuizScreen>
     final duration = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!).inSeconds
         : 1;
-    final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+    final finalScore = _originalCoinsEarned;
 
     if (finalScore > 0) {
       if (!mounted) return;
@@ -303,8 +311,39 @@ class _MathQuizScreenState extends State<MathQuizScreen>
       if (!saved) return;
     }
 
+    _claimCount++;
+    if (_claimCount % 2 == 0 && mounted) {
+      final adState = context.read<AdState>();
+      await adState.showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+    }
+
     if (mounted) {
       _startQuizRound();
+    }
+  }
+
+  void _watchRewardedAd() async {
+    if (_watchedRewardedAd) return;
+
+    final adState = context.read<AdState>();
+    final reward = await adState.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (amount) async {
+        // Reward callback
+      },
+      onAdDismissed: () {
+        // Ad dismissed
+      },
+      onAdFailed: (error) async {
+        debugPrint('Failed to show rewarded ad: $error');
+      },
+    );
+
+    if (mounted && reward != null) {
+      setState(() {
+        _watchedRewardedAd = true;
+        _coinsEarned = _originalCoinsEarned * 2;
+      });
     }
   }
 
@@ -443,7 +482,6 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   Widget _buildMenuScreen() {
     return Column(
       key: const ValueKey('MENU'),
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Spacer(),
         // Title
@@ -738,53 +776,44 @@ class _MathQuizScreenState extends State<MathQuizScreen>
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              // Watch Ad for 2x
-              if (_coinsEarned > 0 && !_adWatched)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
-                  child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (_) => AdRewardDialog(
-                          onRewardGranted: () {
-                            setState(() {
-                              _coinsEarned = _originalCoinsEarned * 2;
-                              _adWatched = true;
-                            });
-                          },
-                        ),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFF8C00), Color(0xFFFFCC44)],
-                        ),
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFFCC44).withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+              // Double Your Coins Button (Rewarded Ad)
+              if (!_watchedRewardedAd && _originalCoinsEarned > 0)
+                Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _watchRewardedAd,
+                      child: Container(
+                        width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFB000), Color(0xFFFFC947)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: const Center(
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFB000).withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.play_circle,
-                                color: Colors.white, size: 20),
-                            SizedBox(width: 6),
+                            const Icon(
+                              Icons.play_circle_outline,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
                             Text(
-                              'Watch Ad for 2x Coins',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
+                              'Double Your Coins',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
                                 color: Colors.white,
                               ),
                             ),
@@ -792,9 +821,9 @@ class _MathQuizScreenState extends State<MathQuizScreen>
                         ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 14),
+                  ],
                 ),
-
               // Play Again
               GestureDetector(
                 onTap: _playAgain,

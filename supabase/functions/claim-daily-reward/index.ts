@@ -16,8 +16,21 @@ Deno.serve(async (req) => {
   }
 
   const uid = user.id;
+  
+  // Parse request body for amount (default 100)
+  let amount = 100;
+  try {
+    const body = await req.json();
+    if (body.amount && typeof body.amount === 'number') {
+      amount = Math.max(1, Math.min(200, body.amount)); // Clamp between 1-200
+    }
+  } catch {
+    // No body or invalid JSON, use default
+  }
+
   const { data, error } = await supabase.rpc("claim_daily_reward", {
     p_user_id: uid,
+    p_amount: amount,
   });
 
   if (error) {

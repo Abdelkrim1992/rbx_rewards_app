@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../state/app_state.dart';
+import '../state/ad_state.dart';
+import '../models/ad_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chest_painter.dart';
 import '../widgets/coin_burst.dart';
 import '../widgets/game_prefs.dart';
+import '../utils/reward_helper.dart';
 
 class ChestScreen extends StatefulWidget {
   const ChestScreen({super.key});
@@ -67,23 +70,42 @@ class _ChestScreenState extends State<ChestScreen>
     super.dispose();
   }
 
-  void _openChest() {
-    showDialog<int>(
+  Future<void> _openChest() async {
+    // Step 1: Show chest opening animation
+    final earnedCoins = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
       builder: (context) => const ChestOpeningDialog(),
-    ).then((coinsEarned) async {
-      if (coinsEarned != null) {
-        await GamePrefs.setChestUnlockTime(10800); // Reset to 3 hours
-        if (!mounted) return;
-        setState(() {
-          _secondsRemaining = 10800;
-        });
-        _timer?.cancel();
-        _startTimer();
-      }
-    });
+    );
+
+    if (!mounted || earnedCoins == null) return;
+
+    bool claimed = false;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Chest Reward',
+      baseReward: earnedCoins,
+      quickPlacement: AdPlacement.chestOpen,
+      premiumPlacement: AdPlacement.doubleReward,
+      onSuccess: (coins) async {
+        if (mounted) {
+          await context.read<AppState>().addCoins(coins, source: 'chest');
+          claimed = true;
+        }
+      },
+    );
+
+    // Step 4: Reset chest timer
+    if (claimed && mounted) {
+      await GamePrefs.setChestUnlockTime(10800); // Reset to 3 hours
+      setState(() {
+        _secondsRemaining = 10800;
+      });
+      _timer?.cancel();
+      _startTimer();
+    }
   }
 
   @override
@@ -251,14 +273,6 @@ class _ChestScreenState extends State<ChestScreen>
                     text: 'Open Chest',
                     onTap: _secondsRemaining == 0 ? _openChest : null,
                   ),
-                  if (_secondsRemaining > 0) ...[
-                    const SizedBox(height: 16),
-                    _SecondaryButton(
-                      text: 'Open Instantly — Watch Ad',
-                      icon: Icons.ondemand_video,
-                      onTap: _openChest,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -370,72 +384,6 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
   }
 }
 
-// ─── Secondary Button ───
-class _SecondaryButton extends StatefulWidget {
-  final String text;
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _SecondaryButton({required this.text, required this.icon, this.onTap});
-  @override
-  State<_SecondaryButton> createState() => _SecondaryButtonState();
-}
-
-class _SecondaryButtonState extends State<_SecondaryButton> {
-  double _scale = 1.0;
-  @override
-  Widget build(BuildContext context) {
-    final bool isEnabled = widget.onTap != null;
-    return GestureDetector(
-      onTapDown: isEnabled ? (_) => setState(() => _scale = 0.96) : null,
-      onTapUp: isEnabled
-          ? (_) {
-              setState(() => _scale = 1.0);
-              widget.onTap!();
-            }
-          : null,
-      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: isEnabled
-                    ? AppColors.primary.withOpacity(0.3)
-                    : const Color(0xFFE2E8F0),
-                width: 1.5),
-          ),
-          alignment: Alignment.center,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                widget.text,
-                style: TextStyle(
-                  color:
-                      isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                widget.icon,
-                color: isEnabled ? AppColors.primary : const Color(0xFF94A3B8),
-                size: 20,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Chest Opening Dialog ───
 class ChestOpeningDialog extends StatefulWidget {
   const ChestOpeningDialog({super.key});
@@ -500,14 +448,11 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
         _burstCoins = true;
       });
     }
-    // Wait for the coin burst to fully finish (2 seconds) before popping up the reward
+    // Wait for the coin burst to fully finish (2 seconds) before closing
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
-      setState(() {
-        _showReward = true;
-        _earnedCoins = 500;
-      });
-      _rewardController.forward();
+      Navigator.of(context)
+          .pop(500); // return earned coins to start two-tier flow
     }
   }
 
@@ -536,163 +481,24 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
               alignment: Alignment.center,
               children: [
                 // Coin Burst Animation (rendered behind the reward popup, coming out of the chest)
-                if (!_showReward)
-                  Positioned.fill(
-                    child: CoinBurstWidget(isTriggered: _burstCoins),
-                  ),
+                Positioned.fill(
+                  child: CoinBurstWidget(isTriggered: _burstCoins),
+                ),
 
                 // Chest with open animation
-                if (!_showReward)
-                  Positioned(
-                    top: 100,
-                    child: Transform.rotate(
-                      angle: _shakeAnim.value,
-                      child: SizedBox(
-                        width: 240,
-                        height: 240,
-                        child: CustomPaint(
-                          painter: ChestPainter(openAmount: _openAnim.value),
-                        ),
+                Positioned(
+                  top: 100,
+                  child: Transform.rotate(
+                    angle: _shakeAnim.value,
+                    child: SizedBox(
+                      width: 240,
+                      height: 240,
+                      child: CustomPaint(
+                        painter: ChestPainter(openAmount: _openAnim.value),
                       ),
                     ),
                   ),
-
-                // Reward card
-                if (_showReward)
-                  Center(
-                    child: Opacity(
-                      opacity: _rewardOpacity.value.clamp(0.0, 1.0),
-                      child: Transform.scale(
-                        scale: _rewardScale.value.clamp(0.0, 1.5),
-                        child: Container(
-                          padding: const EdgeInsets.all(28),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: 2,
-                                spreadRadius: 0,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text('🎉', style: TextStyle(fontSize: 40)),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Congratulations!',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF131326),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8F9FA),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFF1F5F9)),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      AppAssets.goldRbxCoin,
-                                      width: 28,
-                                      height: 28,
-                                      errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.monetization_on,
-                                        color: Color(0xFFFFCC44),
-                                        size: 28,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      '+$_earnedCoins RBX',
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w900,
-                                        color: AppColors.primary,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              _InteractiveCard(
-                                onTap: _isClaiming
-                                    ? null
-                                    : () async {
-                                        setState(() {
-                                          _isClaiming = true;
-                                        });
-                                        try {
-                                          debugPrint(
-                                              '[Chest] Claiming $_earnedCoins coins...');
-                                          await context
-                                              .read<AppState>()
-                                              .addCoins(_earnedCoins,
-                                                  source: 'chest');
-                                          debugPrint(
-                                              '[Chest] Claim succeeded.');
-                                        } catch (e, st) {
-                                          debugPrint(
-                                              '[Chest] Claim error: $e\n$st');
-                                        }
-                                        if (!context.mounted) return;
-                                        Navigator.of(context).pop(_earnedCoins);
-                                      },
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    gradient: _isClaiming
-                                        ? null
-                                        : AppColors.primaryGradient,
-                                    color: _isClaiming
-                                        ? Colors.white.withOpacity(0.5)
-                                        : null,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: _isClaiming
-                                        ? null
-                                        : [
-                                            BoxShadow(
-                                              color: AppColors.primary
-                                                  .withOpacity(0.3),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 6),
-                                            ),
-                                          ],
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    _isClaiming
-                                        ? 'Claiming...'
-                                        : 'Claim Reward',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                ),
               ],
             ),
           );

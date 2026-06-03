@@ -17,13 +17,14 @@ class RewardService {
   String? get _userId => _client?.auth.currentUser?.id;
 
   /// Claim daily reward via Edge Function.
-  Future<Map<String, dynamic>> claimDailyReward() async {
+  /// [amount] specifies the reward amount (default 100).
+  Future<Map<String, dynamic>> claimDailyReward({int amount = 100}) async {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
 
     final resp = await _client!.functions.invoke(
       'claim-daily-reward',
-      body: {},
+      body: {'amount': amount},
     );
 
     if (resp.status != 200) {

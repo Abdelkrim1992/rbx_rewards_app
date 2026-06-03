@@ -13,7 +13,12 @@ import 'screens/profile_screen.dart';
 import 'services/auth_service.dart';
 import 'services/coin_service.dart';
 import 'services/reward_service.dart';
+import 'services/ad_service.dart';
+import 'services/ad_tracker_service.dart';
+import 'services/lucky_bonus_service.dart';
+import 'services/connectivity_service.dart';
 import 'state/app_state.dart';
+import 'state/ad_state.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/quit_confirmation_dialog.dart';
@@ -58,15 +63,30 @@ Future<void> main() async {
   final authService = AuthService();
   final coinService = CoinService();
   final rewardService = RewardService();
+  final adService = AdService();
+  final adTrackerService = AdTrackerService();
+  final connectivityService = ConnectivityService()..startListening();
+  LuckyBonusService()..load();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppState(
-        supabaseEnabled: supabaseInitialized,
-        authService: authService,
-        coinService: coinService,
-        rewardService: rewardService,
-      )..load(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AppState(
+            supabaseEnabled: supabaseInitialized,
+            authService: authService,
+            coinService: coinService,
+            rewardService: rewardService,
+          )..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AdState(
+            adService: adService,
+            trackerService: adTrackerService,
+          )..initialize(),
+        ),
+        ChangeNotifierProvider.value(value: connectivityService),
+      ],
       child: const RbxRewardsApp(),
     ),
   );
@@ -90,7 +110,8 @@ class RbxRewardsApp extends StatelessWidget {
       ),
       builder: (context, child) {
         return Container(
-          color: const Color(0xFFF0F0F0), // Subtle background color outside the app area
+          color: const Color(
+              0xFFF0F0F0), // Subtle background color outside the app area
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 500),
@@ -115,21 +136,11 @@ class _AppNavigatorState extends State<AppNavigator>
     with WidgetsBindingObserver {
   int _currentTab = 0;
   bool _showSpin = false;
-  bool _showLoadingOverlay = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _startLoadingTimer();
-  }
-
-  void _startLoadingTimer() {
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => _showLoadingOverlay = false);
-      }
-    });
   }
 
   @override
@@ -140,10 +151,7 @@ class _AppNavigatorState extends State<AppNavigator>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      setState(() => _showLoadingOverlay = true);
-      _startLoadingTimer();
-    }
+    // App lifecycle tracking can be handled here if needed in the future
   }
 
   Future<void> _onGetStarted() async {
@@ -227,15 +235,7 @@ class _AppNavigatorState extends State<AppNavigator>
       );
     }
 
-    if (_showLoadingOverlay) {
-      return Stack(
-        children: [
-          Offstage(child: destination),
-          const LoadingScreen(),
-        ],
-      );
-    }
-
+    // Return directly without the forced loading overlay
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 500),
       transitionBuilder: (child, animation) => FadeTransition(

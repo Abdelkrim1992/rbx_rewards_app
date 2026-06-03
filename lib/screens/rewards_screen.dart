@@ -962,70 +962,51 @@ class RedeemSuccessDialog extends StatelessWidget {
       elevation: 0,
       insetPadding: const EdgeInsets.all(24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.25),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            ),
-            const BoxShadow(
-              color: Colors.black12,
+              color: AppColors.primary.withValues(alpha: 0.2),
               blurRadius: 20,
-              offset: Offset(0, 10),
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Celebration icon
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.celebration,
-                color: Colors.white,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Title
+            const Text('🎉', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 8),
             const Text(
               'Congratulations!',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
+                color: Color(0xFF131326),
               ),
             ),
             const SizedBox(height: 8),
-
-            // Reward name
+            const Text(
+              'Your reward has been requested',
+              style: TextStyle(
+                fontSize: 15,
+                color: Color(0xFF868A9F),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFF1F5F9)),
               ),
               child: Text(
                 rewardTitle,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1033,23 +1014,19 @@ class RedeemSuccessDialog extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-
-            // 48h message
+            const SizedBox(height: 8),
             const Text(
               'You will receive your reward within 48 hours.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.secondaryText,
+                color: Color(0xFF868A9F),
                 height: 1.4,
               ),
             ),
             const SizedBox(height: 24),
-
-            // Close button
-            GestureDetector(
+            _InteractiveCard(
               onTap: () => Navigator.of(context).pop(),
               child: Container(
                 width: double.infinity,
@@ -1059,7 +1036,7 @@ class RedeemSuccessDialog extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -1067,7 +1044,7 @@ class RedeemSuccessDialog extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: const Text(
-                  'Awesome!',
+                  'Done',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
@@ -1079,6 +1056,37 @@ class RedeemSuccessDialog extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _InteractiveCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _InteractiveCard({required this.child, this.onTap});
+
+  @override
+  State<_InteractiveCard> createState() => _InteractiveCardState();
+}
+
+class _InteractiveCardState extends State<_InteractiveCard> {
+  double _scale = 1.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _scale = 0.97),
+      onTapUp: (_) {
+        setState(() => _scale = 1.0);
+        widget.onTap?.call();
+      },
+      onTapCancel: () => setState(() => _scale = 1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 100),
+        child: widget.child,
       ),
     );
   }
