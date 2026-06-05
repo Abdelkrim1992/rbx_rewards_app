@@ -10,31 +10,25 @@ import 'analytics_service.dart';
 /// Manages loading, preloading, and displaying of rewarded and interstitial video ads.
 class AdService {
   // Test Ad Unit IDs (Android)
-  static const String _testAdUnitIdAndroid = 'ca-app-pub-3940256099942544/5224354917';
-  static const String _testInterstitialIdAndroid = 'ca-app-pub-3940256099942544/1033173712';
-  static const String _testRewardedInterstitialIdAndroid = 'ca-app-pub-3940256099942544/5354046379';
+  static const String _testAdUnitIdAndroid = String.fromEnvironment('TEST_AD_UNIT_ID_ANDROID');
+  static const String _testInterstitialIdAndroid = String.fromEnvironment('TEST_INTERSTITIAL_ID_ANDROID');
+  static const String _testRewardedInterstitialIdAndroid = String.fromEnvironment('TEST_REWARDED_INTERSTITIAL_ID_ANDROID');
 
   // Test Ad Unit IDs (iOS)
-  static const String _testAdUnitIdIOS = 'ca-app-pub-3940256099942544/1712485313';
-  static const String _testInterstitialIdIOS = 'ca-app-pub-3940256099942544/4411468910';
-  static const String _testRewardedInterstitialIdIOS = 'ca-app-pub-3940256099942544/6978759866';
+  static const String _testAdUnitIdIOS = String.fromEnvironment('TEST_AD_UNIT_ID_IOS');
+  static const String _testInterstitialIdIOS = String.fromEnvironment('TEST_INTERSTITIAL_ID_IOS');
+  static const String _testRewardedInterstitialIdIOS = String.fromEnvironment('TEST_REWARDED_INTERSTITIAL_ID_IOS');
 
-  // Secure Android Production Keys (Obfuscated fallbacks)
-  static final String _premiumAdUnitIdAndroid = const String.fromEnvironment('PREMIUM_AD_UNIT_ID').isNotEmpty
-      ? const String.fromEnvironment('PREMIUM_AD_UNIT_ID')
-      : _deobfuscate('7620384282/2724509372983216-bup-ppa-ac');
+  // Secure Android Production Keys (Injected via --dart-define-from-file=.env)
+  static final String _premiumAdUnitIdAndroid = const String.fromEnvironment('PREMIUM_AD_UNIT_ID');
+  static final String _quickAdUnitIdAndroid = const String.fromEnvironment('QUICK_AD_UNIT_ID');
 
-  static final String _quickAdUnitIdAndroid = const String.fromEnvironment('QUICK_AD_UNIT_ID').isNotEmpty
-      ? const String.fromEnvironment('QUICK_AD_UNIT_ID')
-      : _deobfuscate('1391173714/2724509372983216-bup-ppa-ac');
-
-  static String _deobfuscate(String obfuscated) {
-    return obfuscated.split('').reversed.join('');
-  }
+  // Secure iOS Production Keys (Injected via --dart-define-from-file=.env)
+  static final String _premiumAdUnitIdIOS = const String.fromEnvironment('PREMIUM_AD_UNIT_ID_IOS');
+  static final String _quickAdUnitIdIOS = const String.fromEnvironment('QUICK_AD_UNIT_ID_IOS');
 
   static const int _maxPreloadedAds = 3;
   static const int _maxRetryAttempts = 5;
-  static const Duration _adCacheTimeout = Duration(hours: 4);
   static const int _frequencyCap = 3; // impressions per creative per day
 
   /// Multiple ad unit IDs per placement for creative rotation (Android).
@@ -51,23 +45,21 @@ class AdService {
   };
 
   /// Multiple ad unit IDs per placement for creative rotation (iOS).
-  /// TODO: Replace placeholders with your actual iOS production Ad Unit IDs.
   final Map<AdPlacement, List<String>> _productionAdUnitIdsIOS = {
-    AdPlacement.dailyReward: ['ca-app-pub-6123892739054272/2843502364'],
-    AdPlacement.chestOpen: ['ca-app-pub-6123892739054272/4393903126'],
-    AdPlacement.chestInstantUnlock: ['ca-app-pub-6123892739054272/9105658382'],
-    AdPlacement.spinForced: ['ca-app-pub-6123892739054272/3832620178'],
-    AdPlacement.spinExtra: ['ca-app-pub-6123892739054272/9897511248'],
-    AdPlacement.miniGameCompletion: ['ca-app-pub-6123892739054272/3882767236'],
-    AdPlacement.scratchCard: ['ca-app-pub-6123892739054272/8893375165'],
-    AdPlacement.doubleReward: ['ca-app-pub-6123892739054272/2049295443'],
-    AdPlacement.luckyBonus: ['ca-app-pub-6123892739054272/3332102891'],
+    AdPlacement.dailyReward: [_premiumAdUnitIdIOS],
+    AdPlacement.chestOpen: [_premiumAdUnitIdIOS],
+    AdPlacement.chestInstantUnlock: [_premiumAdUnitIdIOS],
+    AdPlacement.spinForced: [_premiumAdUnitIdIOS],
+    AdPlacement.spinExtra: [_premiumAdUnitIdIOS],
+    AdPlacement.miniGameCompletion: [_premiumAdUnitIdIOS],
+    AdPlacement.scratchCard: [_premiumAdUnitIdIOS],
+    AdPlacement.doubleReward: [_premiumAdUnitIdIOS],
+    AdPlacement.luckyBonus: [_premiumAdUnitIdIOS],
   };
 
   final List<RewardedAd> _preloadedAds = [];
   final Map<AdPlacement, InterstitialAd?> _preloadedInterstitials = {};
   final Map<AdPlacement, RewardedInterstitialAd?> _preloadedRewardedInterstitials = {};
-  final Map<AdPlacement, AdConfig> _adConfigs = {};
   final Map<String, int> _retryAttempts = {};
   bool _isInitialized = false;
   bool _developerModeEnabled = false;
@@ -234,6 +226,7 @@ class AdService {
     debugPrint(
         'AdService: retrying ${placement.name} in ${delay.inSeconds}s (attempt $attempts)');
     await Future.delayed(delay);
+    loadRewardedAd(placement);
   }
 
   Duration _calculateBackoffDelay(int attempt) {
@@ -580,17 +573,16 @@ class AdService {
   };
 
   /// Rewarded interstitial ad unit IDs per placement (iOS).
-  /// TODO: Replace placeholders with your actual iOS production Ad Unit IDs.
   final Map<AdPlacement, List<String>> _productionRewardedInterstitialIdsIOS = {
-    AdPlacement.dailyReward: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.chestOpen: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.chestInstantUnlock: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.spinForced: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.spinExtra: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.miniGameCompletion: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.scratchCard: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.doubleReward: ['ca-app-pub-3940256099942544/6978759866'],
-    AdPlacement.luckyBonus: ['ca-app-pub-3940256099942544/6978759866'],
+    AdPlacement.dailyReward: [_quickAdUnitIdIOS],
+    AdPlacement.chestOpen: [_quickAdUnitIdIOS],
+    AdPlacement.chestInstantUnlock: [_quickAdUnitIdIOS],
+    AdPlacement.spinForced: [_quickAdUnitIdIOS],
+    AdPlacement.spinExtra: [_quickAdUnitIdIOS],
+    AdPlacement.miniGameCompletion: [_quickAdUnitIdIOS],
+    AdPlacement.scratchCard: [_quickAdUnitIdIOS],
+    AdPlacement.doubleReward: [_quickAdUnitIdIOS],
+    AdPlacement.luckyBonus: [_quickAdUnitIdIOS],
   };
 
   /// Dispose all preloaded ads.

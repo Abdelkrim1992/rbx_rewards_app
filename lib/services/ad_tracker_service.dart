@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ad_models.dart';
 
@@ -10,7 +10,7 @@ class AdTrackerService {
   static const int _maxDailyOptionalAds = 10;
   static const int _syncThreshold = 10;
 
-  SharedPreferences? _prefs;
+  static const _secureStorage = FlutterSecureStorage();
   final SupabaseClient? _supabase;
   AdTrackingData _trackingData = AdTrackingData(
     lastResetDate: DateTime.now(),
@@ -24,8 +24,7 @@ class AdTrackerService {
 
   /// Load persisted tracking data.
   Future<void> load() async {
-    _prefs = await SharedPreferences.getInstance();
-    final jsonStr = _prefs!.getString('ad_tracking_data');
+    final jsonStr = await _secureStorage.read(key: 'ad_tracking_data');
     if (jsonStr != null) {
       try {
         final map = jsonDecode(jsonStr) as Map<String, dynamic>;
@@ -81,9 +80,10 @@ class AdTrackerService {
   }
 
   Future<void> _persistCounters() async {
-    if (_prefs == null) return;
-    await _prefs!
-        .setString('ad_tracking_data', jsonEncode(_trackingData.toJson()));
+    await _secureStorage.write(
+      key: 'ad_tracking_data',
+      value: jsonEncode(_trackingData.toJson()),
+    );
   }
 
   /// Whether a forced ad can be shown today.

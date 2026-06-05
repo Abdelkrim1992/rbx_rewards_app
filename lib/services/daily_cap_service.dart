@@ -1,7 +1,8 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Tracks daily coin earnings and enforces a 5000 RBX cap.
 class DailyCapService {
+  static const _secureStorage = FlutterSecureStorage();
   static const String _dailyEarningsKey = 'daily_earnings';
   static const String _earningsDateKey = 'earnings_date';
   static const int _dailyCap = 5000;
@@ -15,13 +16,13 @@ class DailyCapService {
 
   /// Load persisted daily earnings.
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedDate = prefs.getString(_earningsDateKey) ?? '';
+    final storedDate = await _secureStorage.read(key: _earningsDateKey) ?? '';
     final now = DateTime.now();
     final today = '${now.year}-${now.month}-${now.day}';
 
     if (storedDate == today) {
-      _todayEarnings = prefs.getInt(_dailyEarningsKey) ?? 0;
+      final storedEarningsStr = await _secureStorage.read(key: _dailyEarningsKey);
+      _todayEarnings = storedEarningsStr != null ? (int.tryParse(storedEarningsStr) ?? 0) : 0;
     } else {
       _todayEarnings = 0;
     }
@@ -43,8 +44,7 @@ class DailyCapService {
   }
 
   Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_dailyEarningsKey, _todayEarnings);
-    await prefs.setString(_earningsDateKey, _currentDate);
+    await _secureStorage.write(key: _dailyEarningsKey, value: _todayEarnings.toString());
+    await _secureStorage.write(key: _earningsDateKey, value: _currentDate);
   }
 }

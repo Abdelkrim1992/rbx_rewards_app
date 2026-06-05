@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Tracks app usage time and triggers lucky bonus popups every 2 hours.
 class LuckyBonusService {
+  static const _secureStorage = FlutterSecureStorage();
   static const String _lastBonusTimeKey = 'lucky_bonus_last_time';
   static const String _bonusCountTodayKey = 'lucky_bonus_count_today';
   static const String _bonusDateKey = 'lucky_bonus_date';
@@ -31,13 +32,16 @@ class LuckyBonusService {
 
   /// Load persisted state.
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastTime = prefs.getInt(_lastBonusTimeKey);
-    if (lastTime != null) {
-      _lastBonusTime = DateTime.fromMillisecondsSinceEpoch(lastTime);
+    final lastTimeStr = await _secureStorage.read(key: _lastBonusTimeKey);
+    if (lastTimeStr != null) {
+      final lastTime = int.tryParse(lastTimeStr);
+      if (lastTime != null) {
+        _lastBonusTime = DateTime.fromMillisecondsSinceEpoch(lastTime);
+      }
     }
-    _bonusCountToday = prefs.getInt(_bonusCountTodayKey) ?? 0;
-    _todayDate = prefs.getString(_bonusDateKey) ?? '';
+    final countTodayStr = await _secureStorage.read(key: _bonusCountTodayKey);
+    _bonusCountToday = countTodayStr != null ? (int.tryParse(countTodayStr) ?? 0) : 0;
+    _todayDate = await _secureStorage.read(key: _bonusDateKey) ?? '';
     _checkDailyReset();
   }
 
@@ -74,13 +78,12 @@ class LuckyBonusService {
   }
 
   Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
     if (_lastBonusTime != null) {
-      await prefs.setInt(
-          _lastBonusTimeKey, _lastBonusTime!.millisecondsSinceEpoch);
+      await _secureStorage.write(
+          key: _lastBonusTimeKey, value: _lastBonusTime!.millisecondsSinceEpoch.toString());
     }
-    await prefs.setInt(_bonusCountTodayKey, _bonusCountToday);
-    await prefs.setString(_bonusDateKey, _todayDate);
+    await _secureStorage.write(key: _bonusCountTodayKey, value: _bonusCountToday.toString());
+    await _secureStorage.write(key: _bonusDateKey, value: _todayDate);
   }
 
   void dispose() {

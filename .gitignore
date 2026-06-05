@@ -40,7 +40,7 @@ app.*.symbols
 app.*.map.json
 
 # Environment secrets & API keys
-.env
+# .env
 .env.local
 .env.*.local
 *.key

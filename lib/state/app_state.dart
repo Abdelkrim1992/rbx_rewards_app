@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
@@ -14,6 +15,7 @@ import '../services/reward_service.dart';
 import '../widgets/game_prefs.dart';
 
 class AppState extends ChangeNotifier {
+  static const _secureStorage = FlutterSecureStorage();
   static const String _keyOnboardingCompleted = 'onboarding_completed';
   static const String _keySpinFreeSpins = 'spin_free_spins';
   static const String _keySpinCooldownEnd = 'spin_cooldown_end';
@@ -128,8 +130,10 @@ class AppState extends ChangeNotifier {
     _isOnboardingCompleted = prefs.getBool(_keyOnboardingCompleted) ?? false;
     _profilePhotoUrl = await GamePrefs.getProfilePhotoUrl();
 
-    _spinFreeSpins = prefs.getInt(_keySpinFreeSpins) ?? 5;
-    final spinCooldownEnd = prefs.getInt(_keySpinCooldownEnd);
+    final spinFreeSpinsStr = await _secureStorage.read(key: _keySpinFreeSpins);
+    _spinFreeSpins = spinFreeSpinsStr != null ? (int.tryParse(spinFreeSpinsStr) ?? 5) : 5;
+    final spinCooldownEndStr = await _secureStorage.read(key: _keySpinCooldownEnd);
+    final spinCooldownEnd = spinCooldownEndStr != null ? int.tryParse(spinCooldownEndStr) : null;
     if (spinCooldownEnd != null) {
       final now = DateTime.now().millisecondsSinceEpoch;
       final remainingMs = spinCooldownEnd - now;
@@ -140,7 +144,7 @@ class AppState extends ChangeNotifier {
         _spinCooldownRemaining = Duration.zero;
         if (_spinFreeSpins == 0) {
           _spinFreeSpins = 3;
-          prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
+          await _secureStorage.write(key: _keySpinFreeSpins, value: '3');
         }
       }
     }
@@ -163,7 +167,8 @@ class AppState extends ChangeNotifier {
     }
 
     _coins = await GamePrefs.getCoins();
-    _firstRedemptionReachedAt = prefs.getInt(_keyFirstRedemptionReachedAt);
+    final firstRedemptionReachedAtStr = await _secureStorage.read(key: _keyFirstRedemptionReachedAt);
+    _firstRedemptionReachedAt = firstRedemptionReachedAtStr != null ? int.tryParse(firstRedemptionReachedAtStr) : null;
 
     if (supabaseEnabled) {
       _balanceSub = _coinService.userDataStream.listen(
@@ -224,8 +229,8 @@ class AppState extends ChangeNotifier {
     }
 
     // Local fallback
-    final prefs = await SharedPreferences.getInstance();
-    final claimedAt = prefs.getInt(_keyDailyRewardClaimedAt);
+    final claimedAtStr = await _secureStorage.read(key: _keyDailyRewardClaimedAt);
+    final claimedAt = claimedAtStr != null ? int.tryParse(claimedAtStr) : null;
     if (claimedAt != null) {
       final lastClaimed = DateTime.fromMillisecondsSinceEpoch(claimedAt);
       final cooldownEnd = lastClaimed.add(const Duration(hours: 24));
@@ -247,16 +252,14 @@ class AppState extends ChangeNotifier {
       if (cooldownMs > 0) {
         _spinCooldownRemaining = Duration(milliseconds: cooldownMs);
         _syncSpinCooldownTimer();
-        final prefs = await SharedPreferences.getInstance();
         final cooldownEnd = DateTime.now().millisecondsSinceEpoch + cooldownMs;
-        await prefs.setInt(_keySpinCooldownEnd, cooldownEnd);
+        await _secureStorage.write(key: _keySpinCooldownEnd, value: cooldownEnd.toString());
       } else {
         _spinCooldownRemaining = Duration.zero;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(_keySpinCooldownEnd);
+        await _secureStorage.delete(key: _keySpinCooldownEnd);
         if (_spinFreeSpins == 0) {
           _spinFreeSpins = 3;
-          await prefs.setInt(_keySpinFreeSpins, 3);
+          await _secureStorage.write(key: _keySpinFreeSpins, value: '3');
         }
       }
       notifyListeners();
@@ -387,9 +390,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _persistFirstRedemption() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-        _keyFirstRedemptionReachedAt, _firstRedemptionReachedAt ?? 0);
+    await _secureStorage.write(
+      key: _keyFirstRedemptionReachedAt,
+      value: (_firstRedemptionReachedAt ?? 0).toString(),
+    );
   }
 
   void syncBalanceFromServer(int serverBalance) {
@@ -482,9 +486,11 @@ class AppState extends ChangeNotifier {
     }
 
     // Local offline fallback
-    final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    await prefs.setInt(_keyDailyRewardClaimedAt, now.millisecondsSinceEpoch);
+    await _secureStorage.write(
+      key: _keyDailyRewardClaimedAt,
+      value: now.millisecondsSinceEpoch.toString(),
+    );
     _dailyRewardRemaining = const Duration(hours: 24);
     _syncDailyRewardTimer();
     _coins += amount;
@@ -498,16 +504,14 @@ class AppState extends ChangeNotifier {
   Future<void> addFreeSpin() async {
     _spinFreeSpins++;
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
+    await _secureStorage.write(key: _keySpinFreeSpins, value: _spinFreeSpins.toString());
   }
 
   Future<bool> consumeLocalSpin() async {
     if (_spinFreeSpins <= 0) return false;
     _spinFreeSpins--;
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keySpinFreeSpins, _spinFreeSpins);
+    await _secureStorage.write(key: _keySpinFreeSpins, value: _spinFreeSpins.toString());
     return true;
   }
 
@@ -521,17 +525,15 @@ class AppState extends ChangeNotifier {
         if (cooldownMs > 0) {
           _spinCooldownRemaining = Duration(milliseconds: cooldownMs);
           _syncSpinCooldownTimer();
-          final prefs = await SharedPreferences.getInstance();
           final cooldownEnd =
               DateTime.now().millisecondsSinceEpoch + cooldownMs;
-          await prefs.setInt(_keySpinCooldownEnd, cooldownEnd);
+          await _secureStorage.write(key: _keySpinCooldownEnd, value: cooldownEnd.toString());
         } else {
           _spinCooldownRemaining = Duration.zero;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove(_keySpinCooldownEnd);
+          await _secureStorage.delete(key: _keySpinCooldownEnd);
           if (_spinFreeSpins == 0) {
             _spinFreeSpins = 3;
-            await prefs.setInt(_keySpinFreeSpins, 3);
+            await _secureStorage.write(key: _keySpinFreeSpins, value: '3');
           }
         }
         notifyListeners();
