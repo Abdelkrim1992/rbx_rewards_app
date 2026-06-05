@@ -68,12 +68,12 @@ key.properties
 /windows/flutter/ephemeral/
 
 # Generated lock files (size + merge conflicts)
-# *.lock
-# pubspec.lock
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-# deno.lock
+*.lock
+pubspec.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+deno.lock
 
 # Supabase local/temp files
 supabase/.env
