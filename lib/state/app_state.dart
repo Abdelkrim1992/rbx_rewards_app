@@ -13,6 +13,7 @@ import '../services/game_service.dart';
 import '../services/pending_transaction_service.dart';
 import '../services/reward_service.dart';
 import '../widgets/game_prefs.dart';
+import '../services/pubscale_service.dart';
 
 class AppState extends ChangeNotifier {
   static const _secureStorage = FlutterSecureStorage();
@@ -79,6 +80,7 @@ class AppState extends ChangeNotifier {
   /// while an addCoins/spendCoins operation is in-flight.
   int _pendingCoinOps = 0;
 
+  String? get userId => _authService.currentUser?.id;
   int get coins => _coins;
   int get totalCoinsEarned => _totalCoinsEarned;
   int get consecutiveDays => _consecutiveDays;
@@ -157,6 +159,8 @@ class AppState extends ChangeNotifier {
         _isAuthenticated = authSuccess;
         if (user != null) {
           debugPrint('✅ Anonymous auth success: uid=${user.id}');
+          // Initialize PubScale Offerwall
+          PubscaleService().initialize(user.id);
         } else {
           debugPrint('⚠️ Anonymous auth returned null user');
         }

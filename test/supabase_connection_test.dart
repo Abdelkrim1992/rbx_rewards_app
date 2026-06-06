@@ -1,7 +1,26 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class MockAsyncStorage extends GotrueAsyncStorage {
+  final Map<String, String> _storage = {};
+
+  @override
+  Future<String?> getItem({required String key}) async => _storage[key];
+
+  @override
+  Future<void> removeItem({required String key}) async => _storage.remove(key);
+
+  @override
+  Future<void> setItem({required String key, required String value}) async {
+    _storage[key] = value;
+  }
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
+
   test('Supabase connection test', () async {
     const url = String.fromEnvironment('SUPABASE_URL');
     const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -13,13 +32,14 @@ void main() {
         reason:
             'SUPABASE_ANON_KEY not provided — pass --dart-define=SUPABASE_ANON_KEY=...');
 
-    // Initialize Supabase with in-memory storage (avoids shared_preferences in tests)
+    // Initialize Supabase with in-memory storage (avoids shared_preferences/MissingPluginException in tests)
     await Supabase.initialize(
       url: url,
       anonKey: anonKey,
       debug: false,
-      authOptions: const FlutterAuthClientOptions(
-        localStorage: EmptyLocalStorage(),
+      authOptions: FlutterAuthClientOptions(
+        localStorage: const EmptyLocalStorage(),
+        pkceAsyncStorage: MockAsyncStorage(),
       ),
     );
 

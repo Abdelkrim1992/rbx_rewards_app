@@ -17,6 +17,7 @@ import 'services/ad_service.dart';
 import 'services/ad_tracker_service.dart';
 import 'services/lucky_bonus_service.dart';
 import 'services/connectivity_service.dart';
+import 'services/tapjoy_service.dart';
 import 'state/app_state.dart';
 import 'state/ad_state.dart';
 import 'dart:io';
@@ -67,6 +68,7 @@ Future<void> main() async {
   final adTrackerService = AdTrackerService();
   final connectivityService = ConnectivityService()..startListening();
   LuckyBonusService()..load();
+  TapjoyService()..initialize();
 
   runApp(
     MultiProvider(

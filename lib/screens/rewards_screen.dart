@@ -344,20 +344,44 @@ class _BalanceWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        gradient: AppColors.dailyCardGradient,
+        gradient: AppColors.balanceCardGradient,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
+            color: const Color(0xFF4828A8).withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Decorative sparkles
+          // Decorative glow circles in background
+          Positioned(
+            right: -10,
+            top: -20,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.08),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 70,
+            bottom: -25,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
 
           Row(
             children: [
@@ -384,17 +408,17 @@ class _BalanceWidget extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF131326),
+                        color: Colors.white,
                         letterSpacing: 0,
                         height: 1.1,
                       ),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
+                    Text(
                       'Your RBX Balance',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF4A4B60),
+                        color: Colors.white.withOpacity(0.8),
                         fontWeight: FontWeight.w500,
                       ),
                     ),

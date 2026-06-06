@@ -2,6 +2,10 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            name = "Tapjoy's maven repo"
+            url = uri("https://sdk.tapjoy.com/")
+        }
     }
 }
 

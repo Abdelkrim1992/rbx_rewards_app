@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
@@ -10,6 +11,8 @@ import '../widgets/refreshable_scroll.dart';
 import '../widgets/two_tier_reward_dialog.dart';
 import '../widgets/congratulations_dialog.dart';
 import '../utils/reward_helper.dart';
+import '../services/tapjoy_service.dart';
+import '../services/pubscale_service.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
@@ -102,6 +105,36 @@ class _HomeScreenState extends State<HomeScreen> {
         await context.read<AppState>().incrementOffersCompleted();
       },
     );
+  }
+
+  Future<void> _launchOfferwall(String sdkName) async {
+    if (kIsWeb || (Theme.of(context).platform != TargetPlatform.iOS && Theme.of(context).platform != TargetPlatform.android)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Offerwalls are only supported on Android and iOS devices.'),
+            backgroundColor: AppColors.purple,
+          ),
+        );
+      }
+      return;
+    }
+
+    bool success = false;
+    if (sdkName == 'tapjoy') {
+      success = await TapjoyService().showOfferwall();
+    } else if (sdkName == 'pubscale') {
+      success = await PubscaleService().launch();
+    }
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${sdkName[0].toUpperCase()}${sdkName.substring(1)} Offerwall is loading. Please try again in a moment.'),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+    }
   }
 
   @override
@@ -396,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: const EdgeInsets.only(right: 12),
                                 child: Opacity(
                                   opacity: isDailyClaimed ? 0.7 : 1.0,
-                                  child: Image.network(
+                                  child: Image.asset(
                                     AppAssets.dailyRewardImage,
                                     fit: BoxFit.contain,
                                     errorBuilder: (_, __, ___) => const Icon(
@@ -679,33 +712,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         children: [
                           _HomeOfferListItem(
-                            icon: Icons.casino,
-                            title: 'Candy Crush Saga',
-                            subtitle: 'Reach Level 15',
-                            reward: 2500,
-                            difficulty: 'Hard',
-                            estimatedTime: '3 hours',
-                            onTap: () {},
+                            icon: Icons.star_rounded,
+                            title: 'Mega Reward Offers',
+                            subtitle: 'Games, surveys & app downloads',
+                            reward: 12000,
+                            difficulty: 'Medium',
+                            estimatedTime: 'Varies',
+                            onTap: () => _launchOfferwall('tapjoy'),
                           ),
                           const SizedBox(height: 12),
                           _HomeOfferListItem(
-                            icon: Icons.poll,
-                            title: 'Complete Survey',
-                            subtitle: 'Share your shopping habits',
-                            reward: 800,
+                            icon: Icons.bolt_rounded,
+                            title: 'Express Coin Offers',
+                            subtitle: 'Tasks, surveys & fast payouts',
+                            reward: 15000,
                             difficulty: 'Easy',
-                            estimatedTime: '5 min',
-                            onTap: () => _showSurveyDialog(),
-                          ),
-                          const SizedBox(height: 12),
-                          _HomeOfferListItem(
-                            icon: Icons.shopping_bag,
-                            title: 'Travel Town',
-                            subtitle: 'Install & Open',
-                            reward: 1200,
-                            difficulty: 'Easy',
-                            estimatedTime: '3 min',
-                            onTap: () {},
+                            estimatedTime: 'Varies',
+                            onTap: () => _launchOfferwall('pubscale'),
                           ),
                         ],
                       ),

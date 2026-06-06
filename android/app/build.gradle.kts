@@ -45,3 +45,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation("com.tapjoy:tapjoy-android-sdk:14.4.0")
+    implementation("com.pubscale.sdkone:offerwall:1.0.11")
+}

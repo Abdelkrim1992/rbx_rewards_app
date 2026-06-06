@@ -30,6 +30,17 @@ class AppColors {
     colors: [Color(0xFFEFECFF), Color(0xFFDFD6FF)],
   );
 
+  static const LinearGradient balanceCardGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color.fromARGB(255, 136, 104, 231), // Vibrant purple matching wallet coin image
+      Color.fromARGB(255, 155, 121, 255), // Dominant purple matching wallet coin image
+      Color(0xFFAA8EFF), // Deep purple-indigo matching dark wallet coin tones
+    ],
+    stops: [0.0, 0.5, 1.0],
+  );
+
   static const LinearGradient xpBarGradient = LinearGradient(
     colors: [Color(0xFF6B4BF4), Color(0xFF886EF6)],
   );

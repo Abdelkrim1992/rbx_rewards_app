@@ -5,17 +5,19 @@ import '../state/app_state.dart';
 class RefreshableScrollView extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Widget child;
+  final Future<void> Function()? onRefresh;
 
   const RefreshableScrollView({
     super.key,
     this.padding,
     required this.child,
+    this.onRefresh,
   });
 
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
-      onRefresh: () => context.read<AppState>().refreshCoins(),
+      onRefresh: onRefresh ?? () => context.read<AppState>().refreshCoins(),
       child: SingleChildScrollView(
         key: key,
         physics: const AlwaysScrollableScrollPhysics(),
