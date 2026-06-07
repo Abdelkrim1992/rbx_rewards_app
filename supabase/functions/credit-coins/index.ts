@@ -1,7 +1,6 @@
-// Supabase Edge Function: Credit Coins (generic)
-// Used for non-game coin additions: chests, spin wheel, ads, surveys, scratch cards, quizzes.
-
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
+import { enforceRateLimit } from "../_shared/rate_limit.ts";
+import { redis } from "../_shared/redis.ts";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -34,6 +33,17 @@ Deno.serve(async (req: Request) => {
     return errorResponse("txId required", 400);
   }
 
+  // Enforce rate limit (max 60 coin credits per hour)
+  const rateLimitKey = `ratelimit:credit:${uid}`;
+  try {
+    await enforceRateLimit(rateLimitKey, 60, 3600);
+  } catch (e) {
+    if (e instanceof Response) {
+      return e;
+    }
+    throw e;
+  }
+
   try {
     const { data: newBalance, error: rpcError } = await supabase.rpc("credit_user_coins", {
       p_user_id: uid,
@@ -45,6 +55,17 @@ Deno.serve(async (req: Request) => {
     if (rpcError) {
       console.error("Credit coins RPC error:", rpcError);
       return errorResponse(rpcError.message, 500);
+    }
+
+    // Fetch updated total_earned to sync with weekly leaderboard
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("total_earned")
+      .eq("id", uid)
+      .single();
+
+    if (userRow) {
+      await redis.zadd("leaderboard:weekly", { score: userRow.total_earned, member: uid });
     }
 
     return jsonResponse({ success: true, balance: newBalance });

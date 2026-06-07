@@ -1,6 +1,5 @@
-// Supabase Edge Function: Add Game Coins (with session validation)
-
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
+import { redis } from "../_shared/redis.ts";
 
 const GAME_DAILY_CAP = 50;
 
@@ -51,6 +50,17 @@ Deno.serve(async (req) => {
   const body = await req.json();
   const { amount, gameName, sessionId, durationSeconds, originalScore, multiplier, txId: clientTxId } = body;
 
+  if (!sessionId || typeof sessionId !== "string") {
+    return errorResponse("sessionId required", 400);
+  }
+
+  // 1. Session Lock: Prevent double-submit race conditions
+  const lockKey = `lock:session:${sessionId}`;
+  const locked = await redis.set(lockKey, "1", { nx: true, ex: 30 });
+  if (!locked) {
+    return errorResponse("Duplicate submission in progress", 409);
+  }
+
   // Ensure the user row exists (covers legacy accounts created before trigger setup).
   const { error: userUpsertError } = await supabase
     .from("users")
@@ -65,9 +75,6 @@ Deno.serve(async (req) => {
   if (!gameName || typeof gameName !== "string") {
     return errorResponse("gameName required", 400);
   }
-  if (!sessionId || typeof sessionId !== "string") {
-    return errorResponse("sessionId required", 400);
-  }
   if (!durationSeconds || durationSeconds <= 0) {
     return errorResponse("durationSeconds required", 400);
   }
@@ -78,6 +85,15 @@ Deno.serve(async (req) => {
   // Validate original score against anti-cheat if multiplier is present
   const scoreToValidate = (originalScore !== undefined && originalScore > 0) ? originalScore : amount;
   const finalScore = scoreToValidate * (multiplier ?? 1);
+
+  // 2. Daily Cap Check in Redis
+  const todayStr = new Date().toISOString().split("T")[0];
+  const capKey = `cap:game:${uid}:${todayStr}`;
+  const currentDailyCap = parseInt(await redis.get(capKey) || "0", 10);
+  if (currentDailyCap + finalScore > GAME_DAILY_CAP) {
+    const allowed = Math.max(0, GAME_DAILY_CAP - currentDailyCap);
+    return errorResponse(`Daily game cap reached. Max allowed: ${allowed}`, 400);
+  }
 
   // Feasibility check first — reject unknown games and impossible scores
   const feasibility = isSessionFeasible(gameName, scoreToValidate, durationSeconds);
@@ -116,6 +132,17 @@ Deno.serve(async (req) => {
   const resultJson = typeof result === "string" ? JSON.parse(result) : result;
   if (!resultJson.success) {
     return errorResponse(resultJson.error || "Session processing failed", 400);
+  }
+
+  // 3. Update Daily Cap in Redis
+  await redis.incrby(capKey, finalScore);
+  await redis.expire(capKey, 86400);
+
+  // 4. Update Game High Score Leaderboard in Redis
+  const currentHighScoreStr = await redis.zscore(`leaderboard:${gameName}`, uid);
+  const currentHighScore = currentHighScoreStr ? parseInt(currentHighScoreStr, 10) : 0;
+  if (scoreToValidate > currentHighScore) {
+    await redis.zadd(`leaderboard:${gameName}`, { score: scoreToValidate, member: uid });
   }
 
   console.log(`User ${uid} earned ${finalScore} from ${gameName} (session ${sessionId})`);

@@ -2,6 +2,7 @@
 // Deno runtime — handles and verifies postback webhooks from Lootably, Monlix, IronSource, and Tapjoy
 
 import { supabase, jsonResponse, errorResponse } from "../_shared/supabase_client.ts";
+import { redis } from "../_shared/redis.ts";
 
 function getConfig(provider: string) {
   const maxHourly = parseInt(Deno.env.get("MAX_OFFERS_PER_HOUR") || "10", 10);
@@ -262,8 +263,14 @@ Deno.serve(async (req) => {
     return errorResponse("Invalid amount", 400);
   }
 
-  // 5. Deduplication Check
+  // 5. Deduplication Check (Redis first, then Postgres fallback)
   const txId = `${provider}_${eventId}`;
+  const dedupKey = `dedup:webhook:${txId}`;
+  const isNew = await redis.set(dedupKey, "1", { nx: true, ex: 86400 });
+  if (!isNew) {
+    return jsonResponse({ success: true, credited: 0, reason: "already_processed" });
+  }
+
   const { data: existingTx } = await supabase
     .from("transactions")
     .select("id")

@@ -1,96 +1,97 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../state/ad_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../presentation/providers/ad_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../theme/app_theme.dart';
 
 /// Displays daily ad progress with a gradient bar and milestone badges.
-class AdProgressWidget extends StatelessWidget {
+class AdProgressWidget extends ConsumerWidget {
   const AdProgressWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AdState>(
-      builder: (context, adState, child) {
-        final watched = adState.dailyAdsWatched;
-        final total = 25;
-        final progress = (watched / total).clamp(0.0, 1.0);
-        final isComplete = watched >= total;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final adNotifier = ref.watch(adProvider.notifier);
+    final watched = adNotifier.dailyAdsWatched;
+    const total = 25;
+    final progress = (watched / total).clamp(0.0, 1.0);
+    final isComplete = watched >= total;
 
-        return GestureDetector(
-          onTap: () => _showDetailedProgress(context, adState),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF6B46C1).withOpacity(0.15),
-                  const Color(0xFFD4AF37).withOpacity(0.15),
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF6B46C1).withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showDetailedProgress(context, ref),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF6B46C1).withValues(alpha: 0.15),
+              const Color(0xFFD4AF37).withValues(alpha: 0.15),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF6B46C1).withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Text(
-                      isComplete
-                          ? '🎉 $watched/$total ads watched!'
-                          : '$watched/$total ads watched today',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (isComplete)
-                      const Text('🎉', style: TextStyle(fontSize: 18)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: SizedBox(
-                    height: 8,
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withOpacity(0.1),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isComplete
-                            ? const Color(0xFFD4AF37)
-                            : const Color(0xFF6B46C1),
-                      ),
-                    ),
+                Text(
+                  isComplete
+                      ? '🎉 $watched/$total ads watched!'
+                      : '$watched/$total ads watched today',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _MilestoneBadge(at: 5, watched: watched),
-                    _MilestoneBadge(at: 10, watched: watched),
-                    _MilestoneBadge(at: 15, watched: watched),
-                    _MilestoneBadge(at: 20, watched: watched),
-                    _MilestoneBadge(at: 25, watched: watched),
-                  ],
-                ),
+                const Spacer(),
+                if (isComplete)
+                  const Text('🎉', style: TextStyle(fontSize: 18)),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 8,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  backgroundColor: Colors.white.withValues(alpha: 0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isComplete
+                        ? const Color(0xFFD4AF37)
+                        : const Color(0xFF6B46C1),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _MilestoneBadge(at: 5, watched: watched),
+                _MilestoneBadge(at: 10, watched: watched),
+                _MilestoneBadge(at: 15, watched: watched),
+                _MilestoneBadge(at: 20, watched: watched),
+                _MilestoneBadge(at: 25, watched: watched),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  void _showDetailedProgress(BuildContext context, AdState adState) {
+  void _showDetailedProgress(BuildContext context, WidgetRef ref) {
+    final adNotifier = ref.read(adProvider.notifier);
+    final tracker = ref.read(adTrackerServiceProvider);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -105,24 +106,24 @@ class AdProgressWidget extends StatelessWidget {
           children: [
             _DetailRow(
               label: 'Forced ads',
-              value: '${adState.trackingData.dailyForcedAds}/15',
+              value: '${tracker.trackingData.dailyForcedAds}/15',
             ),
             const SizedBox(height: 8),
             _DetailRow(
               label: 'Optional ads',
-              value: '${adState.trackingData.dailyOptionalAds}/10',
+              value: '${tracker.trackingData.dailyOptionalAds}/10',
             ),
             const SizedBox(height: 8),
             _DetailRow(
               label: 'Total today',
-              value: '${adState.dailyAdsWatched}/25',
+              value: '${adNotifier.dailyAdsWatched}/25',
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(
+            child: const Text(
               'Close',
               style: TextStyle(color: AppColors.primary),
             ),

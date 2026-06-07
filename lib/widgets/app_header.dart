@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../state/app_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../presentation/providers/user_provider.dart';
 import '../theme/app_theme.dart';
 
-class RbxAppHeader extends StatelessWidget {
+class RbxAppHeader extends ConsumerWidget {
   final ValueChanged<int>? onNavTap;
 
   const RbxAppHeader({super.key, this.onNavTap});
 
   @override
-  Widget build(BuildContext context) {
-    final profilePhotoUrl = context.watch<AppState>().profilePhotoUrl;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userProfile = ref.watch(userProfileProvider);
+    final profilePhotoUrl = userProfile.profilePhotoUrl;
 
     return Padding(
       padding: const EdgeInsets.only(
@@ -41,30 +42,6 @@ class RbxAppHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // Column(
-              //   crossAxisAlignment: CrossAxisAlignment.start,
-              //   children: [
-              //     const Text(
-              //       'RBX',
-              //       style: TextStyle(
-              //         fontSize: 24,
-              //         fontWeight: FontWeight.w900,
-              //         fontStyle: FontStyle.italic,
-              //         color: Color(0xFF131326),
-              //         letterSpacing: -0.6,
-              //         height: 1.0,
-              //       ),
-              //     ),
-              //     const Text(
-              //       'Spin & Earn',
-              //       style: TextStyle(
-              //         fontSize: 14,
-              //         color: AppColors.purple,
-              //         height: 1.0,
-              //       ),
-              //     ),
-              //   ],
-              // ),
             ],
           ),
           GestureDetector(
@@ -91,22 +68,22 @@ class RbxAppHeader extends StatelessWidget {
               ),
               child: ClipOval(
                 child: profilePhotoUrl != null
-                    ? Image.network(
-                        profilePhotoUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.asset(
-                          AppAssets.profileAvatar,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              const Icon(Icons.person, color: AppColors.purple),
-                        ),
-                      )
-                    : Image.asset(
+                  ? Image.network(
+                      profilePhotoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Image.asset(
                         AppAssets.profileAvatar,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) =>
                             const Icon(Icons.person, color: AppColors.purple),
                       ),
+                    )
+                  : Image.asset(
+                      AppAssets.profileAvatar,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.person, color: AppColors.purple),
+                    ),
               ),
             ),
           ),

@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
     offers[0].isFeatured = true;
   }
 
-  return jsonResponse({ success: true, offers });
+  return jsonResponse({ success: true, offers }, 200, { "Cache-Control": "public, max-age=10, s-maxage=30" });
 });
 
 // Helper: Standardize Categories

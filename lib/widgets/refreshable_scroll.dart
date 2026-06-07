@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../state/app_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../presentation/providers/user_provider.dart';
 
-class RefreshableScrollView extends StatelessWidget {
+class RefreshableScrollView extends ConsumerWidget {
   final EdgeInsetsGeometry? padding;
   final Widget child;
   final Future<void> Function()? onRefresh;
@@ -15,9 +15,11 @@ class RefreshableScrollView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      onRefresh: onRefresh ?? () => context.read<AppState>().refreshCoins(),
+      onRefresh: onRefresh ?? () async {
+        ref.invalidate(userProfileStreamProvider);
+      },
       child: SingleChildScrollView(
         key: key,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -28,7 +30,7 @@ class RefreshableScrollView extends StatelessWidget {
   }
 }
 
-class RefreshableListView extends StatelessWidget {
+class RefreshableListView extends ConsumerWidget {
   final EdgeInsetsGeometry? padding;
   final List<Widget> children;
 
@@ -39,9 +41,11 @@ class RefreshableListView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      onRefresh: () => context.read<AppState>().refreshCoins(),
+      onRefresh: () async {
+        ref.invalidate(userProfileStreamProvider);
+      },
       child: ListView(
         key: key,
         physics: const AlwaysScrollableScrollPhysics(),

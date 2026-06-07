@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/loading_screen.dart';
-import 'screens/onboarding_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/spin_screen.dart';
-import 'screens/games_screen.dart';
-import 'screens/offers_screen.dart';
-import 'screens/rewards_screen.dart';
-import 'screens/profile_screen.dart';
-import 'services/auth_service.dart';
-import 'services/coin_service.dart';
-import 'services/reward_service.dart';
-import 'services/ad_service.dart';
-import 'services/ad_tracker_service.dart';
-import 'services/lucky_bonus_service.dart';
-import 'services/connectivity_service.dart';
-import 'services/tapjoy_service.dart';
-import 'state/app_state.dart';
-import 'state/ad_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'presentation/screens/loading_screen.dart';
+import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/screens/home_screen.dart';
+import 'presentation/screens/spin_screen.dart';
+import 'presentation/screens/games_screen.dart';
+import 'presentation/screens/offers_screen.dart';
+import 'presentation/screens/rewards_screen.dart';
+import 'presentation/screens/profile_screen.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/quit_confirmation_dialog.dart';
+import 'data/hive_repository.dart';
+import 'presentation/providers/providers.dart';
+import 'presentation/providers/user_provider.dart';
+import 'business/lucky_bonus_service.dart';
+import 'business/tapjoy_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,34 +56,36 @@ Future<void> main() async {
     }
   }
 
-  final authService = AuthService();
-  final coinService = CoinService();
-  final rewardService = RewardService();
-  final adService = AdService();
-  final adTrackerService = AdTrackerService();
-  final connectivityService = ConnectivityService()..startListening();
+  // Initialize Hive storage repository
+  final hiveRepo = HiveRepository();
+  await hiveRepo.init();
+
+  // Initialize third-party SDK and local services
   LuckyBonusService()..load();
   TapjoyService()..initialize();
 
+  // Build temporary provider container to initialize auth service logic
+  final container = ProviderContainer(
+    overrides: [
+      hiveRepositoryProvider.overrideWithValue(hiveRepo),
+    ],
+  );
+
+  if (supabaseInitialized) {
+    final auth = container.read(authServiceProvider);
+    await auth.checkFreshInstall();
+    if (auth.currentUser == null) {
+      try {
+        await auth.signInAnonymously();
+      } catch (e) {
+        debugPrint('Failed to sign in anonymously on startup: $e');
+      }
+    }
+  }
+
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => AppState(
-            supabaseEnabled: supabaseInitialized,
-            authService: authService,
-            coinService: coinService,
-            rewardService: rewardService,
-          )..load(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => AdState(
-            adService: adService,
-            trackerService: adTrackerService,
-          )..initialize(),
-        ),
-        ChangeNotifierProvider.value(value: connectivityService),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const RbxRewardsApp(),
     ),
   );
@@ -127,14 +124,14 @@ class RbxRewardsApp extends StatelessWidget {
   }
 }
 
-class AppNavigator extends StatefulWidget {
+class AppNavigator extends ConsumerStatefulWidget {
   const AppNavigator({super.key});
 
   @override
-  State<AppNavigator> createState() => _AppNavigatorState();
+  ConsumerState<AppNavigator> createState() => _AppNavigatorState();
 }
 
-class _AppNavigatorState extends State<AppNavigator>
+class _AppNavigatorState extends ConsumerState<AppNavigator>
     with WidgetsBindingObserver {
   int _currentTab = 0;
   bool _showSpin = false;
@@ -157,7 +154,7 @@ class _AppNavigatorState extends State<AppNavigator>
   }
 
   Future<void> _onGetStarted() async {
-    await context.read<AppState>().setOnboardingCompleted(true);
+    await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
   }
 
   void _onNavTap(int index) {
@@ -185,14 +182,16 @@ class _AppNavigatorState extends State<AppNavigator>
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final profileAsync = ref.watch(userProfileStreamProvider);
+    final onboardingCompleted = ref.watch(onboardingCompletedProvider);
 
-    if (!appState.isLoaded) {
+    // Show loading screen until the profile/session is resolved
+    if (profileAsync.isLoading) {
       return const LoadingScreen();
     }
 
     Widget destination;
-    if (!appState.isOnboardingCompleted) {
+    if (!onboardingCompleted) {
       destination = OnboardingScreen(
         key: const ValueKey('onboarding'),
         onGetStarted: _onGetStarted,

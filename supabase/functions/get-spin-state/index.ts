@@ -1,6 +1,5 @@
-// Supabase Edge Function: Get Spin State
-
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
+import { checkCooldown } from "../_shared/cooldown.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -16,6 +15,16 @@ Deno.serve(async (req) => {
   }
 
   const uid = user.id;
+  const cooldownKey = `cooldown:spin:${uid}`;
+
+  // Check Redis cooldown first
+  const remainingCooldown = await checkCooldown(cooldownKey);
+  if (remainingCooldown > 0) {
+    return jsonResponse({
+      spins_remaining: 0,
+      cooldown_end: remainingCooldown * 1000,
+    });
+  }
 
   const { data, error } = await supabase.rpc("get_spin_state", {
     p_user_id: uid,

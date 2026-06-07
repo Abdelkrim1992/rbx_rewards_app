@@ -15,7 +15,6 @@ dependencies:
   flutter_svg: ^2.0.10+1
   google_fonts: ^6.2.1
   flame: ^1.37.0
-  provider: ^6.1.2
   shared_preferences: ^2.5.5
   scratcher: ^2.5.0
   supabase_flutter: ^2.12.4
@@ -27,6 +26,9 @@ dependencies:
   url_launcher: ^6.3.0
   tapjoy_offerwall: ^14.6.0
   pubscale_offerwall_plugin: ^0.0.4
+  flutter_riverpod: ^2.6.1
+  hive_flutter: ^1.1.0
+  image_picker: ^1.2.2
 
 dev_dependencies:
   flutter_test:

@@ -1,75 +1,52 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rbx_rewards_app/main.dart';
-import 'package:rbx_rewards_app/state/app_state.dart';
-import 'package:rbx_rewards_app/state/ad_state.dart';
-import 'package:rbx_rewards_app/services/auth_service.dart';
-import 'package:rbx_rewards_app/services/coin_service.dart';
-import 'package:rbx_rewards_app/services/reward_service.dart';
-import 'package:rbx_rewards_app/services/ad_service.dart';
-import 'package:rbx_rewards_app/services/ad_tracker_service.dart';
-import 'package:rbx_rewards_app/services/connectivity_service.dart';
+import 'package:rbx_rewards_app/presentation/providers/user_provider.dart';
+import 'package:rbx_rewards_app/models/user_profile.dart';
 
-// pure in-memory subclass of AppState for testing to bypass secure storage / network calls
-class TestAppState extends AppState {
-  TestAppState() : super(
-    supabaseEnabled: false,
-    authService: AuthService(),
-    coinService: CoinService(),
-    rewardService: RewardService(),
-  );
-
-  bool _mockLoaded = false;
-  bool _mockOnboardingCompleted = false;
-
-  @override
-  bool get isLoaded => _mockLoaded;
-
-  @override
-  bool get isOnboardingCompleted => _mockOnboardingCompleted;
-
-  @override
-  Future<void> load() async {
-    _mockLoaded = true;
-    notifyListeners();
+class OnboardingNotifierMock extends OnboardingNotifier {
+  OnboardingNotifierMock(bool initialValue) {
+    state = initialValue;
   }
 
   @override
-  Future<void> setOnboardingCompleted(bool value) async {
-    _mockOnboardingCompleted = value;
-    notifyListeners();
+  Future<void> _load() async {
+    // Sync loading bypassed
+  }
+
+  @override
+  Future<void> setCompleted(bool completed) async {
+    state = completed;
   }
 }
 
 void main() {
   testWidgets('App onboarding and navigator smoke test',
       (WidgetTester tester) async {
-    final adService = AdService();
-    final adTrackerService = AdTrackerService();
-    final connectivityService = ConnectivityService();
-    final appState = TestAppState();
-
-    // Synchronously mark state as loaded
-    await appState.load();
-
-    // Build our app wrapped in providers and trigger a frame.
+    // Build our app wrapped in ProviderScope and trigger a frame.
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<AppState>.value(
-            value: appState,
-          ),
-          ChangeNotifierProvider(
-            create: (_) => AdState(
-              adService: adService,
-              trackerService: adTrackerService,
-            ),
-          ),
-          ChangeNotifierProvider.value(value: connectivityService),
+      ProviderScope(
+        overrides: [
+          // Override userProfileStreamProvider to bypass Supabase loading/auth
+          userProfileStreamProvider.overrideWith((ref) => Stream.value(UserProfile(
+            id: 'test_uid',
+            coins: 0,
+            totalEarned: 0,
+            consecutiveDays: 0,
+            gamesPlayed: 0,
+            offersCompleted: 0,
+            displayName: 'Test Player',
+          ))),
+          // Override onboardingCompletedProvider with mock notifier
+          onboardingCompletedProvider.overrideWith((ref) => OnboardingNotifierMock(false)),
         ],
         child: const RbxRewardsApp(),
       ),
     );
+
+    // Initial load/render
+    await tester.pump();
+    await tester.pumpAndSettle();
 
     // Verify that onboarding screen is displayed with the 'Get Started' button.
     expect(find.text('Get Started'), findsOneWidget);
@@ -79,7 +56,7 @@ void main() {
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    // Verify that we navigated to the home screen dashboard or another screen.
+    // Verify that we navigated to the home screen dashboard.
     expect(find.text('Get Started'), findsNothing);
   });
 }
