@@ -23,6 +23,9 @@ class AppState extends ChangeNotifier {
   static const String _keyDailyRewardClaimedAt = 'daily_reward_claimed_at';
   static const String _keyFirstRedemptionReachedAt =
       'first_redemption_reached_at';
+  // Used to detect a fresh install. SharedPreferences is cleared on iOS app
+  // deletion, unlike the Keychain (used by FlutterSecureStorage).
+  static const String _keyAppInstallId = 'app_install_id';
 
   final bool supabaseEnabled;
   final AuthService _authService;
@@ -111,6 +114,15 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> load() async {
+    // ── iOS Keychain persistence fix ───────────────────────────────────────
+    // On iOS, Keychain data (used by flutter_secure_storage) survives app
+    // deletion. SharedPreferences does NOT. So if _keyAppInstallId is absent
+    // in SharedPreferences but present in the Keychain, the app was
+    // reinstalled. We clear all Keychain entries and force a new sign-in so
+    // the user starts fresh (balance 0, no stale session).
+    await _clearKeychainOnFreshInstall();
+    // ───────────────────────────────────────────────────────────────────────
+
     _connectivitySubscription =
         Connectivity().onConnectivityChanged.listen((results) {
       final hasConnection = results.any((r) => r != ConnectivityResult.none);
@@ -217,6 +229,28 @@ class AppState extends ChangeNotifier {
 
     _isLoaded = true;
     notifyListeners();
+  }
+
+  /// Clears Keychain data when a fresh install is detected.
+  ///
+  /// Detection strategy:
+  ///   - SharedPreferences (cleared on iOS uninstall) acts as a sentinel.
+  ///   - If [_keyAppInstallId] is missing from SharedPreferences but the
+  ///     Keychain has data, the user reinstalled the app.
+  Future<void> _clearKeychainOnFreshInstall() async {
+    final prefs = await SharedPreferences.getInstance();
+    final installId = prefs.getString(_keyAppInstallId);
+    if (installId == null) {
+      // Fresh install detected – wipe Keychain and any cached Supabase session.
+      debugPrint('🔄 Fresh install detected – clearing Keychain data.');
+      try {
+        await _authService.signOut();
+      } catch (_) {}
+      await _secureStorage.deleteAll();
+      // Write a new sentinel so future launches are treated as normal runs.
+      await prefs.setString(
+          _keyAppInstallId, DateTime.now().millisecondsSinceEpoch.toString());
+    }
   }
 
   Future<void> _refreshDailyRewardCooldown() async {

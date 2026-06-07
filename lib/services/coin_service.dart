@@ -21,6 +21,36 @@ class CoinService {
   Stream<Map<String, dynamic>>? _userDataStreamCache;
   String? _lastStreamUserId;
 
+  // ── JWT-future retry helper ───────────────────────────────────────────────
+  // PostgREST rejects JWTs whose `iat` is even a few milliseconds ahead of the
+  // DB server clock (PGRST303 / "JWT issued at future"). We catch that specific
+  // error, wait 1.5 s for the clocks to align, then retry once.
+  bool _isJwtFutureError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (e is PostgrestException) {
+      return e.code == 'PGRST303' ||
+          msg.contains('jwt issued at future') ||
+          msg.contains('jwt issued in the future');
+    }
+    return msg.contains('jwt issued at future') ||
+        msg.contains('jwt issued in the future') ||
+        msg.contains('pgrst303');
+  }
+
+  Future<T> _retryOnJwtFuture<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      if (_isJwtFutureError(e)) {
+        debugPrint('⏱ JWT issued-at-future detected – retrying in 1.5 s…');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        return await fn();
+      }
+      rethrow;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   /// Real-time stream of the current user's full record.
   Stream<Map<String, dynamic>> get userDataStream {
     final uid = _userId;
@@ -47,11 +77,11 @@ class CoinService {
     final uid = _userId;
     if (uid == null) return 0;
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('users')
         .select('balance')
         .eq('id', uid)
-        .maybeSingle();
+        .maybeSingle());
     return data?['balance'] as int? ?? 0;
   }
 
@@ -60,8 +90,8 @@ class CoinService {
     final uid = _userId;
     if (uid == null) return {};
 
-    final data =
-        await _client!.from('users').select().eq('id', uid).maybeSingle();
+    final data = await _retryOnJwtFuture(
+        () => _client!.from('users').select().eq('id', uid).maybeSingle());
     return data ?? {};
   }
 
@@ -120,12 +150,12 @@ class CoinService {
     final uid = _userId;
     if (uid == null) return [];
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('transactions')
         .select()
         .eq('user_id', uid)
         .order('processed_at', ascending: false)
-        .limit(limit);
+        .limit(limit));
 
     return List<Map<String, dynamic>>.from(data);
   }
@@ -135,9 +165,10 @@ class CoinService {
     final uid = _userId;
     if (uid == null) return {'spins_remaining': 0, 'cooldown_end': 0};
 
-    final data = await _client!.rpc('get_spin_state', params: {
-      'p_user_id': uid,
-    });
+    final data = await _retryOnJwtFuture(() => _client!.rpc(
+          'get_spin_state',
+          params: {'p_user_id': uid},
+        ));
     return data as Map<String, dynamic>;
   }
 
@@ -147,12 +178,12 @@ class CoinService {
     final uid = _userId;
     if (uid == null) return [];
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('redeemed_rewards')
         .select()
         .eq('user_id', uid)
         .order('created_at', ascending: false)
-        .limit(limit);
+        .limit(limit));
 
     return List<Map<String, dynamic>>.from(data);
   }
@@ -161,12 +192,15 @@ class CoinService {
   Future<bool> isUsernameAvailable(String username) async {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
-    
-    final result = await _client!.rpc('is_username_available', params: {
-      'p_username': username,
-      'p_exclude_user_id': uid,
-    });
-    
+
+    final result = await _retryOnJwtFuture(() => _client!.rpc(
+          'is_username_available',
+          params: {
+            'p_username': username,
+            'p_exclude_user_id': uid,
+          },
+        ));
+
     return result as bool;
   }
 
@@ -175,14 +209,15 @@ class CoinService {
   Future<void> updateDisplayName(String name) async {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
-    
+
     // Check if username is available
     final available = await isUsernameAvailable(name);
     if (!available) {
       throw Exception('This username already exists. Try another one.');
     }
-    
-    await _client!.from('users').update({'display_name': name}).eq('id', uid);
+
+    await _retryOnJwtFuture(() =>
+        _client!.from('users').update({'display_name': name}).eq('id', uid));
   }
 
   /// Update the user's profile photo URL.
@@ -190,13 +225,13 @@ class CoinService {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
     if (url == null) {
-      await _client!
+      await _retryOnJwtFuture(() => _client!
           .from('users')
-          .update({'profile_photo_url': null}).eq('id', uid);
+          .update({'profile_photo_url': null}).eq('id', uid));
     } else {
-      await _client!
+      await _retryOnJwtFuture(() => _client!
           .from('users')
-          .update({'profile_photo_url': url}).eq('id', uid);
+          .update({'profile_photo_url': url}).eq('id', uid));
     }
   }
 
@@ -205,9 +240,10 @@ class CoinService {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
 
-    final data = await _client!.rpc('use_spin', params: {
-      'p_user_id': uid,
-    });
+    final data = await _retryOnJwtFuture(() => _client!.rpc(
+          'use_spin',
+          params: {'p_user_id': uid},
+        ));
     return data as Map<String, dynamic>;
   }
 
@@ -216,9 +252,12 @@ class CoinService {
     final uid = _userId;
     if (uid == null) throw Exception('Not authenticated');
 
-    await _client!.rpc('increment_user_stat', params: {
-      'p_user_id': uid,
-      'p_stat': stat,
-    });
+    await _retryOnJwtFuture(() => _client!.rpc(
+          'increment_user_stat',
+          params: {
+            'p_user_id': uid,
+            'p_stat': stat,
+          },
+        ));
   }
 }

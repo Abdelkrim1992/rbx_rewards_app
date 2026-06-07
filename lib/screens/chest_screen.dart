@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -451,8 +452,8 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
     // Wait for the coin burst to fully finish (2 seconds) before closing
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
-      Navigator.of(context)
-          .pop(500); // return earned coins to start two-tier flow
+      final reward = 15 + Random().nextInt(31); // variable 15–45 base coins
+      Navigator.of(context).pop(reward); // return earned coins to start two-tier flow
     }
   }
 

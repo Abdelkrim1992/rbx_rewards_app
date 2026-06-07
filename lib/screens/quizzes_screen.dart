@@ -343,7 +343,7 @@ class _QuizzesScreenState extends State<QuizzesScreen>
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
-    final coins = _correctCount * 40;
+    final coins = (_correctCount * 3).clamp(0, 30); // 3 coins per correct, max 30 base
     setState(() {
       _coinsEarned = coins;
       _gameState = 'GAMEOVER';

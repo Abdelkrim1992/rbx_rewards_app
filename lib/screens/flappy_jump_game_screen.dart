@@ -457,7 +457,7 @@ class FlappyJumpGame extends FlameGame {
           if (!isMuted) HapticFeedback.selectionClick();
         }
 
-        coinsEarned = score ~/ 2;
+        coinsEarned = (score ~/ 2).clamp(0, 15); // max 15 base coins
         // Display floating texts
         final playerScreen = _projectPoint(playerPos);
         floatingTexts.add(GameFloatingText(
@@ -506,7 +506,7 @@ class FlappyJumpGame extends FlameGame {
       if (!coin.collected && dist < playerRadius + 14.0) {
         coin.collected = true;
         score += 2; // Increases score too!
-        coinsEarned = score ~/ 2;
+        coinsEarned = (score ~/ 2).clamp(0, 15); // max 15 base coins
         combo++;
         if (combo > maxCombo) maxCombo = combo;
 
@@ -2063,7 +2063,7 @@ class _FlappyJumpGameScreenState extends State<FlappyJumpGameScreen>
                             if (!mounted) return;
                             setState(() {
                               _originalCoinsEarned = _game.coinsEarned;
-                              _game.coinsEarned *= 2;
+                              _game.coinsEarned = (_game.coinsEarned * 2).clamp(0, 30); // 2x capped at 30
                               _adWatched = true;
                             });
                           },

@@ -316,9 +316,10 @@ class _TapTapGameScreenState extends State<TapTapGameScreen>
     if (finalIsFailed) {
       _originalCoinsEarned = 0;
     } else {
-      _originalCoinsEarned = (_score * 0.5).ceil(); // 1 coin for every 2 taps
+      _originalCoinsEarned = (_score * 0.5).ceil().clamp(0, 15); // 1 coin per 2 taps, max 15 base
       if (_maxCombo > 10) {
-        _originalCoinsEarned += (_maxCombo * 0.5).round(); // Combo bonus!
+        final comboBonus = (_maxCombo * 0.5).round();
+        _originalCoinsEarned = (_originalCoinsEarned + comboBonus).clamp(0, 15); // Combo bonus, still capped at 15
       }
     }
     

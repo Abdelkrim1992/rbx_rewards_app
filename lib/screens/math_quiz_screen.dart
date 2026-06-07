@@ -231,8 +231,8 @@ class _MathQuizScreenState extends State<MathQuizScreen>
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
 
-    // Z = _correctCount * 50 coins (as seen in screenshot: 8/10 Correct = 400 RBX Coins)
-    final coins = _correctCount * 50;
+    // 3 coins per correct answer, max 30 base coins
+    final coins = (_correctCount * 3).clamp(0, 30);
 
     setState(() {
       _originalCoinsEarned = coins;

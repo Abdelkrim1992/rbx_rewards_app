@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'pending_transaction_service.dart';
@@ -18,6 +19,33 @@ class GameService {
   }
 
   String? get _userId => _client?.auth.currentUser?.id;
+
+  // ── JWT-future retry helper ───────────────────────────────────────────────
+  bool _isJwtFutureError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (e is PostgrestException) {
+      return e.code == 'PGRST303' ||
+          msg.contains('jwt issued at future') ||
+          msg.contains('jwt issued in the future');
+    }
+    return msg.contains('jwt issued at future') ||
+        msg.contains('jwt issued in the future') ||
+        msg.contains('pgrst303');
+  }
+
+  Future<T> _retryOnJwtFuture<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      if (_isJwtFutureError(e)) {
+        debugPrint('⏱ JWT issued-at-future detected – retrying in 1.5 s…');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        return await fn();
+      }
+      rethrow;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   String _extractErrorMessage(dynamic data, String fallback) {
     if (data is Map) {
@@ -201,15 +229,19 @@ class GameService {
       {String? gameName, int limit = 50}) async {
     if (_client == null) return [];
     if (gameName != null) {
-      final data = await _client!.rpc('get_leaderboard', params: {
-        'p_game_name': gameName,
-        'p_limit': limit,
-      });
+      final data = await _retryOnJwtFuture(() => _client!.rpc(
+            'get_leaderboard',
+            params: {
+              'p_game_name': gameName,
+              'p_limit': limit,
+            },
+          ));
       return List<Map<String, dynamic>>.from(data);
     } else {
-      final data = await _client!.rpc('get_weekly_leaderboard', params: {
-        'p_limit': limit,
-      });
+      final data = await _retryOnJwtFuture(() => _client!.rpc(
+            'get_weekly_leaderboard',
+            params: {'p_limit': limit},
+          ));
       return List<Map<String, dynamic>>.from(data);
     }
   }
@@ -219,12 +251,12 @@ class GameService {
     final uid = _userId;
     if (uid == null) return null;
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('game_stats')
         .select()
         .eq('user_id', uid)
         .eq('game_name', gameName)
-        .maybeSingle();
+        .maybeSingle());
 
     return data;
   }
@@ -234,11 +266,11 @@ class GameService {
     final uid = _userId;
     if (uid == null) return [];
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('game_stats')
         .select()
         .eq('user_id', uid)
-        .order('last_played_at', ascending: false);
+        .order('last_played_at', ascending: false));
 
     return List<Map<String, dynamic>>.from(data);
   }

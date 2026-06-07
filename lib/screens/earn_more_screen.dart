@@ -177,7 +177,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                     iconColor: const Color(0xFF00C853),
                     title: 'Surveys',
                     subtitle: 'Answer quick polls & share opinions!',
-                    badgeText: '+250 Coins',
+                    badgeText: 'Up to 40 Coins',
                     onTap: () => _showSurveyDialog(context),
                   ),
                   const SizedBox(height: 16),
@@ -189,7 +189,7 @@ class _EarnMoreScreenState extends State<EarnMoreScreen> {
                     iconColor: const Color(0xFFE91E63),
                     title: 'Scratch',
                     subtitle: 'Scratch cards and reveal bigger rewards!',
-                    badgeText: 'Up to 350',
+                    badgeText: 'Up to 20 Coins',
                     onTap: () => _showScratchDialog(context),
                   ),
                   const SizedBox(height: 16),
@@ -275,7 +275,8 @@ class _SurveyDialogState extends State<SurveyDialog> {
   }
 
   void _claimSurveyReward() {
-    Navigator.of(context).pop(250);
+    final reward = 30 + Random().nextInt(11); // variable 30–40 base coins
+    Navigator.of(context).pop(reward);
   }
 
   @override
@@ -518,7 +519,7 @@ class _SurveyDialogState extends State<SurveyDialog> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      'CLAIM +250 COINS 🪙',
+                      'CLAIM REWARD 🪙',
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -552,7 +553,7 @@ class ScratchRewardDialog extends StatefulWidget {
 }
 
 class _ScratchRewardDialogState extends State<ScratchRewardDialog> {
-  final int _reward = [150, 200, 250, 300, 350][Random().nextInt(5)];
+  final int _reward = 10 + Random().nextInt(11); // variable 10–20 base coins
   double _scratchProgress = 0;
   bool _revealed = false;
   bool _claimed = false;

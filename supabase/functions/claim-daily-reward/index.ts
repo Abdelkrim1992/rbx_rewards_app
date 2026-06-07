@@ -17,12 +17,12 @@ Deno.serve(async (req) => {
 
   const uid = user.id;
   
-  // Parse request body for amount (default 100)
-  let amount = 100;
+  // Parse request body for amount (default 15)
+  let amount = 15;
   try {
     const body = await req.json();
     if (body.amount && typeof body.amount === 'number') {
-      amount = Math.max(1, Math.min(200, body.amount)); // Clamp between 1-200
+      amount = Math.max(1, Math.min(30, body.amount)); // Clamp between 1-30 (max premium double)
     }
   } catch {
     // No body or invalid JSON, use default

@@ -2,7 +2,7 @@
 
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
 
-const GAME_DAILY_CAP = 5000;
+const GAME_DAILY_CAP = 50;
 
 // Strict game whitelist — unknown games are REJECTED
 const GAME_FEASIBILITY: Record<string, { maxScorePerMinute: number }> = {

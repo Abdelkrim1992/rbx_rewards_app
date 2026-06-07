@@ -31,15 +31,15 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
   static int _spinCount = 0; // Track spins for ad display
 
   final List<_WheelSegment> segments = const [
-    _WheelSegment(label: '100', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
-    _WheelSegment(label: '300', sublabel: 'RBX', color: Color(0xFF7B3FE4)),
-    _WheelSegment(label: '500', sublabel: 'RBX', color: Color(0xFFB370FF)),
-    _WheelSegment(label: '2K', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
+    _WheelSegment(label: '5', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
+    _WheelSegment(label: '8', sublabel: 'RBX', color: Color(0xFF7B3FE4)),
+    _WheelSegment(label: '10', sublabel: 'RBX', color: Color(0xFFB370FF)),
+    _WheelSegment(label: '20', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
     _WheelSegment(
         label: 'JACKPOT',
-        sublabel: 'Huge!',
+        sublabel: '25 RBX!',
         color: Color.fromARGB(255, 160, 122, 16)),
-    _WheelSegment(label: '1K', sublabel: 'RBX', color: Color(0xFF8847F5)),
+    _WheelSegment(label: '15', sublabel: 'RBX', color: Color(0xFF8847F5)),
   ];
 
   @override
@@ -135,14 +135,10 @@ class _SpinScreenState extends State<SpinScreen> with TickerProviderStateMixin {
 
   int _prizeToCoins(String prize) {
     switch (prize) {
-      case '1K':
-        return 1000;
-      case '2K':
-        return 2000;
       case 'JACKPOT':
-        return 5000;
+        return 25;
       default:
-        return int.tryParse(prize) ?? 0;
+        return int.tryParse(prize) ?? 5;
     }
   }
 

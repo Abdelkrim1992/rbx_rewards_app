@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await showRewardChoice(
       context: context,
       featureName: 'Daily Reward',
-      baseReward: 100,
+      baseReward: 15,
       quickPlacement: AdPlacement.dailyReward,
       premiumPlacement: AdPlacement.dailyReward,
       onSuccess: (coins) async {

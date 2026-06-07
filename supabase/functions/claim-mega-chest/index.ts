@@ -18,9 +18,20 @@ Deno.serve(async (req) => {
   const uid = user.id;
   const txId = `mega_${crypto.randomUUID()}`;
 
+  // Parse amount from client (variable chest reward), clamp to max 90
+  let amount = 45;
+  try {
+    const body = await req.json();
+    if (body.amount && typeof body.amount === 'number') {
+      amount = Math.max(1, Math.min(90, body.amount));
+    }
+  } catch {
+    // No body, use default
+  }
+
   const { data, error } = await supabase.rpc("credit_user_coins", {
     p_user_id: uid,
-    p_amount: 500,
+    p_amount: amount,
     p_source: "mega_chest",
     p_tx_id: txId,
   });

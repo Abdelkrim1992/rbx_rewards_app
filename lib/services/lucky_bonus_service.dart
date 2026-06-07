@@ -9,7 +9,7 @@ class LuckyBonusService {
   static const String _bonusCountTodayKey = 'lucky_bonus_count_today';
   static const String _bonusDateKey = 'lucky_bonus_date';
   static const Duration _triggerInterval = Duration(hours: 2);
-  static const int _maxDailyBonuses = 3;
+  static const int _maxDailyBonuses = 2;
 
   Timer? _usageTimer;
   DateTime? _lastBonusTime;
@@ -27,8 +27,8 @@ class LuckyBonusService {
 
   int get remainingBonusesToday => _maxDailyBonuses - _bonusCountToday;
 
-  /// Generate a random reward amount (100-500 RBX).
-  int generateReward() => 100 + Random().nextInt(401);
+  /// Generate a random reward amount (10-30 RBX base coins).
+  int generateReward() => 10 + Random().nextInt(21);
 
   /// Load persisted state.
   Future<void> load() async {

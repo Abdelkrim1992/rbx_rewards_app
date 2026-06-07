@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for daily rewards and spin mechanics.
@@ -15,6 +16,33 @@ class RewardService {
   }
 
   String? get _userId => _client?.auth.currentUser?.id;
+
+  // ── JWT-future retry helper ───────────────────────────────────────────────
+  bool _isJwtFutureError(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (e is PostgrestException) {
+      return e.code == 'PGRST303' ||
+          msg.contains('jwt issued at future') ||
+          msg.contains('jwt issued in the future');
+    }
+    return msg.contains('jwt issued at future') ||
+        msg.contains('jwt issued in the future') ||
+        msg.contains('pgrst303');
+  }
+
+  Future<T> _retryOnJwtFuture<T>(Future<T> Function() fn) async {
+    try {
+      return await fn();
+    } catch (e) {
+      if (_isJwtFutureError(e)) {
+        debugPrint('⏱ JWT issued-at-future detected – retrying in 1.5 s…');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        return await fn();
+      }
+      rethrow;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   /// Claim daily reward via Edge Function.
   /// [amount] specifies the reward amount (default 100).
@@ -40,11 +68,11 @@ class RewardService {
     final uid = _userId;
     if (uid == null) return false;
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('users')
         .select('daily_reward_claimed_at')
         .eq('id', uid)
-        .maybeSingle();
+        .maybeSingle());
 
     final claimedAt = data?['daily_reward_claimed_at'];
     if (claimedAt == null) return true;
@@ -59,11 +87,11 @@ class RewardService {
     final uid = _userId;
     if (uid == null) return Duration.zero;
 
-    final data = await _client!
+    final data = await _retryOnJwtFuture(() => _client!
         .from('users')
         .select('daily_reward_claimed_at')
         .eq('id', uid)
-        .maybeSingle();
+        .maybeSingle());
 
     final claimedAt = data?['daily_reward_claimed_at'];
     if (claimedAt == null) return Duration.zero;

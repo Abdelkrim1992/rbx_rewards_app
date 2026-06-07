@@ -233,10 +233,11 @@ class _FlipCardGameScreenState extends State<FlipCardGameScreen>
     _gameTimer?.cancel();
 
     // Scoring: base 50 per match + time bonus + combo bonus
-    int baseCoins = _matchesFound * 50;
+    final int baseCoins = _matchesFound * 2;
     int timeBonus = (_secondsLeft > 0) ? (_secondsLeft * 2) : 0;
     int comboBonus = _maxCombo >= 3 ? (_maxCombo * 25) : 0;
-    int total = baseCoins + timeBonus + comboBonus;
+    // Cap total at 15 base coins
+    int total = (baseCoins + timeBonus + comboBonus).clamp(0, 15);
 
     // Score = matches * 100 + time bonus
     int score = _matchesFound * 100 + _secondsLeft;
