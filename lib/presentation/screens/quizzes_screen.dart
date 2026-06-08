@@ -10,6 +10,7 @@ import '../../widgets/two_tier_reward_dialog.dart';
 import '../../widgets/congratulations_dialog.dart';
 import '../../core/utils/reward_helper.dart';
 import '../providers/coin_provider.dart';
+import '../providers/data_providers.dart';
 
 class QuizQuestion {
   final String text;
@@ -69,184 +70,48 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   late AnimationController _floatController;
   final math.Random _random = math.Random();
 
-  // Categories
-  late List<QuizCategory> _categories;
-  late List<QuizQuestion> _sessionQuestions;
-  QuizCategory? _activeCategory;
-
   @override
   void initState() {
     super.initState();
-    _initCategories();
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
   }
 
-  void _initCategories() {
-    _categories = [
-      QuizCategory(
-        id: 'science',
-        title: 'Science & Space',
-        description: 'Test your knowledge of the universe.',
-        icon: '🔬',
-        bgColor: const Color(0xFF2ECC71),
-        questions: [
-          QuizQuestion(
-              text: 'What planet is known as the Red Planet?',
-              correctAnswer: 'Mars',
-              options: ['Venus', 'Mars', 'Jupiter', 'Saturn']),
-          QuizQuestion(
-              text: 'What gas do plants absorb from the air?',
-              correctAnswer: 'CO₂',
-              options: ['Oxygen', 'Nitrogen', 'CO₂', 'Helium']),
-          QuizQuestion(
-              text: 'What is the hardest natural substance?',
-              correctAnswer: 'Diamond',
-              options: ['Gold', 'Iron', 'Diamond', 'Quartz']),
-          QuizQuestion(
-              text: 'What is the boiling point of water in °C?',
-              correctAnswer: '100',
-              options: ['90', '100', '110', '120']),
-          QuizQuestion(
-              text: 'Which planet is closest to the Sun?',
-              correctAnswer: 'Mercury',
-              options: ['Venus', 'Mercury', 'Earth', 'Mars']),
-          QuizQuestion(
-              text: 'What is the chemical symbol for gold?',
-              correctAnswer: 'Au',
-              options: ['Ag', 'Au', 'Fe', 'Cu']),
-          QuizQuestion(
-              text: 'What is the speed of light (km/s)?',
-              correctAnswer: '300,000',
-              options: ['150,000', '300,000', '450,000', '600,000']),
-          QuizQuestion(
-              text: 'Which element has symbol "O"?',
-              correctAnswer: 'Oxygen',
-              options: ['Gold', 'Osmium', 'Oxygen', 'Oganesson']),
-          QuizQuestion(
-              text: 'What is the largest planet in our solar system?',
-              correctAnswer: 'Jupiter',
-              options: ['Saturn', 'Jupiter', 'Neptune', 'Uranus']),
-          QuizQuestion(
-              text: 'Which vitamin does the Sun give us?',
-              correctAnswer: 'Vitamin D',
-              options: ['Vitamin A', 'Vitamin B', 'Vitamin C', 'Vitamin D']),
-        ],
-      ),
-      QuizCategory(
-        id: 'geography',
-        title: 'Geography & History',
-        description: 'Explore the world and its past.',
-        icon: '🌍',
-        bgColor: const Color(0xFF3498DB),
-        questions: [
-          QuizQuestion(
-              text: 'How many continents are there on Earth?',
-              correctAnswer: '7',
-              options: ['5', '6', '7', '8']),
-          QuizQuestion(
-              text: 'What is the largest ocean on Earth?',
-              correctAnswer: 'Pacific',
-              options: ['Atlantic', 'Indian', 'Pacific', 'Arctic']),
-          QuizQuestion(
-              text: 'Which country has the most people?',
-              correctAnswer: 'India',
-              options: ['USA', 'China', 'India', 'Brazil']),
-          QuizQuestion(
-              text: 'What is the capital of Japan?',
-              correctAnswer: 'Tokyo',
-              options: ['Osaka', 'Tokyo', 'Kyoto', 'Nagoya']),
-          QuizQuestion(
-              text: 'What year did World War II end?',
-              correctAnswer: '1945',
-              options: ['1942', '1944', '1945', '1946']),
-          QuizQuestion(
-              text: 'Which language has the most speakers?',
-              correctAnswer: 'English',
-              options: ['Spanish', 'English', 'Mandarin', 'Hindi']),
-          QuizQuestion(
-              text: 'What is the tallest mountain in the world?',
-              correctAnswer: 'Mount Everest',
-              options: ['K2', 'Mount Everest', 'Kilimanjaro', 'Denali']),
-          QuizQuestion(
-              text: 'Which river is the longest in the world?',
-              correctAnswer: 'Nile',
-              options: ['Amazon', 'Nile', 'Yangtze', 'Mississippi']),
-        ],
-      ),
-      QuizCategory(
-        id: 'biology',
-        title: 'Animals & Biology',
-        description: 'Discover the living world.',
-        icon: '🦁',
-        bgColor: const Color(0xFFE67E22),
-        questions: [
-          QuizQuestion(
-              text: 'Which animal is the tallest in the world?',
-              correctAnswer: 'Giraffe',
-              options: ['Elephant', 'Giraffe', 'Horse', 'Camel']),
-          QuizQuestion(
-              text: 'How many legs does a spider have?',
-              correctAnswer: '8',
-              options: ['6', '8', '10', '12']),
-          QuizQuestion(
-              text: 'How many bones are in the human body?',
-              correctAnswer: '206',
-              options: ['196', '206', '216', '226']),
-          QuizQuestion(
-              text: 'What is the largest land animal?',
-              correctAnswer: 'Elephant',
-              options: ['Rhino', 'Hippo', 'Elephant', 'Bear']),
-          QuizQuestion(
-              text: 'Which organ pumps blood in the body?',
-              correctAnswer: 'Heart',
-              options: ['Brain', 'Lungs', 'Heart', 'Liver']),
-          QuizQuestion(
-              text: 'What do pandas primarily eat?',
-              correctAnswer: 'Bamboo',
-              options: ['Fish', 'Bamboo', 'Insects', 'Fruits']),
-          QuizQuestion(
-              text: 'Which bird can fly backwards?',
-              correctAnswer: 'Hummingbird',
-              options: ['Eagle', 'Pigeon', 'Hummingbird', 'Woodpecker']),
-        ],
-      ),
-      QuizCategory(
-        id: 'general',
-        title: 'General & Math',
-        description: 'A mix of brain teasers and facts.',
-        icon: '🧠',
-        bgColor: const Color(0xFF9B5CFF),
-        questions: [
-          QuizQuestion(
-              text: 'What is the smallest prime number?',
-              correctAnswer: '2',
-              options: ['0', '1', '2', '3']),
-          QuizQuestion(
-              text: 'How many colors are in a rainbow?',
-              correctAnswer: '7',
-              options: ['5', '6', '7', '8']),
-          QuizQuestion(
-              text: 'How many hours are in a day?',
-              correctAnswer: '24',
-              options: ['12', '24', '36', '48']),
-          QuizQuestion(
-              text: 'How many sides does a hexagon have?',
-              correctAnswer: '6',
-              options: ['5', '6', '7', '8']),
-          QuizQuestion(
-              text: 'What is the square root of 144?',
-              correctAnswer: '12',
-              options: ['10', '12', '14', '16']),
-          QuizQuestion(
-              text: 'What is 15% of 200?',
-              correctAnswer: '30',
-              options: ['15', '20', '30', '45']),
-        ],
-      ),
-    ];
+  // Categories
+  List<QuizCategory> _categories = [];
+  late List<QuizQuestion> _sessionQuestions;
+  QuizCategory? _activeCategory;
+
+  void _parseCategories(List<Map<String, dynamic>> data) {
+    _categories = data.map((cat) {
+      final qs = (cat['questions'] as List?)?.map((q) {
+            return QuizQuestion(
+              text: q['text'] ?? '',
+              correctAnswer: q['correctAnswer'] ?? '',
+              options: List<String>.from(q['options'] ?? []),
+            );
+          }).toList() ??
+          [];
+      
+      // Parse hex color if needed
+      Color parsedColor = const Color(0xFF9B5CFF);
+      if (cat['bgColor'] != null) {
+        String hex = cat['bgColor'].toString().replaceAll('#', '');
+        if (hex.length == 6) hex = 'FF$hex';
+        parsedColor = Color(int.parse(hex, radix: 16));
+      }
+
+      return QuizCategory(
+        id: cat['id'] ?? '',
+        title: cat['title'] ?? '',
+        description: cat['description'] ?? '',
+        icon: cat['icon'] ?? '🧠',
+        bgColor: parsedColor,
+        questions: qs,
+      );
+    }).toList();
   }
 
   @override
@@ -683,45 +548,63 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   // --- MENU SCREEN ---
   Widget _buildMenuScreen() {
-    return Column(
-      key: const ValueKey('MENU'),
-      children: [
-        const Spacer(),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Available Quizzes',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryText,
-                ),
+    final asyncQuizzes = ref.watch(quizzesProvider);
+    
+    return asyncQuizzes.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, st) => Center(child: Text('Failed to load quizzes: $e')),
+      data: (data) {
+        if (_categories.isEmpty && data.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _parseCategories(data);
+              });
+            }
+          });
+        }
+        
+        return Column(
+          key: const ValueKey('MENU'),
+          children: [
+            const Spacer(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Available Quizzes',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryText,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Flexible(
-          flex: 0,
-          child: ListView.separated(
-            shrinkWrap: true,
-            padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-            itemCount: _categories.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 14),
-            itemBuilder: (ctx, i) {
-              final cat = _categories[i];
-              return _QuizCategoryItem(
-                category: cat,
-                onStart: () => _startQuizRound(cat),
-              );
-            },
-          ),
-        ),
-        const Spacer(),
-      ],
+            ),
+            const SizedBox(height: 16),
+            Flexible(
+              flex: 0,
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                itemCount: _categories.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 14),
+                itemBuilder: (ctx, i) {
+                  final cat = _categories[i];
+                  return _QuizCategoryItem(
+                    category: cat,
+                    onStart: () => _startQuizRound(cat),
+                  );
+                },
+              ),
+            ),
+            const Spacer(),
+          ],
+        );
+      },
     );
   }
 

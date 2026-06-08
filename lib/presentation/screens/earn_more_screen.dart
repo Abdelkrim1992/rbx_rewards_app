@@ -50,9 +50,8 @@ class _EarnMoreScreenState extends ConsumerState<EarnMoreScreen> {
           try {
             final uid = Supabase.instance.client.auth.currentUser?.id;
             if (uid != null) {
-              await Supabase.instance.client.rpc('increment_user_stat', params: {
-                'p_user_id': uid,
-                'p_stat_name': 'offers_completed',
+              await Supabase.instance.client.functions.invoke('increment-user-stat', body: {
+                'stat_name': 'offers_completed',
               });
             }
           } catch (_) {}
@@ -83,9 +82,8 @@ class _EarnMoreScreenState extends ConsumerState<EarnMoreScreen> {
           try {
             final uid = Supabase.instance.client.auth.currentUser?.id;
             if (uid != null) {
-              await Supabase.instance.client.rpc('increment_user_stat', params: {
-                'p_user_id': uid,
-                'p_stat_name': 'offers_completed',
+              await Supabase.instance.client.functions.invoke('increment-user-stat', body: {
+                'stat_name': 'offers_completed',
               });
             }
           } catch (_) {}

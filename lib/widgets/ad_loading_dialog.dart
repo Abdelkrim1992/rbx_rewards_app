@@ -80,14 +80,14 @@ class _AdLoadingDialogState extends State<AdLoadingDialog>
               },
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Loading ad...',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            // const Text(
+            //   'Loading ad...',
+            //   style: TextStyle(
+            //     color: Colors.white,
+            //     fontSize: 16,
+            //     fontWeight: FontWeight.bold,
+            //   ),
+            // ),
             const SizedBox(height: 8),
             Text(
               '${_elapsedSeconds}s',

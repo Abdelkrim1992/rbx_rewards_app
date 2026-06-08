@@ -8,6 +8,7 @@ import '../../widgets/refreshable_scroll.dart';
 import '../../business/tapjoy_service.dart';
 import '../../business/pubscale_service.dart';
 import '../providers/user_provider.dart';
+import '../providers/data_providers.dart';
 
 class OffersScreen extends ConsumerStatefulWidget {
   final Function(int) onNavTap;
@@ -212,6 +213,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 120),
                   ],
                 ),

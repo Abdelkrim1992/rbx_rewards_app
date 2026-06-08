@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/providers.dart';
+import '../providers/data_providers.dart';
 import '../../theme/app_theme.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
@@ -17,77 +18,7 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
   ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
-    with WidgetsBindingObserver {
-  List<_LeaderboardEntry> _entries = [];
-  bool _isLoading = true;
-  String? _error;
-  Timer? _refreshTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadLeaderboard();
-    _startRefreshTimer();
-  }
-
-  void _startRefreshTimer() {
-    _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) _loadLeaderboard();
-    });
-  }
-
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadLeaderboard();
-    }
-  }
-
-  Future<void> _loadLeaderboard() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final data = await ref.read(gameServiceProvider).getLeaderboard(limit: 10);
-      String? currentUserId;
-      try {
-        currentUserId = Supabase.instance.client.auth.currentUser?.id;
-      } catch (_) {
-        currentUserId = null;
-      }
-      final entries = data
-          .map((e) => _LeaderboardEntry(
-                rank: e.rank,
-                name: e.displayName,
-                avatar: (e.displayName.isEmpty ? 'A' : e.displayName)
-                    .substring(0, 1)
-                    .toUpperCase(),
-                coins: e.score,
-                isUser: e.userId == currentUserId,
-              ))
-          .toList();
-      setState(() {
-        _entries = entries;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
   int _bonusForRank(int rank) {
     switch (rank) {
@@ -105,28 +36,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final userEntry = _entries.isNotEmpty
-        ? _entries.firstWhere(
-            (e) => e.isUser,
-            orElse: () => const _LeaderboardEntry(
-                rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true),
-          )
-        : const _LeaderboardEntry(
-            rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true);
-    final userBonus = _bonusForRank(userEntry.rank);
-
-    final podiumEntries = List<_LeaderboardEntry>.from(_entries);
-    while (podiumEntries.length < 3) {
-      final rank = podiumEntries.length + 1;
-      podiumEntries.add(_LeaderboardEntry(
-        rank: rank,
-        name: 'Empty Slot',
-        avatar: '-',
-        coins: 0,
-        isUser: false,
-      ));
-    }
-
+    final asyncLeaderboard = ref.watch(leaderboardProvider(''));
+    
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -182,20 +93,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             ),
             const SizedBox(height: 20),
 
-            if (_isLoading)
-              const Expanded(
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_error != null)
-              Expanded(
-                child: Center(
+            Expanded(
+              child: asyncLeaderboard.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline,
-                          color: Colors.redAccent, size: 48),
+                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
                       const SizedBox(height: 12),
                       Text(
                         'Failed to load leaderboard',
@@ -207,7 +112,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        _error!,
+                        error.toString(),
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13,
@@ -216,7 +121,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _loadLeaderboard,
+                        onPressed: () => ref.invalidate(leaderboardProvider('')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -229,14 +134,52 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                     ],
                   ),
                 ),
-              )
-            else if (_entries.isEmpty)
-              Expanded(
-                child: _EmptyLeaderboardState(
-                  onPlayGames: widget.onBack,
-                ),
-              )
-            else ...[
+                data: (data) {
+                  String? currentUserId;
+                  try {
+                    currentUserId = Supabase.instance.client.auth.currentUser?.id;
+                  } catch (_) {}
+                  
+                  final entries = data.map((e) {
+                    final displayName = (e['display_name'] ?? e['displayName'] ?? 'A').toString();
+                    return _LeaderboardEntry(
+                      rank: (e['rank'] ?? 0) as int,
+                      name: displayName,
+                      avatar: displayName.isEmpty ? 'A' : displayName.substring(0, 1).toUpperCase(),
+                      coins: (e['score'] ?? 0) as int,
+                      isUser: e['user_id'] == currentUserId || e['userId'] == currentUserId,
+                    );
+                  }).toList();
+
+                  if (entries.isEmpty) {
+                    return _EmptyLeaderboardState(onPlayGames: widget.onBack);
+                  }
+
+                  final userEntry = entries.isNotEmpty
+                      ? entries.firstWhere(
+                          (e) => e.isUser,
+                          orElse: () => const _LeaderboardEntry(
+                              rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true),
+                        )
+                      : const _LeaderboardEntry(
+                          rank: 0, name: 'You', avatar: 'Y', coins: 0, isUser: true);
+                  final userBonus = _bonusForRank(userEntry.rank);
+
+                  final podiumEntries = List<_LeaderboardEntry>.from(entries);
+                  while (podiumEntries.length < 3) {
+                    final rank = podiumEntries.length + 1;
+                    podiumEntries.add(_LeaderboardEntry(
+                      rank: rank,
+                      name: 'Empty Slot',
+                      avatar: '-',
+                      coins: 0,
+                      isUser: false,
+                    ));
+                  }
+
+                  return Column(
+                    children: [
+
               // Podium (Top 3)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -360,14 +303,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               // Rankings list (#4-#10)
               Expanded(
                 child: RefreshIndicator(
-                  onRefresh: _loadLeaderboard,
+                  onRefresh: () async => ref.invalidate(leaderboardProvider('')),
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount:
-                        _entries.length > 3 ? min(7, _entries.length - 3) : 0,
+                        entries.length > 3 ? min(7, entries.length - 3) : 0,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (ctx, i) {
-                      final entry = _entries[i + 3];
+                      final entry = entries[i + 3];
                       final bonus = _bonusForRank(entry.rank);
                       return _LeaderboardListItem(
                         entry: entry,
@@ -377,7 +320,11 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   ),
                 ),
               ),
-            ],
+                    ],
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),

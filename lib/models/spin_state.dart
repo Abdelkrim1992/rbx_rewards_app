@@ -8,9 +8,14 @@ class SpinState {
   });
 
   factory SpinState.fromJson(Map<String, dynamic> json) {
+    final int? relativeCooldownMs = (json['cooldownEnd'] as num?)?.toInt() ?? (json['cooldown_end'] as num?)?.toInt();
+    final int? absoluteCooldownMs = (relativeCooldownMs != null && relativeCooldownMs > 0)
+        ? DateTime.now().millisecondsSinceEpoch + relativeCooldownMs
+        : null;
+
     return SpinState(
-      spinsRemaining: json['spinsRemaining'] as int? ?? json['spins_remaining'] as int? ?? 0,
-      cooldownEndMs: json['cooldownEnd'] as int? ?? json['cooldown_end'] as int?,
+      spinsRemaining: (json['spinsRemaining'] as num?)?.toInt() ?? (json['spins_remaining'] as num?)?.toInt() ?? 0,
+      cooldownEndMs: absoluteCooldownMs,
     );
   }
 }
@@ -27,10 +32,15 @@ class SpinResult {
   });
 
   factory SpinResult.fromJson(Map<String, dynamic> json) {
+    final int? relativeCooldownMs = (json['cooldownEnd'] as num?)?.toInt() ?? (json['cooldown_end'] as num?)?.toInt();
+    final int? absoluteCooldownMs = (relativeCooldownMs != null && relativeCooldownMs > 0)
+        ? DateTime.now().millisecondsSinceEpoch + relativeCooldownMs
+        : null;
+
     return SpinResult(
-      spinsRemaining: json['spinsRemaining'] as int? ?? json['spins_remaining'] as int? ?? 0,
-      cooldownEnd: json['cooldownEnd'] as int? ?? json['cooldown_end'] as int?,
-      coinsEarned: json['coinsEarned'] as int? ?? json['coins_earned'] as int? ?? 0,
+      spinsRemaining: (json['spinsRemaining'] as num?)?.toInt() ?? (json['spins_remaining'] as num?)?.toInt() ?? 0,
+      cooldownEnd: absoluteCooldownMs,
+      coinsEarned: (json['coinsEarned'] as num?)?.toInt() ?? (json['coins_earned'] as num?)?.toInt() ?? 0,
     );
   }
 }

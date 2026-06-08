@@ -49,6 +49,19 @@ class SupabaseRepository {
     return data['remaining'] as int? ?? data['balance'] as int? ?? 0;
   }
 
+  /// Fetches user profile via the get-user-stats Edge Function.
+  /// The function serves from Redis cache, so this is fast at scale.
+  Future<Map<String, dynamic>> getUserStats() async {
+    final uid = currentUserId;
+    if (uid == null) return <String, dynamic>{};
+    try {
+      return await callEdgeFunction('get-user-stats');
+    } catch (e) {
+      debugPrint('getUserStats error: $e');
+      return <String, dynamic>{};
+    }
+  }
+
   Future<Map<String, dynamic>> getUserData() {
     final uid = currentUserId;
     if (uid == null) return Future.value(<String, dynamic>{});
@@ -74,15 +87,30 @@ class SupabaseRepository {
   Future<List<Map<String, dynamic>>> getRedeemedRewards({int limit = 50}) async {
     final uid = currentUserId;
     if (uid == null) return [];
-    return _call(() async {
-      final data = await _client
-          .from('redeemed_rewards')
-          .select()
-          .eq('user_id', uid)
-          .order('created_at', ascending: false)
-          .limit(limit);
-      return List<Map<String, dynamic>>.from(data as List);
-    });
+    try {
+      final data = await callEdgeFunction('get-reward-history', body: {'limit': limit});
+      
+      if (data.containsKey('history') && data['history'] is List) {
+        return (data['history'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('get-reward-history error: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getQuizzes() async {
+    try {
+      final resp = await _client.functions.invoke('get-quizzes');
+      if (resp.status == 200 && resp.data is List) {
+        return List<Map<String, dynamic>>.from(resp.data as List);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('get-quizzes error: $e');
+      return [];
+    }
   }
 
   bool _isJwtFutureError(Object e) {

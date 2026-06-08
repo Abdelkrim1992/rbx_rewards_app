@@ -62,7 +62,10 @@ class AdService {
   final Map<AdPlacement, RewardedInterstitialAd?> _preloadedRewardedInterstitials = {};
   final Map<String, int> _retryAttempts = {};
   bool _isInitialized = false;
-  bool _developerModeEnabled = false;
+  // Set USE_TEST_ADS=true in your .env and pass --dart-define-from-file=.env to force
+  // test ads even in a release build (safe for performance testing).
+  bool _developerModeEnabled =
+      const bool.fromEnvironment('USE_TEST_ADS', defaultValue: false);
 
   /// Impressions per ad unit ID per day. Key: "placementIndex:date"
   final Map<String, int> _adUnitImpressions = {};

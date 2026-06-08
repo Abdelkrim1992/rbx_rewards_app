@@ -15,13 +15,6 @@ Deno.serve(async (req) => {
   }
 
   const uid = user.id;
-  const lockKey = `lock:chest:${uid}`;
-
-  // Acquire 5 second lock
-  const locked = await redis.set(lockKey, "1", { nx: true, ex: 5 });
-  if (!locked) {
-    return errorResponse("Chest unlock in progress. Please wait.", 429);
-  }
 
   const txId = `chest_${crypto.randomUUID()}`;
 
@@ -46,6 +39,9 @@ Deno.serve(async (req) => {
   if (error) {
     return errorResponse(error.message, 400);
   }
+
+  // Invalidate user profile cache so updated balance is reflected
+  redis.del(`user:profile:${uid}`).catch(console.error);
 
   return jsonResponse({ success: true, coinsEarned: amount, newBalance: data });
 });

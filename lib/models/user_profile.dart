@@ -22,7 +22,7 @@ class UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as String? ?? '',
-      coins: json['coins'] as int? ?? 0,
+      coins: json['balance'] as int? ?? json['coins'] as int? ?? 0,
       totalEarned: json['total_earned'] as int? ?? 0,
       consecutiveDays: json['consecutive_days'] as int? ?? 0,
       gamesPlayed: json['games_played'] as int? ?? 0,

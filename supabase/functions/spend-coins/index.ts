@@ -1,6 +1,7 @@
 // Supabase Edge Function: Spend Coins (Redeem)
 
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
+import { redis } from "../_shared/redis.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -33,6 +34,10 @@ Deno.serve(async (req) => {
     const status = error.message.includes("Insufficient") ? 400 : 500;
     return errorResponse(error.message, status);
   }
+
+  // Invalidate the user profile cache so the next fetch gets the fresh balance
+  redis.del(`user:profile:${uid}`).catch(console.error);
+  redis.del(`reward_history:${uid}:50`).catch(console.error);
 
   return jsonResponse({
     success: true,

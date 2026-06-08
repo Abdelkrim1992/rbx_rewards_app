@@ -14,6 +14,9 @@ class TapjoyService {
   TJPlacement? _offerwallPlacement;
   bool _isPlacementLoading = false;
 
+  /// Optional callback invoked when the offerwall is closed.
+  VoidCallback? onClosed;
+
   /// Connects to Tapjoy SDK using configuration variables.
   Future<void> initialize() async {
     if (kIsWeb) {
@@ -85,6 +88,7 @@ class TapjoyService {
         },
         onContentDismiss: (placement) {
           debugPrint('TapjoyService: TJPlacement onContentDismiss. Auto-preloading next content...');
+          onClosed?.call();
           placement.requestContent().catchError((err) {
             debugPrint('TapjoyService: Error preloading placement after dismiss: $err');
           });

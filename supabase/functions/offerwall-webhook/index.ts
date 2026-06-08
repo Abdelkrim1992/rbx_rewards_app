@@ -1,28 +1,14 @@
 // Supabase Edge Function: Offerwall Webhook
-// Deno runtime — handles and verifies postback webhooks from Lootably, Monlix, IronSource, and Tapjoy
+// Deno runtime — handles and verifies postback webhooks from Pubscale, IronSource, and Tapjoy
 
 import { supabase, jsonResponse, errorResponse } from "../_shared/supabase_client.ts";
 import { redis } from "../_shared/redis.ts";
+import { createHash } from "node:crypto";
 
 function getConfig(provider: string) {
   const maxHourly = parseInt(Deno.env.get("MAX_OFFERS_PER_HOUR") || "10", 10);
 
-  if (provider === "lootably") {
-    const secret = Deno.env.get("LOOTABLY_SECRET");
-    if (!secret) {
-      console.warn("⚠️ LOOTABLY_SECRET not configured. Using fallback 'mock_secret' for sandbox/testing.");
-      return { secret: "mock_secret", maxHourly };
-    }
-    return { secret, maxHourly };
-  }
-  if (provider === "monlix") {
-    const secret = Deno.env.get("MONLIX_SECRET");
-    if (!secret) {
-      console.warn("⚠️ MONLIX_SECRET not configured. Using fallback 'mock_secret' for sandbox/testing.");
-      return { secret: "mock_secret", maxHourly };
-    }
-    return { secret, maxHourly };
-  }
+
   if (provider === "ironsource") {
     const secret = Deno.env.get("IRONSOURCE_SECRET");
     if (!secret) {
@@ -48,7 +34,7 @@ function getConfig(provider: string) {
     return { secret, maxHourly };
   }
 
-  const fallback = Deno.env.get("LOOTABLY_SECRET") || Deno.env.get("MONLIX_SECRET") || Deno.env.get("IRONSOURCE_SECRET") || Deno.env.get("TAPJOY_SECRET");
+  const fallback = Deno.env.get("IRONSOURCE_SECRET") || Deno.env.get("TAPJOY_SECRET") || Deno.env.get("PUBSCALE_SECRET");
   return { secret: fallback || "mock_secret", maxHourly };
 }
 
@@ -70,39 +56,10 @@ async function hmacSha256(message: string, secret: string): Promise<string> {
 
 // Helper: MD5 Hash
 async function md5Hash(message: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const hash = await crypto.subtle.digest("MD5", encoder.encode(message));
-  return Array.from(new Uint8Array(hash))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return createHash("md5").update(message).digest("hex");
 }
 
-// Verifier: Lootably (HMAC SHA-256 of: userId + ip + payout + id)
-async function verifyLootablySignature(
-  userId: string,
-  ip: string,
-  payout: string,
-  id: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  const payload = `${userId}${ip}${payout}${id}`;
-  const expected = await hmacSha256(payload, secret);
-  return signature === expected;
-}
 
-// Verifier: Monlix (MD5 of: transactionId + userId + payout + secretKey)
-async function verifyMonlixSignature(
-  userId: string,
-  payout: string,
-  id: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  const payload = `${id}${userId}${payout}${secret}`;
-  const expected = await md5Hash(payload);
-  return signature.toLowerCase() === expected.toLowerCase();
-}
 
 // Verifier: IronSource
 async function verifyIronSourceSignature(
@@ -145,6 +102,7 @@ async function verifyPubscaleSignature(
 }
 
 Deno.serve(async (req) => {
+  try {
   // Support both GET and POST requests
   if (req.method !== "POST" && req.method !== "GET") {
     return errorResponse("Method Not Allowed", 405);
@@ -172,7 +130,7 @@ Deno.serve(async (req) => {
   // Combine parameters (body overrides query parameters)
   const params = { ...queryParams, ...bodyParams };
 
-  const provider = params.provider?.toLowerCase() || "lootably";
+  const provider = params.provider?.toLowerCase() || "pubscale";
   const config = getConfig(provider);
 
   let userId = "";
@@ -182,30 +140,7 @@ Deno.serve(async (req) => {
   let isValid = false;
 
   // 2. Normalize and check params per provider
-  if (provider === "lootably") {
-    userId = params.userId || params.userID || "";
-    eventId = params.id || "";
-    amountStr = params.payout || "";
-    signature = params.signature || "";
-    const ip = params.ip || "";
-
-    if (!userId || !eventId || !amountStr || !signature) {
-      return errorResponse("Missing required Lootably parameters", 400);
-    }
-    isValid = await verifyLootablySignature(userId, ip, amountStr, eventId, signature, config.secret);
-
-  } else if (provider === "monlix") {
-    userId = params.userId || "";
-    eventId = params.transactionId || params.id || "";
-    amountStr = params.payout || params.amount || "";
-    signature = params.signature || "";
-
-    if (!userId || !eventId || !amountStr || !signature) {
-      return errorResponse("Missing required Monlix parameters", 400);
-    }
-    isValid = await verifyMonlixSignature(userId, amountStr, eventId, signature, config.secret);
-
-  } else if (provider === "ironsource") {
+  if (provider === "ironsource") {
     userId = params.userId || "";
     eventId = params.eventId || "";
     amountStr = params.amount || "";
@@ -287,7 +222,7 @@ Deno.serve(async (req) => {
     .from("transactions")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
-    .in("source", ["offerwall_lootably", "offerwall_monlix", "offerwall_ironsource", "offerwall_tapjoy", "offerwall_pubscale"])
+    .in("source", ["offerwall_ironsource", "offerwall_tapjoy", "offerwall_pubscale"])
     .gte("processed_at", oneHourAgo);
 
   if ((count || 0) >= config.maxHourly) {
@@ -314,6 +249,13 @@ Deno.serve(async (req) => {
   // 8. Increment offers completed
   await supabase.rpc("increment_offers", { p_user_id: userId });
 
+  // 9. Invalidate user profile cache so next fetch returns fresh balance
+  redis.del(`user:profile:${userId}`).catch(console.error);
+
   console.log(`Credited ${amount} coins to ${userId} from provider ${provider}`);
   return jsonResponse({ success: true, credited: amount });
+  } catch (err) {
+    console.error("Unhandled Exception:", err);
+    return errorResponse(`Unhandled Exception: ${err instanceof Error ? err.message : String(err)}`, 500);
+  }
 });

@@ -4,8 +4,7 @@ import '../../models/user_profile.dart';
 import '../providers/coin_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/providers.dart';
-import 'dart:typed_data';
-import 'package:image_picker/image_picker.dart';
+
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
@@ -602,39 +601,6 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog>
   bool _isSaving = false;
   String? _errorMessage;
 
-  Future<void> _uploadCustomPhoto() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-      
-      if (pickedFile == null) return;
-      
-      setState(() {
-        _isSaving = true;
-        _errorMessage = null;
-      });
-      
-      final bytes = await pickedFile.readAsBytes();
-      final profileService = ref.read(profileServiceProvider);
-      
-      final newUrl = await profileService.uploadProfilePhoto(bytes, widget.userProfile.id);
-      
-      setState(() {
-        _selectedAvatarUrl = newUrl;
-        _isSaving = false;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to upload photo: $e';
-        _isSaving = false;
-      });
-    }
-  }
 
   @override
   void initState() {
@@ -688,6 +654,9 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog>
       if (_selectedAvatarUrl != widget.userProfile.profilePhotoUrl) {
         await profileService.updateProfilePhoto(_selectedAvatarUrl);
       }
+      
+      // Force immediate re-fetch of the profile from backend (which hits the freshly invalidated cache)
+      ref.invalidate(userProfileStreamProvider);
       
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -824,33 +793,18 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog>
               const SizedBox(height: 22),
 
               // Avatar section
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Profile Photo',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _isSaving ? null : _uploadCustomPhoto,
-                    icon: const Icon(Icons.upload_file, size: 16),
-                    label: const Text('Upload Custom', style: TextStyle(fontSize: 12)),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ],
+              const Text(
+                'Profile Photo',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.3,
+                ),
               ),
               const SizedBox(height: 6),
               const Text(
-                'Pick an avatar or upload your own',
+                'Pick an avatar — optional',
                 style: TextStyle(
                   fontSize: 12,
                   color: Color(0xFFB0B8C8),

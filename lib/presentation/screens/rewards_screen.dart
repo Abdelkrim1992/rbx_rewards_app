@@ -6,6 +6,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
+import '../providers/data_providers.dart';
 
 class RewardsScreen extends ConsumerStatefulWidget {
   final Function(int) onNavTap;
@@ -17,24 +18,6 @@ class RewardsScreen extends ConsumerStatefulWidget {
 }
 
 class _RewardsScreenState extends ConsumerState<RewardsScreen> {
-  List<Map<String, dynamic>> _history = [];
-  bool _historyLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-  }
-
-  Future<void> _loadHistory() async {
-    final data = await ref.read(rewardServiceProvider).getRedeemedRewards();
-    if (mounted) {
-      setState(() {
-        _history = data;
-        _historyLoading = false;
-      });
-    }
-  }
 
   int _parseRewardCost(String cost) {
     return int.tryParse(cost.replaceAll(',', '')) ?? 0;
@@ -112,8 +95,8 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       return;
     }
 
-    // Reload history in the background (dialog is still open)
-    await _loadHistory();
+    // Reload history via Riverpod
+    ref.invalidate(rewardHistoryProvider);
   }
 
   @override
@@ -162,6 +145,8 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         bgColor: Color(0xFF6A2FD8),
       ),
     ];
+
+    final historyAsync = ref.watch(rewardHistoryProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -251,7 +236,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                               color: AppColors.primaryText,
                             ),
                           ),
-                          if (_historyLoading)
+                          if (historyAsync.isLoading)
                             const SizedBox(
                               width: 16,
                               height: 16,
@@ -264,54 +249,65 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
-                    if (_history.isEmpty && !_historyLoading)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppLayout.screenPadding),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FA),
-                            borderRadius: BorderRadius.circular(15),
-                            border: Border.all(color: const Color(0xFFF1F5F9)),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x1A000000),
-                                blurRadius: 2,
-                                spreadRadius: 0,
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.history,
-                                  color: AppColors.secondaryText, size: 20),
-                              SizedBox(width: 12),
-                              Text(
-                                'No redemptions yet.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppColors.secondaryText,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppLayout.screenPadding),
-                        itemCount: _history.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (ctx, i) {
-                          final item = _history[i];
-                          return _RedemptionHistoryItem(data: item);
-                        },
+                    
+                    historyAsync.when(
+                      loading: () => const SizedBox(),
+                      error: (err, stack) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                        child: Text('Error loading history: $err', style: const TextStyle(color: Colors.red)),
                       ),
+                      data: (history) {
+                        if (history.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppLayout.screenPadding),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8F9FA),
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: const Color(0xFFF1F5F9)),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x1A000000),
+                                    blurRadius: 2,
+                                    spreadRadius: 0,
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.history,
+                                      color: AppColors.secondaryText, size: 20),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'No redemptions yet.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.secondaryText,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else {
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppLayout.screenPadding),
+                            itemCount: history.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (ctx, i) {
+                              final item = history[i];
+                              return _RedemptionHistoryItem(data: item);
+                            },
+                          );
+                        }
+                      },
+                    ),
                     const SizedBox(height: 120),
                   ],
                 ),

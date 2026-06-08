@@ -1,5 +1,5 @@
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
-import { checkCooldown, setCooldown } from "../_shared/cooldown.ts";
+import { redis } from "../_shared/redis.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,18 +15,6 @@ Deno.serve(async (req) => {
   }
 
   const uid = user.id;
-  const cooldownKey = `cooldown:spin:${uid}`;
-
-  // Check Redis cooldown first
-  const remainingCooldown = await checkCooldown(cooldownKey);
-  if (remainingCooldown > 0) {
-    return jsonResponse({
-      success: false,
-      error: "cooldown",
-      spins_remaining: 0,
-      cooldown_end: remainingCooldown * 1000,
-    });
-  }
 
   const { data, error } = await supabase.rpc("use_spin", {
     p_user_id: uid,
@@ -36,10 +24,9 @@ Deno.serve(async (req) => {
     return errorResponse(error.message, 400);
   }
 
-  // Set Redis cooldown on successful claim if no spins left
-  if (data && data.success === true && data.spins_remaining === 0) {
-    await setCooldown(cooldownKey, 86400); // 24 hours
-    data.cooldown_end = 86400 * 1000;
+  if (data && data.success === true) {
+    // Invalidate user profile cache so updated balance is reflected
+    redis.del(`user:profile:${uid}`).catch(console.error);
   }
 
   return jsonResponse(data);

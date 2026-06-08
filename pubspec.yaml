@@ -28,7 +28,8 @@ dependencies:
   pubscale_offerwall_plugin: ^0.0.4
   flutter_riverpod: ^2.6.1
   hive_flutter: ^1.1.0
-  image_picker: ^1.2.2
+  crypto: ^3.0.7
+  device_info_plus: ^13.1.0
 
 dev_dependencies:
   flutter_test:

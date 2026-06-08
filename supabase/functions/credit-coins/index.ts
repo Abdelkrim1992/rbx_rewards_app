@@ -68,6 +68,9 @@ Deno.serve(async (req: Request) => {
       await redis.zadd("leaderboard:weekly", { score: userRow.total_earned, member: uid });
     }
 
+    // Invalidate the user profile cache so the next fetch gets the fresh balance
+    redis.del(`user:profile:${uid}`).catch(console.error);
+
     return jsonResponse({ success: true, balance: newBalance });
   } catch (e) {
     console.error("Credit coins error:", e);

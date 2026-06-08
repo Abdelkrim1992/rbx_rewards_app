@@ -6,13 +6,13 @@ import '../theme/app_theme.dart';
 /// - Premium Claim (higher reward + rewarded ad)
 ///
 /// Design emphasizes the premium option to maximize user selection (70-80% target).
-class TwoTierRewardDialog extends StatelessWidget {
+class TwoTierRewardDialog extends StatefulWidget {
   final String title;
   final String description;
   final int quickReward;
   final int premiumReward;
-  final VoidCallback onQuickClaim;
-  final VoidCallback onPremiumClaim;
+  final Future<void> Function() onQuickClaim;
+  final Future<void> Function() onPremiumClaim;
   final String quickLabel;
   final String premiumLabel;
 
@@ -27,6 +27,35 @@ class TwoTierRewardDialog extends StatelessWidget {
     this.quickLabel = 'Quick Claim',
     this.premiumLabel = 'Watch a video for more reward',
   });
+
+  @override
+  State<TwoTierRewardDialog> createState() => _TwoTierRewardDialogState();
+}
+
+class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
+  bool _isLoading = false;
+  String _loadingMessage = '';
+
+  Future<void> _handleClaim(bool isPremium) async {
+    setState(() {
+      _isLoading = true;
+      _loadingMessage = '';
+    });
+
+    try {
+      if (isPremium) {
+        await widget.onPremiumClaim();
+      } else {
+        await widget.onQuickClaim();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +96,7 @@ class TwoTierRewardDialog extends StatelessWidget {
 
             // Title
             Text(
-              title,
+              widget.title,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 24,
@@ -80,7 +109,7 @@ class TwoTierRewardDialog extends StatelessWidget {
 
             // Description
             Text(
-              description,
+              _isLoading ? _loadingMessage : widget.description,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 15,
@@ -90,12 +119,18 @@ class TwoTierRewardDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Premium Option (emphasized with visual hierarchy)
-            _buildPremiumOption(context),
-            const SizedBox(height: 12),
+            if (_isLoading) ...[
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(color: AppColors.primary),
+              const SizedBox(height: 40),
+            ] else ...[
+              // Premium Option (emphasized with visual hierarchy)
+              _buildPremiumOption(context),
+              const SizedBox(height: 12),
 
-            // Quick Option (smaller, less emphasized)
-            _buildQuickOption(context),
+              // Quick Option (smaller, less emphasized)
+              _buildQuickOption(context),
+            ],
           ],
         ),
       ),
@@ -104,7 +139,7 @@ class TwoTierRewardDialog extends StatelessWidget {
 
   Widget _buildPremiumOption(BuildContext context) {
     return GestureDetector(
-      onTap: onPremiumClaim,
+      onTap: () => _handleClaim(true),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -124,7 +159,7 @@ class TwoTierRewardDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              premiumLabel,
+              widget.premiumLabel,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 12,
@@ -156,7 +191,7 @@ class TwoTierRewardDialog extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '+$premiumReward RBX',
+                    '+${widget.premiumReward} RBX',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
@@ -174,7 +209,7 @@ class TwoTierRewardDialog extends StatelessWidget {
 
   Widget _buildQuickOption(BuildContext context) {
     return GestureDetector(
-      onTap: onQuickClaim,
+      onTap: () => _handleClaim(false),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -200,7 +235,7 @@ class TwoTierRewardDialog extends StatelessWidget {
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                '+$quickReward RBX',
+                '+${widget.quickReward} RBX',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,

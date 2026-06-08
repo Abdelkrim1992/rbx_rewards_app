@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rbx_rewards_app/services/analytics_service.dart';
+import 'package:rbx_rewards_app/business/analytics_service.dart';
 
 void main() {
   group('AnalyticsService', () {

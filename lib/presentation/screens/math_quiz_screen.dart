@@ -753,8 +753,16 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.currency_bitcoin,
-                color: Color(0xFFFFB000), size: 28),
+            Image.asset(
+              AppAssets.goldRbxCoin,
+              width: 24,
+              height: 24,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.monetization_on,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               '+$_coinsEarned RBX Coins',
@@ -858,27 +866,27 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
               const SizedBox(height: 14),
 
               // Go to Home
-              GestureDetector(
-                onTap: _claimQuizCoins,
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECE7FF),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Go to Home',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF6338F9),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              // GestureDetector(
+              //   onTap: _claimQuizCoins,
+              //   child: Container(
+              //     width: double.infinity,
+              //     height: 60,
+              //     decoration: BoxDecoration(
+              //       color: const Color(0xFFECE7FF),
+              //       borderRadius: BorderRadius.circular(30),
+              //     ),
+              //     child: Center(
+              //       child: Text(
+              //         'Go to Home',
+              //         style: GoogleFonts.outfit(
+              //           fontSize: 18,
+              //           fontWeight: FontWeight.w900,
+              //           color: const Color(0xFF6338F9),
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // ),
               const SizedBox(height: 30),
             ],
           ),

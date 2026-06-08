@@ -145,6 +145,9 @@ Deno.serve(async (req) => {
     await redis.zadd(`leaderboard:${gameName}`, { score: scoreToValidate, member: uid });
   }
 
+  // Invalidate user profile cache so next get-user-stats returns fresh balance
+  redis.del(`user:profile:${uid}`).catch(console.error);
+
   console.log(`User ${uid} earned ${finalScore} from ${gameName} (session ${sessionId})`);
   return jsonResponse({
     success: true,
