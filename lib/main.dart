@@ -15,8 +15,10 @@ import 'widgets/quit_confirmation_dialog.dart';
 import 'data/hive_repository.dart';
 import 'presentation/providers/providers.dart';
 import 'presentation/providers/user_provider.dart';
+import 'presentation/providers/coin_provider.dart';
 import 'business/lucky_bonus_service.dart';
 import 'business/tapjoy_service.dart';
+import 'business/pubscale_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
@@ -73,14 +75,24 @@ Future<void> main() async {
 
   if (supabaseInitialized) {
     final auth = container.read(authServiceProvider);
-    await auth.checkFreshInstall();
     if (auth.currentUser == null) {
       try {
-        await auth.signInAnonymously();
+        await auth.signInWithDevice();
       } catch (e) {
-        debugPrint('Failed to sign in anonymously on startup: $e');
+        debugPrint('Failed to sign in with device on startup: $e');
       }
     }
+    // Initialize PubScale Offerwall with the authenticated user's ID
+    final userId = auth.currentUser?.id ?? 'anonymous';
+    PubscaleService().initialize(userId);
+
+    // Bind Offerwall reward/close events to refresh the coin balance from the backend
+    PubscaleService().onReward = (amount, currency) {
+      container.read(coinProvider.notifier).refresh();
+    };
+    TapjoyService().onClosed = () {
+      container.read(coinProvider.notifier).refresh();
+    };
   }
 
   runApp(
@@ -135,6 +147,7 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
     with WidgetsBindingObserver {
   int _currentTab = 0;
   bool _showSpin = false;
+  bool _hasInitialData = false;
 
   @override
   void initState() {
@@ -150,7 +163,11 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // App lifecycle tracking can be handled here if needed in the future
+    if (state == AppLifecycleState.resumed) {
+      // Re-sync coin balance from backend when app comes back to foreground.
+      // Picks up any coins earned from offerwalls/webhooks while app was backgrounded.
+      ref.read(coinProvider.notifier).refresh();
+    }
   }
 
   Future<void> _onGetStarted() async {
@@ -185,8 +202,12 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
     final profileAsync = ref.watch(userProfileStreamProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
 
-    // Show loading screen until the profile/session is resolved
-    if (profileAsync.isLoading) {
+    if (profileAsync.hasValue || profileAsync.hasError) {
+      _hasInitialData = true;
+    }
+
+    // Show loading screen until the profile/session is resolved for the first time
+    if (!_hasInitialData) {
       return const LoadingScreen();
     }
 
