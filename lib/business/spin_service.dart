@@ -60,6 +60,12 @@ class SpinService {
   }
 
   Future<void> addFreeSpinLocal() async {
+    final online = await _connectivity.isOnline;
+    if (online) {
+      try {
+        await _remote.addFreeSpin();
+      } catch (_) {}
+    }
     final spins = await _secure.getSpinFreeSpins();
     await _secure.saveSpinState(spins + 1, null);
   }

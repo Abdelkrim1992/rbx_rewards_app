@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'interactive_button.dart';
 
 /// Lucky bonus popup offering a random reward for watching an optional ad.
 class LuckyBonusDialog extends StatelessWidget {
@@ -51,41 +52,25 @@ class LuckyBonusDialog extends StatelessWidget {
               style: const TextStyle(color: Color(0xFF5C4A00), fontSize: 14),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onClaim();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A3B00),
-                  foregroundColor: const Color(0xFFFFD700),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'Claim Reward — Watch Ad',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
+            InteractiveButton(
+              text: 'Claim Reward — Watch Ad',
+              onTap: () {
+                Navigator.of(context).pop();
+                onClaim();
+              },
+              backgroundColor: const Color(0xFF4A3B00),
+              textColor: const Color(0xFFFFD700),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onLater();
-                },
-                child: const Text(
-                  'Maybe later',
-                  style: TextStyle(color: Color(0xFF5C4A00)),
-                ),
-              ),
+            InteractiveButton(
+              text: 'Maybe later',
+              onTap: () {
+                Navigator.of(context).pop();
+                onLater();
+              },
+              backgroundColor: Colors.transparent,
+              textColor: const Color(0xFF5C4A00),
+              border: Border.all(color: Colors.transparent), // Flat button look
             ),
           ],
         ),

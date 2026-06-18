@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import 'interactive_button.dart';
 
 /// Simulated rewarded video ad dialog.
 /// Shows a 5-second countdown with progress bar, then calls [onRewardGranted].
@@ -187,36 +188,12 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
             const SizedBox(height: 24),
 
             // Claim action button
-            GestureDetector(
+            InteractiveButton(
+              text: _adFinished ? 'CLAIM 2x REWARD' : 'WATCHING AD...',
               onTap: _adFinished ? _claim : null,
-              child: Container(
-                width: double.infinity,
-                height: 54,
-                decoration: BoxDecoration(
-                  gradient: _adFinished ? AppColors.primaryGradient : null,
-                  color: _adFinished ? null : const Color(0xFFE2E2F5),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: _adFinished
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          )
-                        ]
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  _adFinished ? 'CLAIM 2x REWARD' : 'WATCHING AD...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _adFinished ? Colors.white : const Color(0xFF868A9F),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
+              gradient: _adFinished ? AppColors.primaryGradient : null,
+              backgroundColor: _adFinished ? null : const Color(0xFFE2E2F5),
+              textColor: _adFinished ? Colors.white : const Color(0xFF868A9F),
             ),
           ],
         ),

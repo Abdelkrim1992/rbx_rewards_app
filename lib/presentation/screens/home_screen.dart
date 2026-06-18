@@ -38,6 +38,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _isProcessing = false;
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String hours = twoDigits(duration.inHours);
@@ -59,20 +61,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  void _claimDaily() {
+  void _claimDaily() async {
+    if (_isProcessing) return;
     final coolingDown = ref.read(dailyRewardCooldownProvider).inSeconds > 0;
     if (coolingDown) return;
-    _completeClaim();
+    setState(() => _isProcessing = true);
+    await _completeClaim();
+    if (mounted) setState(() => _isProcessing = false);
   }
 
   Future<void> _showSurveyDialog() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     final coinsEarned = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       builder: (context) => const SurveyDialog(),
     );
 
-    if (!mounted || coinsEarned == null || coinsEarned <= 0) return;
+    if (!mounted || coinsEarned == null || coinsEarned <= 0) {
+      if (mounted) setState(() => _isProcessing = false);
+      return;
+    }
 
     await showRewardChoice(
       context: context,
@@ -85,9 +95,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         await ref.read(profileServiceProvider).incrementOffersCompleted();
       },
     );
+    if (mounted) setState(() => _isProcessing = false);
   }
 
   Future<void> _showScratchDialog() async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
     // Step 1: Animation plays (scratch card reveal)
     final coinsEarned = await showDialog<int>(
       context: context,
@@ -95,7 +108,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       builder: (context) => const ScratchRewardDialog(),
     );
 
-    if (!mounted || coinsEarned == null || coinsEarned <= 0) return;
+    if (!mounted || coinsEarned == null || coinsEarned <= 0) {
+      if (mounted) setState(() => _isProcessing = false);
+      return;
+    }
 
     await showRewardChoice(
       context: context,
@@ -108,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         await ref.read(profileServiceProvider).incrementOffersCompleted();
       },
     );
+    if (mounted) setState(() => _isProcessing = false);
   }
 
   Future<void> _launchOfferwall(String sdkName) async {
@@ -150,13 +167,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       extendBody: true,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshableScrollView(
-                padding: const EdgeInsets.only(top: 12, bottom: 100),
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: RefreshableScrollView(
+                    padding: const EdgeInsets.only(top: 12, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -716,7 +735,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             reward: 15000,
                             difficulty: 'Easy',
                             estimatedTime: 'Varies',
-                            onTap: () => _launchOfferwall('pubscale'),
+                            onTap: () async {
+                              setState(() => _isProcessing = true);
+                              await _launchOfferwall('pubscale');
+                              if (mounted) setState(() => _isProcessing = false);
+                            },
                           ),
                         ],
                       ),
@@ -729,6 +752,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+      if (_isProcessing)
+        Container(
+          color: Colors.black26,
+          child: const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        ),
+    ],
+    ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(

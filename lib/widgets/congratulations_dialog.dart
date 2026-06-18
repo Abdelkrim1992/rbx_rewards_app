@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'interactive_button.dart';
 
 /// A shared congratulations popup used across all reward flows.
 /// Matches the style of the spin screen congratulations dialog.
@@ -84,67 +85,12 @@ class CongratulationsDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
-            _InteractiveCard(
+            InteractiveButton(
+              text: 'Done',
               onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'Done',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InteractiveCard extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-
-  const _InteractiveCard({required this.child, this.onTap});
-
-  @override
-  State<_InteractiveCard> createState() => _InteractiveCardState();
-}
-
-class _InteractiveCardState extends State<_InteractiveCard> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap?.call();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: widget.child,
       ),
     );
   }

@@ -567,7 +567,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
         return Column(
           key: const ValueKey('MENU'),
           children: [
-            const Spacer(),
+            const SizedBox(height: 16),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
               child: Row(
@@ -585,10 +585,8 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
               ),
             ),
             const SizedBox(height: 16),
-            Flexible(
-              flex: 0,
+            Expanded(
               child: ListView.separated(
-                shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                 itemCount: _categories.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 14),
@@ -601,7 +599,6 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                 },
               ),
             ),
-            const Spacer(),
           ],
         );
       },
@@ -617,10 +614,10 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
         const SizedBox(height: 10),
         // Question Card
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Container(
             width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 200),
+            height: 250,
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -653,18 +650,19 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
         const SizedBox(height: 25),
 
         // Answer Options (vertical list)
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            itemCount: _currentQuestion.options.length,
-            itemBuilder: (ctx, idx) {
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: List.generate(_currentQuestion.options.length, (idx) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _buildAnswerButton(idx),
               );
-            },
+            }),
           ),
         ),
+
+        const Spacer(),
 
         // Timer bar
         Padding(

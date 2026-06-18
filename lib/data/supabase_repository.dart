@@ -62,6 +62,19 @@ class SupabaseRepository {
     }
   }
 
+  Future<void> addFreeSpin() async {
+    final uid = currentUserId;
+    if (uid == null) return;
+    return _call(() async {
+      final data = await _client.from('users').select('spin_free_spins').eq('id', uid).maybeSingle();
+      final currentSpins = data != null ? (data['spin_free_spins'] as int? ?? 0) : 0;
+      await _client.from('users').update({
+        'spin_free_spins': currentSpins + 1,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', uid);
+    });
+  }
+
   Future<Map<String, dynamic>> getUserData() {
     final uid = currentUserId;
     if (uid == null) return Future.value(<String, dynamic>{});

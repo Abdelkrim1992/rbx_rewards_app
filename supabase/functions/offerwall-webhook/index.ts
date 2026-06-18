@@ -33,6 +33,14 @@ function getConfig(provider: string) {
     }
     return { secret, maxHourly };
   }
+  if (provider === "pubscale_ios") {
+    const secret = Deno.env.get("PUBSCALE_SECRET_IOS");
+    if (!secret) {
+      console.warn("⚠️ PUBSCALE_SECRET_IOS not configured. Using fallback 'mock_secret' for sandbox/testing.");
+      return { secret: "mock_secret", maxHourly };
+    }
+    return { secret, maxHourly };
+  }
 
   const fallback = Deno.env.get("IRONSOURCE_SECRET") || Deno.env.get("TAPJOY_SECRET") || Deno.env.get("PUBSCALE_SECRET");
   return { secret: fallback || "mock_secret", maxHourly };
@@ -161,7 +169,7 @@ Deno.serve(async (req) => {
       return errorResponse("Missing required Tapjoy parameters", 400);
     }
     isValid = await verifyTapjoySignature(params, config.secret);
-  } else if (provider === "pubscale") {
+  } else if (provider === "pubscale" || provider === "pubscale_ios") {
     userId = params.user_id || "";
     eventId = params.token || "";
     amountStr = params.value || "";
@@ -222,7 +230,7 @@ Deno.serve(async (req) => {
     .from("transactions")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
-    .in("source", ["offerwall_ironsource", "offerwall_tapjoy", "offerwall_pubscale"])
+    .in("source", ["offerwall_ironsource", "offerwall_tapjoy", "offerwall_pubscale", "offerwall_pubscale_ios"])
     .gte("processed_at", oneHourAgo);
 
   if ((count || 0) >= config.maxHourly) {

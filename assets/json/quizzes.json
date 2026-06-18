@@ -1,0 +1,5092 @@
+[
+  {
+    "id": "roblox_general",
+    "title": "Roblox Trivia",
+    "description": "Test your knowledge on all things Roblox!",
+    "icon": "🎮",
+    "bgColor": "E53935",
+    "questions": [
+      {
+        "text": "What is the main currency used in Roblox to buy items and game passes?",
+        "correctAnswer": "Robux",
+        "options": [
+          "Gems",
+          "Robux",
+          "Coins",
+          "Tix"
+        ]
+      },
+      {
+        "text": "What is the name of the customizable character you play as in Roblox?",
+        "correctAnswer": "Avatar",
+        "options": [
+          "Character",
+          "Figure",
+          "Player",
+          "Avatar"
+        ]
+      },
+      {
+        "text": "What is the name of the free tool used by players to create their own games on Roblox?",
+        "correctAnswer": "Roblox Studio",
+        "options": [
+          "Build Mode",
+          "Roblox Studio",
+          "Game Maker",
+          "World Editor"
+        ]
+      },
+      {
+        "text": "In the popular game 'Adopt Me!', what kind of creatures can you collect and trade?",
+        "correctAnswer": "Pets",
+        "options": [
+          "Cars",
+          "Houses",
+          "Pets",
+          "Weapons"
+        ]
+      },
+      {
+        "text": "What type of game is 'Brookhaven RP' mostly known for?",
+        "correctAnswer": "Role-playing",
+        "options": [
+          "Role-playing",
+          "Racing",
+          "Fighting",
+          "Puzzle"
+        ]
+      },
+      {
+        "text": "What do Roblox players often call their own created worlds or games?",
+        "correctAnswer": "Experiences",
+        "options": [
+          "Levels",
+          "Maps",
+          "Experiences",
+          "Worlds"
+        ]
+      },
+      {
+        "text": "What is a popular admin command used to make your avatar fly in some games?",
+        "correctAnswer": ":fly",
+        "options": [
+          ":speed",
+          ":jump",
+          ":teleport",
+          ":fly"
+        ]
+      },
+      {
+        "text": "What are special items players can use in some games, like swords or jetpacks, called?",
+        "correctAnswer": "Gear",
+        "options": [
+          "Gadgets",
+          "Tools",
+          "Items",
+          "Gear"
+        ]
+      },
+      {
+        "text": "What are rare items that are sold for a short time and often increase in value called?",
+        "correctAnswer": "Limiteds",
+        "options": [
+          "Rares",
+          "Collectibles",
+          "Exclusives",
+          "Limiteds"
+        ]
+      },
+      {
+        "text": "What are the basic building blocks used to create objects and environments in Roblox Studio called?",
+        "correctAnswer": "Parts",
+        "options": [
+          "Bricks",
+          "Cubes",
+          "Parts",
+          "Blocks"
+        ]
+      },
+      {
+        "text": "What can players earn in games for completing specific achievements or tasks?",
+        "correctAnswer": "Badges",
+        "options": [
+          "Trophies",
+          "Medals",
+          "Ribbons",
+          "Badges"
+        ]
+      },
+      {
+        "text": "What can you send to other players to connect with them and play together easily?",
+        "correctAnswer": "Friend Request",
+        "options": [
+          "Play Invite",
+          "Buddy Up",
+          "Friend Request",
+          "Join Request"
+        ]
+      },
+      {
+        "text": "What shape is the classic Roblox logo often associated with?",
+        "correctAnswer": "A tilted square",
+        "options": [
+          "A star",
+          "A tilted square",
+          "A circle",
+          "A triangle"
+        ]
+      },
+      {
+        "text": "What can you buy in a game to unlock special abilities, items, or areas?",
+        "correctAnswer": "Game Pass",
+        "options": [
+          "VIP Ticket",
+          "Level Up",
+          "Power Up",
+          "Game Pass"
+        ]
+      },
+      {
+        "text": "What kind of item can you wear on your avatar's head, like a hat or a crown?",
+        "correctAnswer": "Accessory",
+        "options": [
+          "Decoration",
+          "Headgear",
+          "Ornament",
+          "Accessory"
+        ]
+      },
+      {
+        "text": "Who is often credited as one of the co-founders of Roblox?",
+        "correctAnswer": "David Baszucki",
+        "options": [
+          "Mark Zuckerberg",
+          "Bill Gates",
+          "David Baszucki",
+          "Elon Musk"
+        ]
+      },
+      {
+        "text": "Before Robux became the main currency, what other currency did Roblox have that is now retired?",
+        "correctAnswer": "Tix",
+        "options": [
+          "Bucks",
+          "Points",
+          "Tix",
+          "Stars"
+        ]
+      },
+      {
+        "text": "In 'Tower of Hell', what is the main goal?",
+        "correctAnswer": "Reach the top of the tower",
+        "options": [
+          "Fight monsters",
+          "Build a base",
+          "Solve puzzles",
+          "Reach the top of the tower"
+        ]
+      },
+      {
+        "text": "What is a popular type of game in Roblox that involves navigating obstacle courses?",
+        "correctAnswer": "Obby",
+        "options": [
+          "Parkour",
+          "Race",
+          "Obby",
+          "Maze"
+        ]
+      },
+      {
+        "text": "What do Roblox often host where players can earn free virtual items by completing tasks?",
+        "correctAnswer": "Events",
+        "options": [
+          "Competitions",
+          "Festivals",
+          "Events",
+          "Parties"
+        ]
+      },
+      {
+        "text": "What is the subscription service that gives players extra Robux and exclusive items?",
+        "correctAnswer": "Roblox Premium",
+        "options": [
+          "VIP Pass",
+          "Roblox Premium",
+          "Elite Membership",
+          "Gold Club"
+        ]
+      },
+      {
+        "text": "What can players join to connect with others who share similar interests or play the same games?",
+        "correctAnswer": "Group",
+        "options": [
+          "Team",
+          "Alliance",
+          "Club",
+          "Group"
+        ]
+      },
+      {
+        "text": "What is the main way players communicate with each other in games?",
+        "correctAnswer": "Chat",
+        "options": [
+          "Messaging",
+          "Yelling",
+          "Talking",
+          "Chat"
+        ]
+      },
+      {
+        "text": "In 'Murder Mystery 2', what are the three main roles players can be?",
+        "correctAnswer": "Innocent, Sheriff, Murderer",
+        "options": [
+          "Hunter, Prey, Witness",
+          "Cop, Thief, Citizen",
+          "Innocent, Sheriff, Murderer",
+          "Good, Bad, Neutral"
+        ]
+      },
+      {
+        "text": "Where can players buy new clothes, accessories, and gear for their avatar?",
+        "correctAnswer": "Catalog",
+        "options": [
+          "Shop",
+          "Market",
+          "Store",
+          "Catalog"
+        ]
+      },
+      {
+        "text": "In Roblox Studio, what command allows you to combine multiple parts into one object?",
+        "correctAnswer": "Group",
+        "options": [
+          "Merge",
+          "Unite",
+          "Combine",
+          "Group"
+        ]
+      },
+      {
+        "text": "What is a common term for a new or inexperienced player in Roblox?",
+        "correctAnswer": "Noob",
+        "options": [
+          "Rookie",
+          "Starter",
+          "Beginner",
+          "Noob"
+        ]
+      },
+      {
+        "text": "What are the special animations your avatar can perform, like dancing or waving?",
+        "correctAnswer": "Emotes",
+        "options": [
+          "Gestures",
+          "Actions",
+          "Moves",
+          "Emotes"
+        ]
+      },
+      {
+        "text": "What is the official website domain for Roblox?",
+        "correctAnswer": "Roblox.com",
+        "options": [
+          "TheRoblox.com",
+          "PlayRoblox.com",
+          "Roblox.com",
+          "RobloxGames.com"
+        ]
+      },
+      {
+        "text": "What can players earn in some games to show their progress or skill?",
+        "correctAnswer": "Points",
+        "options": [
+          "Scores",
+          "XP",
+          "Levels",
+          "Points"
+        ]
+      },
+      {
+        "text": "What feature helps protect younger players by filtering inappropriate language in chat?",
+        "correctAnswer": "Chat Filter",
+        "options": [
+          "Word Blocker",
+          "Language Guard",
+          "Chat Filter",
+          "Safe Chat"
+        ]
+      },
+      {
+        "text": "'MeepCity' is a popular social hangout game. What are the small, customizable creatures you can have in the game called?",
+        "correctAnswer": "Meeps",
+        "options": [
+          "Bloxels",
+          "Puffles",
+          "Pets",
+          "Meeps"
+        ]
+      },
+      {
+        "text": "What allows characters to move and perform actions in a game?",
+        "correctAnswer": "Animation",
+        "options": [
+          "Movement",
+          "Action",
+          "Motion",
+          "Animation"
+        ]
+      },
+      {
+        "text": "What was the name of the previous premium membership before Roblox Premium?",
+        "correctAnswer": "Builder's Club",
+        "options": [
+          "Player's Club",
+          "Developer's Club",
+          "Creator's Club",
+          "Builder's Club"
+        ]
+      },
+      {
+        "text": "What programming language is used in Roblox Studio to create game logic?",
+        "correctAnswer": "Lua",
+        "options": [
+          "C#",
+          "Python",
+          "Lua",
+          "JavaScript"
+        ]
+      },
+      {
+        "text": "What is a 2D image that can be applied to parts in Roblox Studio?",
+        "correctAnswer": "Decal",
+        "options": [
+          "Texture",
+          "Image",
+          "Decal",
+          "Sticker"
+        ]
+      },
+      {
+        "text": "What is the term for Roblox avatars that have more realistic body proportions and animations?",
+        "correctAnswer": "Rthro",
+        "options": [
+          "Humanoid",
+          "Realblox",
+          "Anthro",
+          "Rthro"
+        ]
+      },
+      {
+        "text": "What does 'UGC' stand for in the context of Roblox, referring to items created by players?",
+        "correctAnswer": "User-Generated Content",
+        "options": [
+          "Ultimate Game Creation",
+          "Unique Game Crafts",
+          "User-Generated Content",
+          "Universal Game Code"
+        ]
+      },
+      {
+        "text": "What are items sometimes given out for free during special holiday events like Christmas or Halloween?",
+        "correctAnswer": "Event Items",
+        "options": [
+          "Holiday Gifts",
+          "Seasonal Loot",
+          "Festival Gear",
+          "Event Items"
+        ]
+      },
+      {
+        "text": "What is the annual awards show that celebrates the best games and creators on Roblox?",
+        "correctAnswer": "Bloxy Awards",
+        "options": [
+          "Creator's Choice",
+          "Robloxys",
+          "Bloxy Awards",
+          "Game Awards"
+        ]
+      },
+      {
+        "text": "What is a common bundle of items often given to new players in some games?",
+        "correctAnswer": "Starter Pack",
+        "options": [
+          "Welcome Kit",
+          "Newbie Box",
+          "Beginner Bundle",
+          "Starter Pack"
+        ]
+      },
+      {
+        "text": "What is a common action in many Roblox games that instantly moves your avatar to a new location?",
+        "correctAnswer": "Teleport",
+        "options": [
+          "Warp",
+          "Travel",
+          "Jump",
+          "Teleport"
+        ]
+      },
+      {
+        "text": "What is a nickname often used to refer to a person who plays Roblox?",
+        "correctAnswer": "Robloxian",
+        "options": [
+          "Bloxer",
+          "Gamer",
+          "Player",
+          "Robloxian"
+        ]
+      },
+      {
+        "text": "What can you do to a game to save it to a special list and easily find it later?",
+        "correctAnswer": "Favorite",
+        "options": [
+          "Bookmark",
+          "Like",
+          "Save",
+          "Favorite"
+        ]
+      },
+      {
+        "text": "What feature allows players to flag inappropriate content or behavior to moderators?",
+        "correctAnswer": "Report Button",
+        "options": [
+          "Alert Tool",
+          "Complaint Form",
+          "Report Button",
+          "Flag System"
+        ]
+      },
+      {
+        "text": "What was the primary color of the classic Roblox 'R' logo?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Yellow",
+          "Red",
+          "Green",
+          "Blue"
+        ]
+      },
+      {
+        "text": "In Roblox Studio, what is the general term for any item that can be used in a game, like a model, sound, or image?",
+        "correctAnswer": "Asset",
+        "options": [
+          "Object",
+          "Component",
+          "Asset",
+          "Element"
+        ]
+      },
+      {
+        "text": "Which popular survival game on Roblox involves starting on a small island in the sky?",
+        "correctAnswer": "Islands",
+        "options": [
+          "Work at a Pizza Place",
+          "Jailbreak",
+          "Islands",
+          "Survive the Disasters"
+        ]
+      },
+      {
+        "text": "What is a one-time purchase within a game that can be bought multiple times, like buying more in-game currency?",
+        "correctAnswer": "Developer Product",
+        "options": [
+          "Microtransaction",
+          "Robux Pack",
+          "Game Pass",
+          "Developer Product"
+        ]
+      },
+      {
+        "text": "What is a popular annual event where players collect special items from many different games?",
+        "correctAnswer": "The Hunt",
+        "options": [
+          "Scavenger Quest",
+          "Egg Hunt",
+          "The Hunt",
+          "Item Dash"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "blox_fruits",
+    "title": "Blox Fruits",
+    "description": "Are you a true pirate or marine? Guess the fruits!",
+    "icon": "🍎",
+    "bgColor": "8E24AA",
+    "questions": [
+      {
+        "text": "What is the main currency used to buy items and fruits in Blox Fruits?",
+        "correctAnswer": "Beli",
+        "options": [
+          "Robux",
+          "Coins",
+          "Gems",
+          "Beli"
+        ]
+      },
+      {
+        "text": "Which fruit allows users to turn into a mythical bird and fly?",
+        "correctAnswer": "Phoenix",
+        "options": [
+          "Falcon",
+          "Light",
+          "Bird",
+          "Phoenix"
+        ]
+      },
+      {
+        "text": "What is the highest level a player can reach in Blox Fruits?",
+        "correctAnswer": "2550",
+        "options": [
+          "1500",
+          "2550",
+          "2000",
+          "3000"
+        ]
+      },
+      {
+        "text": "What is the name of the first island new players usually start on?",
+        "correctAnswer": "Starter Island",
+        "options": [
+          "Jungle",
+          "Marine Base",
+          "Pirate Starter",
+          "Starter Island"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to move extremely fast and shoot light beams?",
+        "correctAnswer": "Light Fruit",
+        "options": [
+          "Flash Fruit",
+          "Speed Fruit",
+          "Dark Fruit",
+          "Light Fruit"
+        ]
+      },
+      {
+        "text": "What type of damage does the Dark Fruit primarily deal?",
+        "correctAnswer": "Dark",
+        "options": [
+          "Shadow",
+          "Fire",
+          "Dark",
+          "Poison"
+        ]
+      },
+      {
+        "text": "Which boss is known as the \"King of the Sea\" in the First Sea?",
+        "correctAnswer": "Greybeard",
+        "options": [
+          "Dough King",
+          "Greybeard",
+          "Sea Beast",
+          "Rip_Indra"
+        ]
+      },
+      {
+        "text": "What is the name of the special currency used to awaken fruits or buy specific items?",
+        "correctAnswer": "Fragments",
+        "options": [
+          "Fragments",
+          "Gems",
+          "Coins",
+          "Beli"
+        ]
+      },
+      {
+        "text": "Which race can transform into a giant, powerful form for a short time?",
+        "correctAnswer": "Mink",
+        "options": [
+          "Human",
+          "Cyborg",
+          "Mink",
+          "Fishman"
+        ]
+      },
+      {
+        "text": "What is the name of the island where you can find the Marine Fortress in the First Sea?",
+        "correctAnswer": "Marine Fortress",
+        "options": [
+          "Naval Base",
+          "Marine Fortress",
+          "Pirate Town",
+          "Marine HQ"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and control ice?",
+        "correctAnswer": "Ice Fruit",
+        "options": [
+          "Snow Fruit",
+          "Water Fruit",
+          "Blizzard Fruit",
+          "Ice Fruit"
+        ]
+      },
+      {
+        "text": "What item is needed to summon the Sea Beast?",
+        "correctAnswer": "Fist of Darkness",
+        "options": [
+          "Kraken Tentacle",
+          "Sea Scroll",
+          "Fist of Darkness",
+          "Water Gem"
+        ]
+      },
+      {
+        "text": "Which fruit is known for its ability to create barriers and cages?",
+        "correctAnswer": "Barrier Fruit",
+        "options": [
+          "Cage Fruit",
+          "Force Field Fruit",
+          "Barrier Fruit",
+          "Wall Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the fighting style focused on powerful punches and kicks, often associated with the main character?",
+        "correctAnswer": "Superhuman",
+        "options": [
+          "Dragon Breath",
+          "Superhuman",
+          "Death Step",
+          "Electric Claw"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to become intangible and avoid attacks, turning into smoke?",
+        "correctAnswer": "Smoke Fruit",
+        "options": [
+          "Cloud Fruit",
+          "Smoke Fruit",
+          "Mist Fruit",
+          "Gas Fruit"
+        ]
+      },
+      {
+        "text": "What is the maximum number of accessory slots a player has?",
+        "correctAnswer": "2",
+        "options": [
+          "3",
+          "1",
+          "2",
+          "4"
+        ]
+      },
+      {
+        "text": "Which fruit lets you transform into a powerful, fiery dragon?",
+        "correctAnswer": "Dragon Fruit",
+        "options": [
+          "Lava Fruit",
+          "Fire Fruit",
+          "Blaze Fruit",
+          "Dragon Fruit"
+        ]
+      },
+      {
+        "text": "What is the common name for the special ability that allows you to see through walls and detect enemies?",
+        "correctAnswer": "Observation Haki",
+        "options": [
+          "Detection Haki",
+          "Observation Haki",
+          "Vision Haki",
+          "Sight Haki"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and control sticky, sweet dough?",
+        "correctAnswer": "Dough Fruit",
+        "options": [
+          "Mochi Fruit",
+          "Gum Fruit",
+          "Dough Fruit",
+          "Candy Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the main boss in the Second Sea, often found in the castle?",
+        "correctAnswer": "Awakened Ice Admiral",
+        "options": [
+          "Indra",
+          "Awakened Ice Admiral",
+          "Darkbeard",
+          "Dough King"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to control gravity and throw objects?",
+        "correctAnswer": "Gravity Fruit",
+        "options": [
+          "Weight Fruit",
+          "Pull Fruit",
+          "Force Fruit",
+          "Gravity Fruit"
+        ]
+      },
+      {
+        "text": "What material do you need to craft the \"Shark Anchor\" weapon?",
+        "correctAnswer": "Leviathan Heart",
+        "options": [
+          "Kraken Skin",
+          "Leviathan Heart",
+          "Sea Beast Scale",
+          "Shark Tooth"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and manipulate magma?",
+        "correctAnswer": "Magma Fruit",
+        "options": [
+          "Fire Fruit",
+          "Volcano Fruit",
+          "Magma Fruit",
+          "Lava Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the special sword that can be obtained from the \"Awakened Ice Admiral\"?",
+        "correctAnswer": "Rengoku",
+        "options": [
+          "Rengoku",
+          "Yoru",
+          "True Triple Katana",
+          "Saber"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to become a giant, destructive beast like a T-Rex?",
+        "correctAnswer": "T-Rex Fruit",
+        "options": [
+          "Beast Fruit",
+          "Rumble Fruit",
+          "T-Rex Fruit",
+          "Dinosaur Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the island in the First Sea where you can find the \"Prison\" and the \"Warden\" boss?",
+        "correctAnswer": "Prison",
+        "options": [
+          "Impel Down",
+          "Prison",
+          "Alcatraz",
+          "Jail Island"
+        ]
+      },
+      {
+        "text": "Which fruit grants the user the ability to control and become sand?",
+        "correctAnswer": "Sand Fruit",
+        "options": [
+          "Desert Fruit",
+          "Sand Fruit",
+          "Dust Fruit",
+          "Earth Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the powerful Haki that can knock out weaker opponents?",
+        "correctAnswer": "Conqueror's Haki",
+        "options": [
+          "Observation Haki",
+          "King's Haki",
+          "Conqueror's Haki",
+          "Armament Haki"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to turn into a ghost and possess others?",
+        "correctAnswer": "Ghost Fruit",
+        "options": [
+          "Spirit Fruit",
+          "Ghost Fruit",
+          "Phantom Fruit",
+          "Soul Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the currency used to buy specific items from the \"Death King\" in the Third Sea?",
+        "correctAnswer": "Bones",
+        "options": [
+          "Spirit Shards",
+          "Bones",
+          "Skulls",
+          "Ectoplasm"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and control strings?",
+        "correctAnswer": "String Fruit",
+        "options": [
+          "Wire Fruit",
+          "String Fruit",
+          "Rope Fruit",
+          "Thread Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the legendary sword that can be obtained by defeating \"Darkbeard\"?",
+        "correctAnswer": "Dark Blade",
+        "options": [
+          "Tushita",
+          "Saber",
+          "Dark Blade",
+          "Cursed Dual Katana"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to summon and control storms and lightning?",
+        "correctAnswer": "Rumble Fruit",
+        "options": [
+          "Thunder Fruit",
+          "Lightning Fruit",
+          "Rumble Fruit",
+          "Storm Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the NPC who sells \"Enchanting Books\" and upgrades accessories?",
+        "correctAnswer": "Master of Auras",
+        "options": [
+          "Enchanter",
+          "Master of Auras",
+          "Blacksmith",
+          "Accessory Dealer"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and manipulate portals?",
+        "correctAnswer": "Portal Fruit",
+        "options": [
+          "Warp Fruit",
+          "Portal Fruit",
+          "Gate Fruit",
+          "Teleport Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the powerful boss in the Third Sea who drops the \"Dark Dagger\"?",
+        "correctAnswer": "Rip_Indra",
+        "options": [
+          "Rip_Indra",
+          "Dough King",
+          "Katana Man",
+          "Cake Prince"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to turn into a spring and bounce around?",
+        "correctAnswer": "Spring Fruit",
+        "options": [
+          "Bounce Fruit",
+          "Elastic Fruit",
+          "Spring Fruit",
+          "Jump Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the island in the First Sea where you can fight \"Vice Admiral\"?",
+        "correctAnswer": "Frozen Village",
+        "options": [
+          "Arctic Base",
+          "Frozen Village",
+          "Snowy Island",
+          "Ice Island"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and manipulate bombs?",
+        "correctAnswer": "Bomb Fruit",
+        "options": [
+          "Explosion Fruit",
+          "Bomb Fruit",
+          "Blast Fruit",
+          "Dynamite Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the fighting style that utilizes powerful kicks and fire?",
+        "correctAnswer": "Death Step",
+        "options": [
+          "Death Step",
+          "Electric Claw",
+          "Sharkman Karate",
+          "Dragon Breath"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to control and become a cloud?",
+        "correctAnswer": "Cloud Fruit",
+        "options": [
+          "Mist Fruit",
+          "Cloud Fruit",
+          "Sky Fruit",
+          "Air Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the special item needed to awaken a fruit?",
+        "correctAnswer": "Fruit Awakening Chip",
+        "options": [
+          "Awakening Gem",
+          "Spirit Orb",
+          "Fruit Awakening Chip",
+          "Awakening Scroll"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to turn into a diamond and become very durable?",
+        "correctAnswer": "Diamond Fruit",
+        "options": [
+          "Steel Fruit",
+          "Iron Fruit",
+          "Crystal Fruit",
+          "Diamond Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the final island in the First Sea, often guarded by powerful enemies?",
+        "correctAnswer": "Fountain City",
+        "options": [
+          "Pirate Island",
+          "Fountain City",
+          "Marine Base",
+          "Desert Island"
+        ]
+      },
+      {
+        "text": "Which fruit's moveset often involves summoning light projectiles and a light sword?",
+        "correctAnswer": "Light Fruit",
+        "options": [
+          "Ice Fruit",
+          "Light Fruit",
+          "Magma Fruit",
+          "Phoenix Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the special item you need to summon the \"Dough King\" boss?",
+        "correctAnswer": "Cake Chalice",
+        "options": [
+          "Sweet Chalice",
+          "Pastry Cup",
+          "Cake Chalice",
+          "Dough Chalice"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to turn into a rubber human and stretch your body?",
+        "correctAnswer": "Rubber Fruit",
+        "options": [
+          "Gum Fruit",
+          "Elastic Fruit",
+          "Rubber Fruit",
+          "Stretch Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the island in the Second Sea known for its \"Hot and Cold\" biomes?",
+        "correctAnswer": "Hot and Cold",
+        "options": [
+          "Magma Village",
+          "Hot and Cold",
+          "Volcano Island",
+          "Frozen Village"
+        ]
+      },
+      {
+        "text": "Which fruit allows you to create and manipulate a sticky, stretchy, and sweet substance, often mistaken for mochi?",
+        "correctAnswer": "Dough Fruit",
+        "options": [
+          "Sweet Fruit",
+          "Gum Gum Fruit",
+          "Dough Fruit",
+          "Candy Fruit"
+        ]
+      },
+      {
+        "text": "What is the name of the powerful sword that can be obtained from the \"Expert Swordsman\" in the First Sea?",
+        "correctAnswer": "Saber",
+        "options": [
+          "Katana",
+          "Blade",
+          "Saber",
+          "Longsword"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "adopt_me",
+    "title": "Adopt Me!",
+    "description": "Pets, eggs, and trades! How well do you know Adopt Me?",
+    "icon": "🐶",
+    "bgColor": "039BE5",
+    "questions": [
+      {
+        "text": "What is the main currency used to buy items and eggs in Adopt Me!?",
+        "correctAnswer": "Bucks",
+        "options": [
+          "Gems",
+          "Robux",
+          "Bucks",
+          "Stars"
+        ]
+      },
+      {
+        "text": "Which of these is NOT a pet rarity in Adopt Me!?",
+        "correctAnswer": "Rarely Seen",
+        "options": [
+          "Legendary",
+          "Uncommon",
+          "Rarely Seen",
+          "Common"
+        ]
+      },
+      {
+        "text": "Where can you buy eggs like the Cracked Egg and Pet Egg?",
+        "correctAnswer": "Nursery",
+        "options": [
+          "Pet Shop",
+          "Toy Shop",
+          "Nursery",
+          "Trading Post"
+        ]
+      },
+      {
+        "text": "What type of pet is the Frost Dragon?",
+        "correctAnswer": "Legendary",
+        "options": [
+          "Uncommon",
+          "Legendary",
+          "Common",
+          "Rare"
+        ]
+      },
+      {
+        "text": "Which of these is a common trick a pet can learn?",
+        "correctAnswer": "Sit",
+        "options": [
+          "Fly",
+          "Swim",
+          "Run",
+          "Sit"
+        ]
+      },
+      {
+        "text": "What popular vehicle allows you to fly around Adoption Island?",
+        "correctAnswer": "Helicopter",
+        "options": [
+          "Skateboard",
+          "Boat",
+          "Car",
+          "Helicopter"
+        ]
+      },
+      {
+        "text": "What kind of egg can you get from the Gumball Machine in the Nursery?",
+        "correctAnswer": "Cracked Egg",
+        "options": [
+          "Royal Egg",
+          "Cracked Egg",
+          "Mythic Egg",
+          "Ocean Egg"
+        ]
+      },
+      {
+        "text": "What do pets love to do at the Playground?",
+        "correctAnswer": "Play",
+        "options": [
+          "Eat",
+          "Sleep",
+          "Play",
+          "Trade"
+        ]
+      },
+      {
+        "text": "Which pet rarity is higher than 'Ultra-Rare'?",
+        "correctAnswer": "Legendary",
+        "options": [
+          "Common",
+          "Uncommon",
+          "Rare",
+          "Legendary"
+        ]
+      },
+      {
+        "text": "What is the final stage of pet aging before it becomes a 'Full-Grown' pet?",
+        "correctAnswer": "Post-Teen",
+        "options": [
+          "Baby",
+          "Junior",
+          "Post-Teen",
+          "Newborn"
+        ]
+      },
+      {
+        "text": "How many full-grown pets of the same kind do you need to make a 'Mega Neon' pet?",
+        "correctAnswer": "16",
+        "options": [
+          "4",
+          "8",
+          "12",
+          "16"
+        ]
+      },
+      {
+        "text": "What can you put on your pet to make it look unique?",
+        "correctAnswer": "Pet Wear",
+        "options": [
+          "Food",
+          "Potions",
+          "Toys",
+          "Pet Wear"
+        ]
+      },
+      {
+        "text": "What potion can you give your pet so it can fly?",
+        "correctAnswer": "Fly Potion",
+        "options": [
+          "Ride Potion",
+          "Swim Potion",
+          "Fly Potion",
+          "Jump Potion"
+        ]
+      },
+      {
+        "text": "What is the main purpose of the Trading License?",
+        "correctAnswer": "To trade with other players",
+        "options": [
+          "To buy pets",
+          "To build a house",
+          "To trade with other players",
+          "To get free items"
+        ]
+      },
+      {
+        "text": "Which of these is a legendary pet often associated with winter events?",
+        "correctAnswer": "Frost Dragon",
+        "options": [
+          "Dog",
+          "Cat",
+          "Frost Dragon",
+          "Horse"
+        ]
+      },
+      {
+        "text": "Where can players go to adopt a pet, buy an egg, or get a new home?",
+        "correctAnswer": "Nursery",
+        "options": [
+          "Shop",
+          "School",
+          "Hospital",
+          "Nursery"
+        ]
+      },
+      {
+        "text": "What do pets need to eat to stay happy and healthy?",
+        "correctAnswer": "Pet Food",
+        "options": [
+          "Toys",
+          "Pet Food",
+          "Potions",
+          "Gems"
+        ]
+      },
+      {
+        "text": "When your pet has a thought bubble with a bed, what does it need?",
+        "correctAnswer": "Sleep",
+        "options": [
+          "Play",
+          "Eat",
+          "Sleep",
+          "Drink"
+        ]
+      },
+      {
+        "text": "Which of these eggs is considered the most expensive to buy with Bucks in the Nursery?",
+        "correctAnswer": "Royal Egg",
+        "options": [
+          "Cracked Egg",
+          "Pet Egg",
+          "Royal Egg",
+          "Starter Egg"
+        ]
+      },
+      {
+        "text": "What kind of building do players live in and decorate in Adopt Me!?",
+        "correctAnswer": "House",
+        "options": [
+          "Tent",
+          "Shop",
+          "House",
+          "Castle"
+        ]
+      },
+      {
+        "text": "What happens when you combine four full-grown pets of the same kind at the Neon Cave?",
+        "correctAnswer": "They become a Neon pet",
+        "options": [
+          "They disappear",
+          "They become a Neon pet",
+          "They get bigger",
+          "They lay an egg"
+        ]
+      },
+      {
+        "text": "What is a primary goal for many players in Adopt Me!?",
+        "correctAnswer": "Collecting pets",
+        "options": [
+          "Fighting monsters",
+          "Solving puzzles",
+          "Collecting pets",
+          "Building a city"
+        ]
+      },
+      {
+        "text": "Which of these pets is known for being a starter pet?",
+        "correctAnswer": "Dog",
+        "options": [
+          "Dragon",
+          "Unicorn",
+          "Dog",
+          "Giraffe"
+        ]
+      },
+      {
+        "text": "What role can you choose to be in Adopt Me! besides an 'Adult'?",
+        "correctAnswer": "Baby",
+        "options": [
+          "Teenager",
+          "Elder",
+          "Baby",
+          "Kid"
+        ]
+      },
+      {
+        "text": "What type of pet was the Bat Dragon originally from?",
+        "correctAnswer": "Halloween Event",
+        "options": [
+          "Christmas Event",
+          "Easter Event",
+          "Halloween Event",
+          "Summer Event"
+        ]
+      },
+      {
+        "text": "Which of these is a common pet accessory that helps pets move faster?",
+        "correctAnswer": "Skates",
+        "options": [
+          "Backpack",
+          "Hat",
+          "Skates",
+          "Collar"
+        ]
+      },
+      {
+        "text": "The 'Shadow Dragon' is what rarity of pet?",
+        "correctAnswer": "Legendary",
+        "options": [
+          "Uncommon",
+          "Rare",
+          "Ultra-Rare",
+          "Legendary"
+        ]
+      },
+      {
+        "text": "What do players often receive for logging in each day?",
+        "correctAnswer": "Daily Rewards",
+        "options": [
+          "New pets",
+          "Free Robux",
+          "Daily Rewards",
+          "Extra houses"
+        ]
+      },
+      {
+        "text": "What task involves taking your pet to the school to learn?",
+        "correctAnswer": "Study",
+        "options": [
+          "Play",
+          "Eat",
+          "Study",
+          "Sleep"
+        ]
+      },
+      {
+        "text": "Where can you find a giant pizza and other food items for your pet?",
+        "correctAnswer": "Pizzeria",
+        "options": [
+          "School",
+          "Hospital",
+          "Pizzeria",
+          "Toy Shop"
+        ]
+      },
+      {
+        "text": "The 'Giraffe' pet is a highly sought-after pet from which rarity?",
+        "correctAnswer": "Legendary",
+        "options": [
+          "Common",
+          "Uncommon",
+          "Rare",
+          "Legendary"
+        ]
+      },
+      {
+        "text": "What do you need to give your pet when it says 'I'm thirsty'?",
+        "correctAnswer": "A drink",
+        "options": [
+          "A toy",
+          "A bath",
+          "A drink",
+          "A hug"
+        ]
+      },
+      {
+        "text": "Which egg type often introduces new pets with a specific theme like 'Ocean' or 'Mythic'?",
+        "correctAnswer": "Event Eggs",
+        "options": [
+          "Cracked Eggs",
+          "Pet Eggs",
+          "Event Eggs",
+          "Royal Eggs"
+        ]
+      },
+      {
+        "text": "What allows players to interact and exchange items with each other?",
+        "correctAnswer": "Trading",
+        "options": [
+          "Chatting",
+          "Dancing",
+          "Trading",
+          "Racing"
+        ]
+      },
+      {
+        "text": "To age up your pet, you might need to take it to a certain building for a bath. Which one?",
+        "correctAnswer": "Hospital",
+        "options": [
+          "School",
+          "Nursery",
+          "Hospital",
+          "Pet Shop"
+        ]
+      },
+      {
+        "text": "What sound does a dog pet typically make?",
+        "correctAnswer": "Bark",
+        "options": [
+          "Meow",
+          "Roar",
+          "Hiss",
+          "Bark"
+        ]
+      },
+      {
+        "text": "Which of these is a legendary pet that resembles a mythical creature with a horn?",
+        "correctAnswer": "Unicorn",
+        "options": [
+          "Dog",
+          "Cat",
+          "Unicorn",
+          "Mouse"
+        ]
+      },
+      {
+        "text": "What is a common way to travel quickly around Adopt Me! Island?",
+        "correctAnswer": "Vehicles",
+        "options": [
+          "Walking",
+          "Teleporting",
+          "Vehicles",
+          "Swimming"
+        ]
+      },
+      {
+        "text": "What special potion can you give your pet to make it grow faster temporarily?",
+        "correctAnswer": "Aging Potion",
+        "options": [
+          "Fly Potion",
+          "Ride Potion",
+          "Aging Potion",
+          "Neon Potion"
+        ]
+      },
+      {
+        "text": "What is the pet given to new players when they first start the game?",
+        "correctAnswer": "Starter Pet",
+        "options": [
+          "Legendary Pet",
+          "Rare Pet",
+          "Starter Pet",
+          "Neon Pet"
+        ]
+      },
+      {
+        "text": "Which accessory is often used to make pets fly?",
+        "correctAnswer": "Fly Potion",
+        "options": [
+          "Swim Potion",
+          "Ride Potion",
+          "Fly Potion",
+          "Sleep Potion"
+        ]
+      },
+      {
+        "text": "What is the name of the popular mini-game where you collect falling items?",
+        "correctAnswer": "Falling Stars",
+        "options": [
+          "Falling Stars",
+          "Pet Race",
+          "Egg Hunt",
+          "Obstacle Course"
+        ]
+      },
+      {
+        "text": "After 'Newborn', what is the next age stage for a pet?",
+        "correctAnswer": "Junior",
+        "options": [
+          "Full-Grown",
+          "Teen",
+          "Junior",
+          "Pre-Teen"
+        ]
+      },
+      {
+        "text": "If your pet needs to go to the doctor, which building would you visit?",
+        "correctAnswer": "Hospital",
+        "options": [
+          "School",
+          "Nursery",
+          "Hospital",
+          "Pet Shop"
+        ]
+      },
+      {
+        "text": "The 'Kitsune' pet is inspired by a mythical fox from which culture?",
+        "correctAnswer": "Japanese",
+        "options": [
+          "Greek",
+          "Egyptian",
+          "Japanese",
+          "Norse"
+        ]
+      },
+      {
+        "text": "What do pets always need to stay alive and happy?",
+        "correctAnswer": "Care",
+        "options": [
+          "Diamonds",
+          "Robux",
+          "Care",
+          "Gold"
+        ]
+      },
+      {
+        "text": "Which of these eggs has the highest chance of hatching a Legendary pet?",
+        "correctAnswer": "Royal Egg",
+        "options": [
+          "Cracked Egg",
+          "Pet Egg",
+          "Royal Egg",
+          "Starter Egg"
+        ]
+      },
+      {
+        "text": "What is a common pet trick that involves the pet following you closely?",
+        "correctAnswer": "Follow",
+        "options": [
+          "Dance",
+          "Beg",
+          "Follow",
+          "Speak"
+        ]
+      },
+      {
+        "text": "Besides pets, what other valuable items can players trade in Adopt Me!?",
+        "correctAnswer": "Vehicles",
+        "options": [
+          "Houses",
+          "Bucks",
+          "Robux",
+          "Vehicles"
+        ]
+      },
+      {
+        "text": "What is the name of the main group that develops Adopt Me!?",
+        "correctAnswer": "Uplift Games",
+        "options": [
+          "Roblox Corp",
+          "DreamCraft",
+          "Uplift Games",
+          "Builderman Devs"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "brookhaven",
+    "title": "Brookhaven RP",
+    "description": "Secrets, locations, and roleplaying trivia.",
+    "icon": "🏡",
+    "bgColor": "43A047",
+    "questions": [
+      {
+        "text": "What does 'RP' stand for in Brookhaven RP?",
+        "correctAnswer": "Roleplay",
+        "options": [
+          "Roblox Play",
+          "Random Play",
+          "Real Players",
+          "Roleplay"
+        ]
+      },
+      {
+        "text": "Where can you find a secret bunker hidden beneath the ground in Brookhaven?",
+        "correctAnswer": "Under the gas station/church",
+        "options": [
+          "Behind the hospital",
+          "Under the gas station/church",
+          "On top of the school",
+          "Inside the bank vault"
+        ]
+      },
+      {
+        "text": "Which building in Brookhaven contains a vault that players often try to rob?",
+        "correctAnswer": "The Bank",
+        "options": [
+          "The Hospital",
+          "The School",
+          "The Police Station",
+          "The Bank"
+        ]
+      },
+      {
+        "text": "What vehicle is typically found parked outside the Police Station in Brookhaven?",
+        "correctAnswer": "Police car",
+        "options": [
+          "School bus",
+          "Ambulance",
+          "Police car",
+          "Fire truck"
+        ]
+      },
+      {
+        "text": "If your character needs to be healed or treated, which building would you visit?",
+        "correctAnswer": "The Hospital",
+        "options": [
+          "The Restaurant",
+          "The Library",
+          "The School",
+          "The Hospital"
+        ]
+      },
+      {
+        "text": "Which building allows players to attend classes and pretend to be students?",
+        "correctAnswer": "The School",
+        "options": [
+          "The Hotel",
+          "The Fire Station",
+          "The Grocery Store",
+          "The School"
+        ]
+      },
+      {
+        "text": "What secret can be discovered by going behind the large waterfall in Brookhaven?",
+        "correctAnswer": "A hidden cave",
+        "options": [
+          "An alien spaceship",
+          "A treasure chest",
+          "A hidden cave",
+          "A secret garden"
+        ]
+      },
+      {
+        "text": "Which icon on your in-game phone allows you to change your character's clothes?",
+        "correctAnswer": "Wardrobe icon",
+        "options": [
+          "Settings icon",
+          "Wardrobe icon",
+          "Map icon",
+          "Camera icon"
+        ]
+      },
+      {
+        "text": "What is a common roleplay job for a player who wants to help others in medical emergencies?",
+        "correctAnswer": "Doctor",
+        "options": [
+          "Teacher",
+          "Doctor",
+          "Chef",
+          "Police Officer"
+        ]
+      },
+      {
+        "text": "How do players typically get a house to live in within Brookhaven?",
+        "correctAnswer": "Claim an empty plot",
+        "options": [
+          "Find a hidden key",
+          "Claim an empty plot",
+          "Build it yourself",
+          "Buy one with Robux"
+        ]
+      },
+      {
+        "text": "What is the general name for the main settlement where most buildings are located?",
+        "correctAnswer": "Brookhaven City",
+        "options": [
+          "Brookhaven Village",
+          "Brookhaven City",
+          "Brookhaven Hamlet",
+          "Brookhaven Town"
+        ]
+      },
+      {
+        "text": "Where would you typically go in Brookhaven to find a small plane or helicopter?",
+        "correctAnswer": "The Airport",
+        "options": [
+          "The Hotel",
+          "The Car Dealership",
+          "The Airport",
+          "The Police Station"
+        ]
+      },
+      {
+        "text": "What is the purpose of the safe found in most houses in Brookhaven?",
+        "correctAnswer": "To store items or money",
+        "options": [
+          "To cook food",
+          "To hide from other players",
+          "To store items or money",
+          "To teleport to a secret location"
+        ]
+      },
+      {
+        "text": "How do you usually get a vehicle to drive around Brookhaven?",
+        "correctAnswer": "Spawn one from the vehicle menu",
+        "options": [
+          "Find one randomly parked",
+          "Steal one from a player",
+          "Spawn one from the vehicle menu",
+          "Buy one from a vending machine"
+        ]
+      },
+      {
+        "text": "Which emergency service building has a large red truck parked outside?",
+        "correctAnswer": "The Fire Station",
+        "options": [
+          "The Police Station",
+          "The Fire Station",
+          "The Post Office",
+          "The Hospital"
+        ]
+      },
+      {
+        "text": "If you're roleplaying a shopping trip for food, which store would you visit?",
+        "correctAnswer": "The Grocery Store",
+        "options": [
+          "The Hotel",
+          "The Library",
+          "The Grocery Store",
+          "The Car Dealership"
+        ]
+      },
+      {
+        "text": "What kind of secret feature is often found in the attic or basement of certain houses?",
+        "correctAnswer": "Hidden rooms or passages",
+        "options": [
+          "A swimming pool",
+          "A pet shop",
+          "A giant TV screen",
+          "Hidden rooms or passages"
+        ]
+      },
+      {
+        "text": "What does 'AFK' commonly mean in the context of roleplaying games?",
+        "correctAnswer": "Away From Keyboard",
+        "options": [
+          "Awesome Fast Karts",
+          "Away From Keyboard",
+          "Always Fun Kicking",
+          "Asking For Kills"
+        ]
+      },
+      {
+        "text": "Which option on your character customization menu allows you to change your character's physical size?",
+        "correctAnswer": "Size slider",
+        "options": [
+          "Accessory changer",
+          "Size slider",
+          "Color picker",
+          "Hair selector"
+        ]
+      },
+      {
+        "text": "What is the main way to change your character's appearance, like hair, face, or clothes?",
+        "correctAnswer": "Using the customization menu",
+        "options": [
+          "Finding magic potions",
+          "Using the customization menu",
+          "Asking another player",
+          "Visiting a salon building"
+        ]
+      },
+      {
+        "text": "What secret can be found by interacting with a specific object in the School's Principal's Office?",
+        "correctAnswer": "A hidden room",
+        "options": [
+          "A pet cat",
+          "A vending machine",
+          "A secret garden",
+          "A hidden room"
+        ]
+      },
+      {
+        "text": "Where can players typically find a swimming pool to relax by or swim in?",
+        "correctAnswer": "At certain houses or the Hotel",
+        "options": [
+          "Under the gas station",
+          "In the bank",
+          "At certain houses or the Hotel",
+          "At the police station"
+        ]
+      },
+      {
+        "text": "What roleplay job would you take if your goal is to enforce laws and catch criminals?",
+        "correctAnswer": "Police Officer",
+        "options": [
+          "Teacher",
+          "Police Officer",
+          "Firefighter",
+          "Chef"
+        ]
+      },
+      {
+        "text": "Which building is known for having a secret area located behind its main vault?",
+        "correctAnswer": "The Bank",
+        "options": [
+          "The Library",
+          "The Bank",
+          "The School",
+          "The Hospital"
+        ]
+      },
+      {
+        "text": "How do players usually adopt a pet in Brookhaven?",
+        "correctAnswer": "From the pet menu",
+        "options": [
+          "Catching one with a net",
+          "From the pet menu",
+          "Finding one in the forest",
+          "Buying one from a player"
+        ]
+      },
+      {
+        "text": "What happens if you use the 'reset character' button in the game menu?",
+        "correctAnswer": "Your character teleports back to the main spawn point",
+        "options": [
+          "Your character changes gender",
+          "Your character becomes invisible",
+          "Your character loses all items",
+          "Your character teleports back to the main spawn point"
+        ]
+      },
+      {
+        "text": "What is the default vehicle that most players can spawn for free when they start playing?",
+        "correctAnswer": "A basic car (sedan)",
+        "options": [
+          "A police car",
+          "A basic car (sedan)",
+          "A skateboard",
+          "A motorcycle"
+        ]
+      },
+      {
+        "text": "If you want to read books or use a computer for research, which building should you visit?",
+        "correctAnswer": "The Library",
+        "options": [
+          "The Post Office",
+          "The Arcade",
+          "The Café",
+          "The Library"
+        ]
+      },
+      {
+        "text": "What secret can be found directly under the Church in Brookhaven?",
+        "correctAnswer": "A secret bunker",
+        "options": [
+          "An ancient tomb",
+          "A giant pizza",
+          "A secret bunker",
+          "A hidden swimming pool"
+        ]
+      },
+      {
+        "text": "Which gamepass in Brookhaven allows your character to fly around the map?",
+        "correctAnswer": "Premium gamepass",
+        "options": [
+          "Premium gamepass",
+          "House gamepass",
+          "Speed gamepass",
+          "Invisible gamepass"
+        ]
+      },
+      {
+        "text": "What is the primary function of the camera icon on your in-game phone?",
+        "correctAnswer": "To take photos",
+        "options": [
+          "To make calls",
+          "To browse the internet",
+          "To track other players",
+          "To take photos"
+        ]
+      },
+      {
+        "text": "If you are roleplaying as a student, where would you typically spend most of your time during the day?",
+        "correctAnswer": "The School",
+        "options": [
+          "The Hospital",
+          "The School",
+          "The Fire Station",
+          "The Bank"
+        ]
+      },
+      {
+        "text": "What is a common type of secret vehicle that can be spawned in hidden or premium areas?",
+        "correctAnswer": "Motorcycle or ATV",
+        "options": [
+          "A hot dog stand",
+          "A tractor",
+          "A horse",
+          "Motorcycle or ATV"
+        ]
+      },
+      {
+        "text": "What does 'OOC' stand for when players use it in roleplaying chat?",
+        "correctAnswer": "Out Of Character",
+        "options": [
+          "On Our Computers",
+          "Out Of Character",
+          "Open Online Chat",
+          "Only One Choice"
+        ]
+      },
+      {
+        "text": "What special ability does the 'no-clip' gamepass grant your character?",
+        "correctAnswer": "Walk through walls",
+        "options": [
+          "Walk through walls",
+          "Fly really fast",
+          "Become invisible",
+          "Teleport anywhere"
+        ]
+      },
+      {
+        "text": "Which building in Brookhaven has multiple beds and rooms for patients and medical staff?",
+        "correctAnswer": "The Hospital",
+        "options": [
+          "The Hotel",
+          "The Library",
+          "The Hospital",
+          "The School"
+        ]
+      },
+      {
+        "text": "What secret can be found by clicking a specific wall inside the bank vault?",
+        "correctAnswer": "A hidden room",
+        "options": [
+          "A giant diamond",
+          "A teleportation device",
+          "A hidden room",
+          "A secret safe"
+        ]
+      },
+      {
+        "text": "Where can you find a playground equipped with swings, slides, and other fun activities?",
+        "correctAnswer": "The Park",
+        "options": [
+          "The Police Station",
+          "The Airport",
+          "The Park",
+          "The Beach"
+        ]
+      },
+      {
+        "text": "What is a common roleplay scenario that involves characters acting as parents, children, and sometimes pets?",
+        "correctAnswer": "Family roleplay",
+        "options": [
+          "Hospital roleplay",
+          "School roleplay",
+          "Family roleplay",
+          "Bank robbery roleplay"
+        ]
+      },
+      {
+        "text": "How do players primarily communicate with each other while roleplaying in Brookhaven?",
+        "correctAnswer": "Using the in-game chat and emotes",
+        "options": [
+          "Sending private messages",
+          "Using voice chat only",
+          "Writing notes on paper",
+          "Using the in-game chat and emotes"
+        ]
+      },
+      {
+        "text": "What secret can be found hidden deep inside the bunker located under the gas station?",
+        "correctAnswer": "A secret vault or room",
+        "options": [
+          "A giant pet dog",
+          "A hidden swimming pool",
+          "A secret vault or room",
+          "An alien artifact"
+        ]
+      },
+      {
+        "text": "Which building is easily identifiable by its distinct red cross symbol on the exterior?",
+        "correctAnswer": "The Hospital",
+        "options": [
+          "The Post Office",
+          "The Hospital",
+          "The Fire Station",
+          "The Police Station"
+        ]
+      },
+      {
+        "text": "If you're roleplaying a meal or getting a drink, where might you go in Brookhaven?",
+        "correctAnswer": "The Café or Restaurant",
+        "options": [
+          "The School",
+          "The Café or Restaurant",
+          "The Library",
+          "The Bank"
+        ]
+      },
+      {
+        "text": "What secret feature in the customization menu allows you to change your character's hair color?",
+        "correctAnswer": "Hair color palette",
+        "options": [
+          "Hair style selector",
+          "Hair color palette",
+          "Outfit changer",
+          "Face accessories"
+        ]
+      },
+      {
+        "text": "What is a common secret option for houses that allows players to hide their home from the map?",
+        "correctAnswer": "The 'Hide House' button",
+        "options": [
+          "The 'Invisible House' gamepass",
+          "Building a secret basement",
+          "The 'Hide House' button",
+          "Teleporting it away"
+        ]
+      },
+      {
+        "text": "What does 'IC' stand for when players use it in roleplaying chat?",
+        "correctAnswer": "In Character",
+        "options": [
+          "In Character",
+          "Item Collected",
+          "Instant Communication",
+          "Important Chat"
+        ]
+      },
+      {
+        "text": "Which vehicle is most commonly used by players roleplaying as police officers?",
+        "correctAnswer": "Police car",
+        "options": [
+          "Ambulance",
+          "Taxi",
+          "Fire truck",
+          "Police car"
+        ]
+      },
+      {
+        "text": "What type of secret area in a house often requires finding a hidden button or lever to access?",
+        "correctAnswer": "A hidden basement or attic",
+        "options": [
+          "A secret garage",
+          "A hidden basement or attic",
+          "A secret garden",
+          "A hidden swimming pool"
+        ]
+      },
+      {
+        "text": "What is the fastest way to travel across the entire map if you have the Premium gamepass?",
+        "correctAnswer": "Flying",
+        "options": [
+          "Running very fast",
+          "Driving a sports car",
+          "Flying",
+          "Teleporting"
+        ]
+      },
+      {
+        "text": "What type of establishment might you visit to send a letter or package in Brookhaven?",
+        "correctAnswer": "The Post Office",
+        "options": [
+          "The Grocery Store",
+          "The Bank",
+          "The Library",
+          "The Post Office"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "murder_mystery_2",
+    "title": "Murder Mystery 2",
+    "description": "Knives, guns, and innocent survival trivia.",
+    "icon": "🔪",
+    "bgColor": "D81B60",
+    "questions": [
+      {
+        "text": "What is the main goal of the Murderer?",
+        "correctAnswer": "Eliminate all players",
+        "options": [
+          "Survive the round",
+          "Eliminate all players",
+          "Shoot the Sheriff",
+          "Collect all coins"
+        ]
+      },
+      {
+        "text": "Which role starts with a gun?",
+        "correctAnswer": "Sheriff",
+        "options": [
+          "Hero",
+          "Murderer",
+          "Innocent",
+          "Sheriff"
+        ]
+      },
+      {
+        "text": "What happens if the Sheriff shoots an Innocent player?",
+        "correctAnswer": "Sheriff dies",
+        "options": [
+          "Sheriff dies",
+          "Innocent gets a gun",
+          "Murderer dies",
+          "Nothing happens"
+        ]
+      },
+      {
+        "text": "What currency do you collect in-game to buy crates?",
+        "correctAnswer": "Coins",
+        "options": [
+          "Gems",
+          "Tickets",
+          "Coins",
+          "Robux"
+        ]
+      },
+      {
+        "text": "What do you open to get new knives, guns, or pets?",
+        "correctAnswer": "Crates",
+        "options": [
+          "Crates",
+          "Treasure chests",
+          "Gift boxes",
+          "Loot bags"
+        ]
+      },
+      {
+        "text": "Which weapon rarity is typically the hardest to obtain?",
+        "correctAnswer": "Godly",
+        "options": [
+          "Uncommon",
+          "Legendary",
+          "Godly",
+          "Rare"
+        ]
+      },
+      {
+        "text": "What action does the Murderer perform to attack from a distance?",
+        "correctAnswer": "Throwing the knife",
+        "options": [
+          "Setting a trap",
+          "Throwing the knife",
+          "Using an axe",
+          "Shooting a gun"
+        ]
+      },
+      {
+        "text": "How many murderers are there in a standard round of MM2?",
+        "correctAnswer": "One",
+        "options": [
+          "One",
+          "Two",
+          "Zero",
+          "Three"
+        ]
+      },
+      {
+        "text": "What happens if the Sheriff is eliminated?",
+        "correctAnswer": "Their gun drops",
+        "options": [
+          "The Murderer gets their gun",
+          "The round ends",
+          "Their gun drops",
+          "They respawn"
+        ]
+      },
+      {
+        "text": "What is the goal of an Innocent player?",
+        "correctAnswer": "Survive",
+        "options": [
+          "Survive",
+          "Find a secret passage",
+          "Eliminate the Murderer",
+          "Collect all weapons"
+        ]
+      },
+      {
+        "text": "What is the name of the companion items that follow you around?",
+        "correctAnswer": "Pets",
+        "options": [
+          "Sidekicks",
+          "Minions",
+          "Followers",
+          "Pets"
+        ]
+      },
+      {
+        "text": "What do you call the visual flair you can equip on your character's weapon?",
+        "correctAnswer": "Effects",
+        "options": [
+          "Glows",
+          "Trails",
+          "Auras",
+          "Effects"
+        ]
+      },
+      {
+        "text": "What happens if the timer runs out and the Murderer is still alive?",
+        "correctAnswer": "Innocents win",
+        "options": [
+          "Innocents win",
+          "The game restarts",
+          "Sheriff wins",
+          "Murderer wins"
+        ]
+      },
+      {
+        "text": "What is the highest rarity class for items like 'Chroma' knives?",
+        "correctAnswer": "Godly",
+        "options": [
+          "Vintage",
+          "Godly",
+          "Legendary",
+          "Ancient"
+        ]
+      },
+      {
+        "text": "What is the name of the game mode where players turn into murderers after being killed?",
+        "correctAnswer": "Infection",
+        "options": [
+          "Infection",
+          "Arena",
+          "Classic",
+          "FFA"
+        ]
+      },
+      {
+        "text": "What color usually represents a Legendary item in its rarity tag?",
+        "correctAnswer": "Orange",
+        "options": [
+          "Purple",
+          "Orange",
+          "Green",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What color usually represents a Rare item in its rarity tag?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Yellow",
+          "Red",
+          "Blue",
+          "Green"
+        ]
+      },
+      {
+        "text": "What do you call the system where players can trade items with each other?",
+        "correctAnswer": "Trading",
+        "options": [
+          "Gifting",
+          "Trading",
+          "Exchanging",
+          "Selling"
+        ]
+      },
+      {
+        "text": "What is the name of the creator of Murder Mystery 2?",
+        "correctAnswer": "Nikilis",
+        "options": [
+          "RobloxDev",
+          "Nikilis",
+          "Zelios",
+          "Builderman"
+        ]
+      },
+      {
+        "text": "What is a common strategy for Innocents trying to survive?",
+        "correctAnswer": "Running and hiding",
+        "options": [
+          "Standing still",
+          "Blocking doors",
+          "Attacking the Murderer",
+          "Running and hiding"
+        ]
+      },
+      {
+        "text": "What happens if an Innocent picks up the gun after the Sheriff dies?",
+        "correctAnswer": "They become the Hero",
+        "options": [
+          "They become the Hero",
+          "They die immediately",
+          "They become the Murderer",
+          "They lose coins"
+        ]
+      },
+      {
+        "text": "How do you earn coins during a round?",
+        "correctAnswer": "Surviving, picking them up, winning",
+        "options": [
+          "Opening crates",
+          "Buying them with Robux",
+          "Killing other players",
+          "Surviving, picking them up, winning"
+        ]
+      },
+      {
+        "text": "What is the name of the notification that shows who killed whom?",
+        "correctAnswer": "Kill Feed",
+        "options": [
+          "Game Chat",
+          "Kill Feed",
+          "Death Log",
+          "Event Log"
+        ]
+      },
+      {
+        "text": "What type of weapon does the Murderer use primarily?",
+        "correctAnswer": "Knife",
+        "options": [
+          "Axe",
+          "Gun",
+          "Knife",
+          "Sword"
+        ]
+      },
+      {
+        "text": "What type of weapon does the Sheriff use primarily?",
+        "correctAnswer": "Gun",
+        "options": [
+          "Bow",
+          "Bomb",
+          "Knife",
+          "Gun"
+        ]
+      },
+      {
+        "text": "What happens if the Murderer kills everyone?",
+        "correctAnswer": "Murderer wins",
+        "options": [
+          "Murderer wins",
+          "Innocents win",
+          "Sheriff wins",
+          "The round is a draw"
+        ]
+      },
+      {
+        "text": "What is the name of the special type of Godly knife that changes colors?",
+        "correctAnswer": "Chroma",
+        "options": [
+          "Rainbow",
+          "Glow",
+          "Spectrum",
+          "Chroma"
+        ]
+      },
+      {
+        "text": "What rarity tier comes directly after Common?",
+        "correctAnswer": "Uncommon",
+        "options": [
+          "Uncommon",
+          "Rare",
+          "Godly",
+          "Legendary"
+        ]
+      },
+      {
+        "text": "What rarity tier comes directly after Uncommon?",
+        "correctAnswer": "Rare",
+        "options": [
+          "Rare",
+          "Common",
+          "Godly",
+          "Legendary"
+        ]
+      },
+      {
+        "text": "What rarity tier comes directly after Rare?",
+        "correctAnswer": "Legendary",
+        "options": [
+          "Legendary",
+          "Ancient",
+          "Uncommon",
+          "Godly"
+        ]
+      },
+      {
+        "text": "What rarity tier comes directly after Legendary?",
+        "correctAnswer": "Godly",
+        "options": [
+          "Vintage",
+          "Godly",
+          "Mythic",
+          "Ancient"
+        ]
+      },
+      {
+        "text": "What is an 'Ancient' rarity item known for?",
+        "correctAnswer": "Being extremely rare and powerful, often from events",
+        "options": [
+          "Being very common",
+          "Being purchasable with coins",
+          "Being a starter item",
+          "Being extremely rare and powerful, often from events"
+        ]
+      },
+      {
+        "text": "Can a Sheriff shoot themselves?",
+        "correctAnswer": "No",
+        "options": [
+          "Only if they are the last player",
+          "No",
+          "Only if they pick up a special item",
+          "Yes, to end the round"
+        ]
+      },
+      {
+        "text": "What is the main objective of the Hero?",
+        "correctAnswer": "Shoot the Murderer",
+        "options": [
+          "Hide from the Murderer",
+          "Collect all coins",
+          "Protect the Innocents",
+          "Shoot the Murderer"
+        ]
+      },
+      {
+        "text": "What is the typical duration of a round in MM2?",
+        "correctAnswer": "Around 2-3 minutes",
+        "options": [
+          "30 seconds",
+          "10 minutes",
+          "Around 2-3 minutes",
+          "5 minutes"
+        ]
+      },
+      {
+        "text": "What important item can often be found on the ground after the Sheriff dies?",
+        "correctAnswer": "The gun",
+        "options": [
+          "Another knife",
+          "A health pack",
+          "A coin pile",
+          "The gun"
+        ]
+      },
+      {
+        "text": "What is a popular strategy for the Murderer to prevent the gun from being picked up?",
+        "correctAnswer": "Camping the gun",
+        "options": [
+          "Running away from the gun",
+          "Picking up the gun",
+          "Throwing the gun off the map",
+          "Camping the gun"
+        ]
+      },
+      {
+        "text": "What is the name of the default knife given to new players?",
+        "correctAnswer": "Classic Knife",
+        "options": [
+          "Starter Blade",
+          "Basic Knife",
+          "Classic Knife",
+          "Beginner Knife"
+        ]
+      },
+      {
+        "text": "What are 'Vintage' weapons known for?",
+        "correctAnswer": "Being old and no longer obtainable through crates",
+        "options": [
+          "Being old and no longer obtainable through crates",
+          "Being very powerful",
+          "Being easily found",
+          "Being custom-made"
+        ]
+      },
+      {
+        "text": "What is the main screen or area where players join before a round starts?",
+        "correctAnswer": "Lobby",
+        "options": [
+          "Spawn Point",
+          "Arena",
+          "Lobby",
+          "Waiting Room"
+        ]
+      },
+      {
+        "text": "What happens if the Hero shoots an Innocent?",
+        "correctAnswer": "Hero dies",
+        "options": [
+          "Nothing happens",
+          "Innocent dies and Hero loses gun",
+          "Hero dies",
+          "Murderer wins"
+        ]
+      },
+      {
+        "text": "What is the maximum number of players in a standard MM2 server?",
+        "correctAnswer": "12",
+        "options": [
+          "16",
+          "12",
+          "8",
+          "20"
+        ]
+      },
+      {
+        "text": "What is the name of the main game mode where one murderer, one sheriff, and innocents play?",
+        "correctAnswer": "Classic Mode",
+        "options": [
+          "Free-for-all",
+          "Capture the Flag",
+          "Classic Mode",
+          "Team Deathmatch"
+        ]
+      },
+      {
+        "text": "What is the purpose of the 'Radio' item in MM2?",
+        "correctAnswer": "To play music",
+        "options": [
+          "To play music",
+          "To locate the Murderer",
+          "To summon pets",
+          "To communicate with teammates"
+        ]
+      },
+      {
+        "text": "What is the name of the special event where players collect specific items for rewards?",
+        "correctAnswer": "Holiday Event",
+        "options": [
+          "Grand Tournament",
+          "Daily Challenge",
+          "Weekend Rush",
+          "Holiday Event"
+        ]
+      },
+      {
+        "text": "What is the term for a player who quickly leaves the game when they are the Murderer?",
+        "correctAnswer": "Rage Quitter",
+        "options": [
+          "Survivor",
+          "Rage Quitter",
+          "Pro Player",
+          "Strategist"
+        ]
+      },
+      {
+        "text": "What is a 'Coin Boost' item used for?",
+        "correctAnswer": "Doubling coins earned for a limited time",
+        "options": [
+          "Making coins appear on the map",
+          "Doubling coins earned for a limited time",
+          "Reducing coin cost for items",
+          "Giving coins to other players"
+        ]
+      },
+      {
+        "text": "What is an item that can change the color of your knife's trail?",
+        "correctAnswer": "Knife Effect",
+        "options": [
+          "Knife Effect",
+          "Knife Glow",
+          "Knife Skin",
+          "Knife Aura"
+        ]
+      },
+      {
+        "text": "What is the purpose of the 'Mute' button on the scoreboard?",
+        "correctAnswer": "To silence chat from other players",
+        "options": [
+          "To change game settings",
+          "To make players invisible",
+          "To silence chat from other players",
+          "To remove players from the game"
+        ]
+      },
+      {
+        "text": "What does the 'E' key typically do on PC when playing MM2 as an Innocent near the gun?",
+        "correctAnswer": "Pick up the gun",
+        "options": [
+          "Throw a knife",
+          "Open inventory",
+          "Pick up the gun",
+          "Crouch"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pet_simulator",
+    "title": "Pet Simulator",
+    "description": "Huge pets, gems, and enchants!",
+    "icon": "🐾",
+    "bgColor": "FDD835",
+    "questions": [
+      {
+        "text": "What is the main currency used for buying most items and pets in Pet Simulator 99?",
+        "correctAnswer": "Gems",
+        "options": [
+          "Coins",
+          "Robux",
+          "Gems",
+          "Tickets"
+        ]
+      },
+      {
+        "text": "What type of pet is considered the rarest and most powerful in Pet Simulator 99, excluding Titanic pets?",
+        "correctAnswer": "Huge Pet",
+        "options": [
+          "Legendary Pet",
+          "Rare Pet",
+          "Epic Pet",
+          "Huge Pet"
+        ]
+      },
+      {
+        "text": "What do you use to give your pets special abilities or boosts?",
+        "correctAnswer": "Enchants",
+        "options": [
+          "Hats",
+          "Potions",
+          "Enchants",
+          "Accessories"
+        ]
+      },
+      {
+        "text": "Which enchant increases your chances of finding more valuable items from broken objects?",
+        "correctAnswer": "Treasure Hunter",
+        "options": [
+          "Strength",
+          "Coin Hunter",
+          "Criticals",
+          "Treasure Hunter"
+        ]
+      },
+      {
+        "text": "What is a common way to obtain Huge pets besides hatching them from eggs?",
+        "correctAnswer": "Trading with other players",
+        "options": [
+          "Crafting them",
+          "Buying from NPCs",
+          "Trading with other players",
+          "Finding them on the ground"
+        ]
+      },
+      {
+        "text": "What color are the basic Gems that drop from broken objects in Pet Simulator 99?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Red",
+          "Green",
+          "Yellow",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What special enchant helps you have a better chance at hatching a Huge pet from an egg?",
+        "correctAnswer": "Huge Hunter",
+        "options": [
+          "Lucky Egg",
+          "Strength V",
+          "Huge Hunter",
+          "Shiny Chance"
+        ]
+      },
+      {
+        "text": "How many enchant slots does a normal pet usually start with in Pet Simulator 99?",
+        "correctAnswer": "One",
+        "options": [
+          "Three",
+          "Two",
+          "One",
+          "Four"
+        ]
+      },
+      {
+        "text": "What happens to Gems that drop from broken objects if you don't collect them quickly?",
+        "correctAnswer": "They disappear",
+        "options": [
+          "They multiply",
+          "They disappear",
+          "They turn into coins",
+          "They teleport to your inventory"
+        ]
+      },
+      {
+        "text": "What is the name of a very popular Huge pet that resembles a feline?",
+        "correctAnswer": "Huge Cat",
+        "options": [
+          "Huge Dog",
+          "Huge Dragon",
+          "Huge Elephant",
+          "Huge Cat"
+        ]
+      },
+      {
+        "text": "Which enchant makes your pets deal more damage to objects?",
+        "correctAnswer": "Strength",
+        "options": [
+          "Magnet",
+          "Criticals",
+          "Strength",
+          "Lucky"
+        ]
+      },
+      {
+        "text": "What is the main purpose of the 'Enchanting Machine' in Pet Simulator 99?",
+        "correctAnswer": "Applying enchants to pets",
+        "options": [
+          "Hatching eggs",
+          "Selling pets",
+          "Applying enchants to pets",
+          "Crafting items"
+        ]
+      },
+      {
+        "text": "What is the only rarity of pet higher than 'Huge' in Pet Simulator 99?",
+        "correctAnswer": "Titanic",
+        "options": [
+          "Mythical",
+          "Legendary",
+          "Titanic",
+          "Divine"
+        ]
+      },
+      {
+        "text": "What do you use Gems for in the Trading Plaza?",
+        "correctAnswer": "Buying and selling items/pets",
+        "options": [
+          "Upgrading your character",
+          "Buying new areas",
+          "Buying and selling items/pets",
+          "Changing your username"
+        ]
+      },
+      {
+        "text": "Which enchant helps your pets collect items and Gems from further away?",
+        "correctAnswer": "Magnet",
+        "options": [
+          "Lucky",
+          "Treasure Hunter",
+          "Magnet",
+          "Criticals"
+        ]
+      },
+      {
+        "text": "What does it mean if a Huge pet is 'Shiny'?",
+        "correctAnswer": "It has a special sparkling visual effect and is rarer",
+        "options": [
+          "It is made of metal",
+          "It has a special sparkling visual effect and is rarer",
+          "It glows in the dark",
+          "It can fly"
+        ]
+      },
+      {
+        "text": "What is the highest rarity color for a common enchant scroll?",
+        "correctAnswer": "Green",
+        "options": [
+          "Blue",
+          "Purple",
+          "Green",
+          "Orange"
+        ]
+      },
+      {
+        "text": "What is a common strategy to earn a lot of Gems while not actively playing?",
+        "correctAnswer": "AFK farming",
+        "options": [
+          "AFK farming",
+          "Sleeping",
+          "Watching TV",
+          "Logging out"
+        ]
+      },
+      {
+        "text": "What is the name of the area where players can trade pets and items with each other?",
+        "correctAnswer": "Trading Plaza",
+        "options": [
+          "Mini-Game Zone",
+          "Hatching Area",
+          "Trading Plaza",
+          "Enchanting Room"
+        ]
+      },
+      {
+        "text": "Which enchant increases the chance of your pets dealing extra powerful hits?",
+        "correctAnswer": "Criticals",
+        "options": [
+          "Strength",
+          "Magnet",
+          "Criticals",
+          "Lucky"
+        ]
+      },
+      {
+        "text": "What type of items are 'scrolls' often used for in Pet Simulator 99?",
+        "correctAnswer": "Enchants",
+        "options": [
+          "Potions",
+          "Eggs",
+          "Enchants",
+          "Hats"
+        ]
+      },
+      {
+        "text": "What special boost do Huge pets give to your other equipped pets?",
+        "correctAnswer": "Damage and coin boosts",
+        "options": [
+          "Extra speed",
+          "Damage and coin boosts",
+          "More health",
+          "Ability to fly"
+        ]
+      },
+      {
+        "text": "What is one way to earn Gems from mini-games?",
+        "correctAnswer": "Completing challenges",
+        "options": [
+          "Buying them directly",
+          "Completing challenges",
+          "Selling your character",
+          "Eating food"
+        ]
+      },
+      {
+        "text": "What color rarity is a 'Legendary' enchant scroll?",
+        "correctAnswer": "Orange/Yellow",
+        "options": [
+          "Red",
+          "Orange/Yellow",
+          "Blue",
+          "Green"
+        ]
+      },
+      {
+        "text": "What is the main characteristic that makes Huge pets highly sought after by players?",
+        "correctAnswer": "Their rarity and power",
+        "options": [
+          "Their small size",
+          "Their rarity and power",
+          "Their funny names",
+          "Their ability to talk"
+        ]
+      },
+      {
+        "text": "Which enchant helps you get more Gems from broken objects?",
+        "correctAnswer": "Gem Hunter",
+        "options": [
+          "Strength",
+          "Lucky",
+          "Criticals",
+          "Gem Hunter"
+        ]
+      },
+      {
+        "text": "What is the name of the machine used to re-roll enchants on your pets?",
+        "correctAnswer": "Re-roll Machine",
+        "options": [
+          "Trading Booth",
+          "Hatching Machine",
+          "Re-roll Machine",
+          "Bank"
+        ]
+      },
+      {
+        "text": "What does it mean if a Huge pet is 'Signed'?",
+        "correctAnswer": "It was signed by a developer",
+        "options": [
+          "It has a special glow",
+          "It was signed by a developer",
+          "It's a limited edition",
+          "It's very old"
+        ]
+      },
+      {
+        "text": "Which enchant can increase the overall luck for finding rare items or hatching pets?",
+        "correctAnswer": "Lucky",
+        "options": [
+          "Strength",
+          "Magnet",
+          "Criticals",
+          "Lucky"
+        ]
+      },
+      {
+        "text": "What type of currency is often exchanged for Gems at an Exchange Booth?",
+        "correctAnswer": "Coins",
+        "options": [
+          "Robux",
+          "Tickets",
+          "Coins",
+          "Diamonds"
+        ]
+      },
+      {
+        "text": "What is the primary method for your pets to earn Gems and break objects?",
+        "correctAnswer": "Attacking objects",
+        "options": [
+          "Sitting still",
+          "Attacking objects",
+          "Sleeping",
+          "Flying around"
+        ]
+      },
+      {
+        "text": "What is the name of the feature that allows you to combine multiple enchants into a stronger one?",
+        "correctAnswer": "Enchanting upgrade",
+        "options": [
+          "Crafting",
+          "Merging",
+          "Enchanting upgrade",
+          "Refining"
+        ]
+      },
+      {
+        "text": "What special item can sometimes be used to increase your chances of hatching a Huge pet temporarily?",
+        "correctAnswer": "Huge Hunter potion",
+        "options": [
+          "Speed Potion",
+          "Strength Potion",
+          "Huge Hunter potion",
+          "Lucky Block"
+        ]
+      },
+      {
+        "text": "What is the common term used by players to refer to Huge pets?",
+        "correctAnswer": "Huges",
+        "options": [
+          "Giants",
+          "Monsters",
+          "Huges",
+          "Behemoths"
+        ]
+      },
+      {
+        "text": "What kind of objects do your pets break to earn Gems and other rewards?",
+        "correctAnswer": "Piles of coins, chests, breakables",
+        "options": [
+          "Other players",
+          "Air",
+          "Piles of coins, chests, breakables",
+          "Trees only"
+        ]
+      },
+      {
+        "text": "Which enchant would you use to get more loot from treasure chests?",
+        "correctAnswer": "Treasure Hunter",
+        "options": [
+          "Magnet",
+          "Lucky",
+          "Criticals",
+          "Treasure Hunter"
+        ]
+      },
+      {
+        "text": "What happens if you try to apply an enchant to a pet that has no empty slots?",
+        "correctAnswer": "You must replace an existing enchant",
+        "options": [
+          "The enchant disappears",
+          "You must replace an existing enchant",
+          "The pet gets an extra slot",
+          "It won't let you"
+        ]
+      },
+      {
+        "text": "What is the primary way to get more enchant scrolls?",
+        "correctAnswer": "Drops from breaking objects and chests",
+        "options": [
+          "Buying with Robux only",
+          "Drops from breaking objects and chests",
+          "Asking other players for free",
+          "Finding them on the ground"
+        ]
+      },
+      {
+        "text": "What is the name of the pet that is often considered the first ever Huge pet?",
+        "correctAnswer": "Huge Cat",
+        "options": [
+          "Huge Dog",
+          "Huge Dragon",
+          "Huge Hell Rock",
+          "Huge Cat"
+        ]
+      },
+      {
+        "text": "How many enchant slots can a standard pet eventually have after being upgraded?",
+        "correctAnswer": "Four",
+        "options": [
+          "One",
+          "Two",
+          "Three",
+          "Four"
+        ]
+      },
+      {
+        "text": "What kind of item is typically used to upgrade pet enchant slots?",
+        "correctAnswer": "Enchant slot upgrade items",
+        "options": [
+          "Gems",
+          "Potions",
+          "Enchant slot upgrade items",
+          "Robux"
+        ]
+      },
+      {
+        "text": "What is the main advantage of having multiple Huge pets equipped?",
+        "correctAnswer": "Increased overall power and boosts",
+        "options": [
+          "They look cooler",
+          "Increased overall power and boosts",
+          "They can talk to each other",
+          "They make you invisible"
+        ]
+      },
+      {
+        "text": "What is the primary currency used to buy items from the Traveling Merchant?",
+        "correctAnswer": "Gems",
+        "options": [
+          "Tickets",
+          "Diamonds",
+          "Robux",
+          "Gems"
+        ]
+      },
+      {
+        "text": "Which enchant directly increases the damage your pets do to objects?",
+        "correctAnswer": "Strength",
+        "options": [
+          "Magnet",
+          "Lucky",
+          "Agility",
+          "Strength"
+        ]
+      },
+      {
+        "text": "What color rarity is an 'Epic' enchant scroll?",
+        "correctAnswer": "Purple",
+        "options": [
+          "Green",
+          "Blue",
+          "Purple",
+          "Red"
+        ]
+      },
+      {
+        "text": "What is the primary function of the 'Re-roll' option in the Enchanting Machine?",
+        "correctAnswer": "To change existing enchants on a pet",
+        "options": [
+          "To sell pets",
+          "To hatch new pets",
+          "To change existing enchants on a pet",
+          "To upgrade pet rarity"
+        ]
+      },
+      {
+        "text": "Which mini-game in Pet Simulator 99 can sometimes reward Huge pets or items to get them?",
+        "correctAnswer": "Dig Site",
+        "options": [
+          "Race Track",
+          "Cooking Game",
+          "Dig Site",
+          "Puzzle Game"
+        ]
+      },
+      {
+        "text": "What happens to your Gems if your inventory is full when you collect them?",
+        "correctAnswer": "They are still added to your currency total",
+        "options": [
+          "They disappear",
+          "They are still added to your currency total",
+          "They drop on the ground",
+          "They are sent to your mail"
+        ]
+      },
+      {
+        "text": "What is the name of an enchant that increases the chance of finding more pets when opening eggs?",
+        "correctAnswer": "Lucky",
+        "options": [
+          "Strength",
+          "Magnet",
+          "Lucky",
+          "Criticals"
+        ]
+      },
+      {
+        "text": "What is the purpose of the 'Best Friends' enchant?",
+        "correctAnswer": "Boosts the stats of your best pet",
+        "options": [
+          "Makes your pets talk",
+          "Boosts the stats of your best pet",
+          "Gives free Gems",
+          "Makes your pet invincible"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "minecraft",
+    "title": "Minecraft",
+    "description": "Crafting recipes, mobs, and blocky trivia.",
+    "icon": "⛏️",
+    "bgColor": "388E3C",
+    "questions": [
+      {
+        "text": "What block is needed to craft a Nether Portal?",
+        "correctAnswer": "Obsidian",
+        "options": [
+          "Bedrock",
+          "Netherrack",
+          "Obsidian",
+          "Cobblestone"
+        ]
+      },
+      {
+        "text": "Which mob drops feathers when defeated?",
+        "correctAnswer": "Chicken",
+        "options": [
+          "Pig",
+          "Sheep",
+          "Chicken",
+          "Cow"
+        ]
+      },
+      {
+        "text": "How many wood planks do you need to craft a Crafting Table?",
+        "correctAnswer": "Four",
+        "options": [
+          "Eight",
+          "Four",
+          "Two",
+          "Six"
+        ]
+      },
+      {
+        "text": "What material is required to mine diamonds effectively?",
+        "correctAnswer": "Iron Pickaxe",
+        "options": [
+          "Wooden Pickaxe",
+          "Gold Pickaxe",
+          "Stone Pickaxe",
+          "Iron Pickaxe"
+        ]
+      },
+      {
+        "text": "Which hostile mob explodes when it gets too close to a player?",
+        "correctAnswer": "Creeper",
+        "options": [
+          "Skeleton",
+          "Zombie",
+          "Creeper",
+          "Spider"
+        ]
+      },
+      {
+        "text": "What block is used to smelt ores and cook food?",
+        "correctAnswer": "Furnace",
+        "options": [
+          "Anvil",
+          "Crafting Table",
+          "Furnace",
+          "Chest"
+        ]
+      },
+      {
+        "text": "What item do you need to craft a bed, besides wood planks?",
+        "correctAnswer": "Wool",
+        "options": [
+          "Feathers",
+          "Wool",
+          "Leather",
+          "String"
+        ]
+      },
+      {
+        "text": "Which mob is known for teleporting and picking up blocks?",
+        "correctAnswer": "Enderman",
+        "options": [
+          "Ghast",
+          "Enderman",
+          "Skeleton",
+          "Zombie"
+        ]
+      },
+      {
+        "text": "What block is commonly found in deserts and can be crafted into glass?",
+        "correctAnswer": "Sand",
+        "options": [
+          "Clay",
+          "Gravel",
+          "Sand",
+          "Dirt"
+        ]
+      },
+      {
+        "text": "How many iron ingots are needed to craft a bucket?",
+        "correctAnswer": "Three",
+        "options": [
+          "Two",
+          "Four",
+          "Three",
+          "One"
+        ]
+      },
+      {
+        "text": "What kind of pickaxe is needed to mine obsidian?",
+        "correctAnswer": "Diamond Pickaxe",
+        "options": [
+          "Gold Pickaxe",
+          "Stone Pickaxe",
+          "Diamond Pickaxe",
+          "Iron Pickaxe"
+        ]
+      },
+      {
+        "text": "What mob drops bones and arrows when defeated?",
+        "correctAnswer": "Skeleton",
+        "options": [
+          "Creeper",
+          "Skeleton",
+          "Zombie",
+          "Spider"
+        ]
+      },
+      {
+        "text": "What block is used to grow crops like wheat and carrots?",
+        "correctAnswer": "Farmland",
+        "options": [
+          "Grass Block",
+          "Farmland",
+          "Dirt",
+          "Coarse Dirt"
+        ]
+      },
+      {
+        "text": "What ingredient is needed to craft a torch, besides a stick?",
+        "correctAnswer": "Coal",
+        "options": [
+          "Redstone Dust",
+          "Coal",
+          "Iron Ingot",
+          "Diamond"
+        ]
+      },
+      {
+        "text": "Which mob drops rotten flesh when defeated?",
+        "correctAnswer": "Zombie",
+        "options": [
+          "Enderman",
+          "Creeper",
+          "Zombie",
+          "Spider"
+        ]
+      },
+      {
+        "text": "What block is used to store multiple items in one place?",
+        "correctAnswer": "Chest",
+        "options": [
+          "Anvil",
+          "Crafting Table",
+          "Chest",
+          "Furnace"
+        ]
+      },
+      {
+        "text": "What do you need to craft paper?",
+        "correctAnswer": "Sugar Cane",
+        "options": [
+          "Wheat",
+          "Tall Grass",
+          "Sugar Cane",
+          "Leaves"
+        ]
+      },
+      {
+        "text": "Which mob can be tamed by feeding it fish?",
+        "correctAnswer": "Cat",
+        "options": [
+          "Horse",
+          "Wolf",
+          "Cat",
+          "Llama"
+        ]
+      },
+      {
+        "text": "What block is the primary source of all wooden items?",
+        "correctAnswer": "Log",
+        "options": [
+          "Sapling",
+          "Plank",
+          "Log",
+          "Stick"
+        ]
+      },
+      {
+        "text": "How many cobblestone blocks are needed to craft a furnace?",
+        "correctAnswer": "Eight",
+        "options": [
+          "Ten",
+          "Four",
+          "Eight",
+          "Six"
+        ]
+      },
+      {
+        "text": "What mob drops wool when sheared?",
+        "correctAnswer": "Sheep",
+        "options": [
+          "Pig",
+          "Cow",
+          "Sheep",
+          "Chicken"
+        ]
+      },
+      {
+        "text": "What is the name of the dimension filled with lava and dangerous mobs?",
+        "correctAnswer": "The Nether",
+        "options": [
+          "The Overworld",
+          "The Nether",
+          "The End",
+          "The Aether"
+        ]
+      },
+      {
+        "text": "What color are the eyes of an Enderman?",
+        "correctAnswer": "Purple",
+        "options": [
+          "Green",
+          "Purple",
+          "Red",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What block is used to make a powerful light source in the Nether?",
+        "correctAnswer": "Glowstone",
+        "options": [
+          "Jack o'Lantern",
+          "Sea Lantern",
+          "Torch",
+          "Glowstone"
+        ]
+      },
+      {
+        "text": "What do you use to craft a sword?",
+        "correctAnswer": "Two of the material and one stick",
+        "options": [
+          "One of the material and two sticks",
+          "Two of the material and one stick",
+          "One of the material and one stick",
+          "Three of the material and two sticks"
+        ]
+      },
+      {
+        "text": "Which mob can fly and shoots fireballs in the Nether?",
+        "correctAnswer": "Ghast",
+        "options": [
+          "Magma Cube",
+          "Ghast",
+          "Blaze",
+          "Wither Skeleton"
+        ]
+      },
+      {
+        "text": "What block is required to activate an End Portal?",
+        "correctAnswer": "Eye of Ender",
+        "options": [
+          "Blaze Rod",
+          "Eye of Ender",
+          "Obsidian",
+          "Ender Pearl"
+        ]
+      },
+      {
+        "text": "What do you need to craft a basic wooden door?",
+        "correctAnswer": "Six wood planks",
+        "options": [
+          "Eight wood planks",
+          "Four wood planks",
+          "Six wood planks",
+          "Two wood planks"
+        ]
+      },
+      {
+        "text": "Which mob drops Slimeballs?",
+        "correctAnswer": "Slime",
+        "options": [
+          "Magma Cube",
+          "Spider",
+          "Slime",
+          "Creeper"
+        ]
+      },
+      {
+        "text": "What block is known for falling due to gravity, besides gravel?",
+        "correctAnswer": "Sand",
+        "options": [
+          "Cobblestone",
+          "Sand",
+          "Dirt",
+          "Stone"
+        ]
+      },
+      {
+        "text": "What item is needed to craft a map, besides paper?",
+        "correctAnswer": "Compass",
+        "options": [
+          "Redstone Dust",
+          "Clock",
+          "Iron Ingot",
+          "Compass"
+        ]
+      },
+      {
+        "text": "Which mob drops Ink Sacs?",
+        "correctAnswer": "Squid",
+        "options": [
+          "Dolphin",
+          "Squid",
+          "Turtle",
+          "Fish"
+        ]
+      },
+      {
+        "text": "What material is used to make a Golden Apple?",
+        "correctAnswer": "Gold Ingots",
+        "options": [
+          "Gold Ore",
+          "Gold Nuggets",
+          "Golden Carrots",
+          "Gold Ingots"
+        ]
+      },
+      {
+        "text": "What block is used to make an Enchanting Table?",
+        "correctAnswer": "Obsidian",
+        "options": [
+          "Gold Block",
+          "Iron Block",
+          "Obsidian",
+          "Diamond Block"
+        ]
+      },
+      {
+        "text": "Which mob can be tamed with bones?",
+        "correctAnswer": "Wolf",
+        "options": [
+          "Horse",
+          "Wolf",
+          "Cat",
+          "Fox"
+        ]
+      },
+      {
+        "text": "What block is used to repair tools and armor?",
+        "correctAnswer": "Anvil",
+        "options": [
+          "Grindstone",
+          "Crafting Table",
+          "Anvil",
+          "Furnace"
+        ]
+      },
+      {
+        "text": "What is the maximum number of blocks you can place per stack in your inventory (for most blocks)?",
+        "correctAnswer": "64",
+        "options": [
+          "16",
+          "64",
+          "32",
+          "1"
+        ]
+      },
+      {
+        "text": "Which hostile mob can climb walls?",
+        "correctAnswer": "Spider",
+        "options": [
+          "Creeper",
+          "Skeleton",
+          "Spider",
+          "Zombie"
+        ]
+      },
+      {
+        "text": "What item is needed to craft a clock?",
+        "correctAnswer": "Redstone Dust",
+        "options": [
+          "Diamond",
+          "Gold Ingot",
+          "Redstone Dust",
+          "Iron Ingot"
+        ]
+      },
+      {
+        "text": "What block type is commonly found in the End dimension and is white?",
+        "correctAnswer": "End Stone",
+        "options": [
+          "Netherrack",
+          "Cobblestone",
+          "End Stone",
+          "Stone"
+        ]
+      },
+      {
+        "text": "What do you need to craft a brewing stand?",
+        "correctAnswer": "Blaze Rod",
+        "options": [
+          "Blaze Rod",
+          "Iron Ingot",
+          "Gold Ingot",
+          "Ghast Tear"
+        ]
+      },
+      {
+        "text": "Which mob drops a Totem of Undying?",
+        "correctAnswer": "Evoker",
+        "options": [
+          "Pillager",
+          "Vindicator",
+          "Evoker",
+          "Ravager"
+        ]
+      },
+      {
+        "text": "What block is used to make a shield?",
+        "correctAnswer": "Iron Ingot",
+        "options": [
+          "Diamond",
+          "Stone",
+          "Iron Ingot",
+          "Gold Ingot"
+        ]
+      },
+      {
+        "text": "What item do you need to craft a boat?",
+        "correctAnswer": "Five wood planks",
+        "options": [
+          "Three wood planks",
+          "Six wood planks",
+          "Five wood planks",
+          "Four wood planks"
+        ]
+      },
+      {
+        "text": "Which mob drops Phantom Membranes?",
+        "correctAnswer": "Phantom",
+        "options": [
+          "Vex",
+          "Ghast",
+          "Phantom",
+          "Bat"
+        ]
+      },
+      {
+        "text": "What block is used to make a conduit?",
+        "correctAnswer": "Heart of the Sea",
+        "options": [
+          "Prismarine Crystal",
+          "Sponge",
+          "Heart of the Sea",
+          "Nautilus Shell"
+        ]
+      },
+      {
+        "text": "What do you need to craft a piston?",
+        "correctAnswer": "Redstone Dust",
+        "options": [
+          "Diamond",
+          "Redstone Dust",
+          "Gold Ingot",
+          "Iron Ingot"
+        ]
+      },
+      {
+        "text": "Which mob drops a Trident?",
+        "correctAnswer": "Drowned",
+        "options": [
+          "Guardian",
+          "Pufferfish",
+          "Elder Guardian",
+          "Drowned"
+        ]
+      },
+      {
+        "text": "What block is used to make a Smoker?",
+        "correctAnswer": "Logs",
+        "options": [
+          "Cobblestone",
+          "Smooth Stone",
+          "Logs",
+          "Iron Ingots"
+        ]
+      },
+      {
+        "text": "What block is essential for enchanting items at a higher level?",
+        "correctAnswer": "Bookshelf",
+        "options": [
+          "Crafting Table",
+          "Bookshelf",
+          "Chest",
+          "Furnace"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "youtubers",
+    "title": "Gaming YouTubers",
+    "description": "Trivia about popular gaming creators and streamers.",
+    "icon": "🎥",
+    "bgColor": "E53935",
+    "questions": [
+      {
+        "text": "What is DanTDM's real first name?",
+        "correctAnswer": "Daniel",
+        "options": [
+          "David",
+          "Daniel",
+          "Dylan",
+          "Derek"
+        ]
+      },
+      {
+        "text": "What game is DanTDM most famous for playing?",
+        "correctAnswer": "Minecraft",
+        "options": [
+          "Roblox",
+          "Fortnite",
+          "Minecraft",
+          "Among Us"
+        ]
+      },
+      {
+        "text": "What kind of pet does DanTDM often feature in his videos?",
+        "correctAnswer": "Pugs",
+        "options": [
+          "Hamsters",
+          "Pugs",
+          "Goldfish",
+          "Cats"
+        ]
+      },
+      {
+        "text": "What is StampyLongnose's signature block in Minecraft?",
+        "correctAnswer": "Cake",
+        "options": [
+          "Diamond",
+          "Dirt",
+          "Cake",
+          "Gold"
+        ]
+      },
+      {
+        "text": "What is the name of Stampy's fun-land in Minecraft?",
+        "correctAnswer": "Lovely World",
+        "options": [
+          "Happy Place",
+          "Fun Kingdom",
+          "Lovely World",
+          "Awesome Land"
+        ]
+      },
+      {
+        "text": "What kind of characters does Aphmau often play in her Minecraft roleplays?",
+        "correctAnswer": "Werewolves and Me'fwa",
+        "options": [
+          "Pirates and Ninjas",
+          "Werewolves and Me'fwa",
+          "Robots and Aliens",
+          "Knights and Dragons"
+        ]
+      },
+      {
+        "text": "What is Aphmau's real first name?",
+        "correctAnswer": "Jess",
+        "options": [
+          "Julia",
+          "Jen",
+          "Jamie",
+          "Jess"
+        ]
+      },
+      {
+        "text": "What game is Flamingo primarily known for playing?",
+        "correctAnswer": "Roblox",
+        "options": [
+          "Call of Duty",
+          "Roblox",
+          "Minecraft",
+          "League of Legends"
+        ]
+      },
+      {
+        "text": "What is Flamingo's signature item or catchphrase often seen in his Roblox videos?",
+        "correctAnswer": "OOF",
+        "options": [
+          "Noob",
+          "OOF",
+          "GG",
+          "EZ"
+        ]
+      },
+      {
+        "text": "KreekCraft is a popular YouTuber known for playing which game?",
+        "correctAnswer": "Roblox",
+        "options": [
+          "Among Us",
+          "Minecraft",
+          "Roblox",
+          "Fortnite"
+        ]
+      },
+      {
+        "text": "What color is KreekCraft's signature cowboy hat in his Roblox avatar?",
+        "correctAnswer": "Red",
+        "options": [
+          "Blue",
+          "Red",
+          "Green",
+          "Black"
+        ]
+      },
+      {
+        "text": "What game made Ninja a household name in streaming?",
+        "correctAnswer": "Fortnite",
+        "options": [
+          "Valorant",
+          "Fortnite",
+          "League of Legends",
+          "Apex Legends"
+        ]
+      },
+      {
+        "text": "What color is Ninja's signature hair?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Red",
+          "Purple",
+          "Green",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What game is Australian YouTuber Lachlan most famous for playing?",
+        "correctAnswer": "Fortnite",
+        "options": [
+          "Fortnite",
+          "Rocket League",
+          "Minecraft",
+          "Call of Duty"
+        ]
+      },
+      {
+        "text": "What kind of mask does the YouTuber Dream wear in his videos?",
+        "correctAnswer": "A white smiley face mask",
+        "options": [
+          "A black skull mask",
+          "A green creeper mask",
+          "A white smiley face mask",
+          "A red devil mask"
+        ]
+      },
+      {
+        "text": "Dream is most famous for his speedruns and challenges in which game?",
+        "correctAnswer": "Minecraft",
+        "options": [
+          "Among Us",
+          "Valorant",
+          "Minecraft",
+          "Roblox"
+        ]
+      },
+      {
+        "text": "Grian is a popular Minecraft builder and member of which server?",
+        "correctAnswer": "Hermitcraft",
+        "options": [
+          "Dream SMP",
+          "Hypixel",
+          "Hermitcraft",
+          "Mineplex"
+        ]
+      },
+      {
+        "text": "What is Grian's signature architectural style in Minecraft?",
+        "correctAnswer": "Organic and whimsical",
+        "options": [
+          "Modern and minimalist",
+          "Futuristic cities",
+          "Medieval castles",
+          "Organic and whimsical"
+        ]
+      },
+      {
+        "text": "What is MrBeast Gaming known for giving away to subscribers?",
+        "correctAnswer": "Money and prizes",
+        "options": [
+          "Money and prizes",
+          "Exclusive merchandise",
+          "Virtual pets",
+          "Free games"
+        ]
+      },
+      {
+        "text": "What color is MrBeast's logo and branding?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Yellow",
+          "Red",
+          "Green",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What animal often represents Technoblade in his Minecraft videos?",
+        "correctAnswer": "Pig",
+        "options": [
+          "Cat",
+          "Pig",
+          "Dog",
+          "Fox"
+        ]
+      },
+      {
+        "text": "What was Technoblade's famous catchphrase?",
+        "correctAnswer": "BLOOD FOR THE BLOOD GOD!",
+        "options": [
+          "Ew, nerds!",
+          "Techno never dies!",
+          "Subscribe to Technoblade!",
+          "BLOOD FOR THE BLOOD GOD!"
+        ]
+      },
+      {
+        "text": "Mumbo Jumbo is famous for his complex builds using what in Minecraft?",
+        "correctAnswer": "Redstone",
+        "options": [
+          "Cobblestone",
+          "Diamonds",
+          "Redstone",
+          "Wood"
+        ]
+      },
+      {
+        "text": "What is Mumbo Jumbo's signature mustache style?",
+        "correctAnswer": "Handlebar",
+        "options": [
+          "Walrus",
+          "Pencil",
+          "Handlebar",
+          "Horseshoe"
+        ]
+      },
+      {
+        "text": "What game does PrestonPlayz primarily create content about?",
+        "correctAnswer": "Minecraft",
+        "options": [
+          "Roblox",
+          "Minecraft",
+          "Fortnite",
+          "Call of Duty"
+        ]
+      },
+      {
+        "text": "What animal is often associated with PrestonPlayz's branding?",
+        "correctAnswer": "Fire Dragon",
+        "options": [
+          "Earth Golem",
+          "Fire Dragon",
+          "Air Phoenix",
+          "Water Turtle"
+        ]
+      },
+      {
+        "text": "What family is behind the popular gaming channel FGTeeV?",
+        "correctAnswer": "The Skylanders Family",
+        "options": [
+          "The Funtime Family",
+          "The Playtime Family",
+          "The Gamer Family",
+          "The Skylanders Family"
+        ]
+      },
+      {
+        "text": "FGTeeV often plays games like Roblox, Minecraft, and what popular horror game?",
+        "correctAnswer": "Hello Neighbor",
+        "options": [
+          "Five Nights at Freddy's",
+          "Bendy and the Ink Machine",
+          "Hello Neighbor",
+          "Poppy Playtime"
+        ]
+      },
+      {
+        "text": "TheGrefg is a Spanish streamer who broke a Twitch viewership record playing which game?",
+        "correctAnswer": "Fortnite",
+        "options": [
+          "Valorant",
+          "Fortnite",
+          "League of Legends",
+          "Call of Duty"
+        ]
+      },
+      {
+        "text": "Ssundee is known for playing Minecraft and what other popular blocky game?",
+        "correctAnswer": "Among Us",
+        "options": [
+          "Terraria",
+          "Among Us",
+          "Roblox",
+          "Fortnite"
+        ]
+      },
+      {
+        "text": "What is Ssundee's signature outfit in Minecraft?",
+        "correctAnswer": "A white shirt with a red tie",
+        "options": [
+          "A black suit",
+          "A green creeper costume",
+          "A white shirt with a red tie",
+          "A blue hoodie"
+        ]
+      },
+      {
+        "text": "PopularMMOs is known for his challenges and modded series in which game?",
+        "correctAnswer": "Minecraft",
+        "options": [
+          "Roblox",
+          "Terraria",
+          "Fortnite",
+          "Minecraft"
+        ]
+      },
+      {
+        "text": "What is the name of Pat's (PopularMMOs) pet cloud in his Minecraft series?",
+        "correctAnswer": "Cloud",
+        "options": [
+          "Nimbus",
+          "Fluffy",
+          "Sparky",
+          "Cloud"
+        ]
+      },
+      {
+        "text": "SypherPK is a professional player and streamer known for his tips and tricks in which game?",
+        "correctAnswer": "Fortnite",
+        "options": [
+          "Valorant",
+          "Fortnite",
+          "Apex Legends",
+          "Call of Duty"
+        ]
+      },
+      {
+        "text": "What is SypherPK's real first name?",
+        "correctAnswer": "Ali",
+        "options": [
+          "Andrew",
+          "Ali",
+          "Adam",
+          "Alex"
+        ]
+      },
+      {
+        "text": "iHasCupquake is known for her Minecraft series like 'Oasis' and what other craft?",
+        "correctAnswer": "Pixelmon",
+        "options": [
+          "Skyblock",
+          "Pixelmon",
+          "Factions",
+          "Hunger Games"
+        ]
+      },
+      {
+        "text": "What is the name of iHasCupquake's husband, who often appears in her videos?",
+        "correctAnswer": "Red",
+        "options": [
+          "Yellow",
+          "Red",
+          "Blue",
+          "Green"
+        ]
+      },
+      {
+        "text": "DenisDaily is a popular Roblox YouTuber often associated with what animal?",
+        "correctAnswer": "A cat",
+        "options": [
+          "A dog",
+          "A cat",
+          "A fox",
+          "A bear"
+        ]
+      },
+      {
+        "text": "What is the name of DenisDaily's iconic cat character?",
+        "correctAnswer": "Sir Meows A Lot",
+        "options": [
+          "Mr. Whiskers",
+          "Lord Fluffy",
+          "Sir Meows A Lot",
+          "Captain Purrfect"
+        ]
+      },
+      {
+        "text": "TBNRfrags is another channel by which popular YouTuber?",
+        "correctAnswer": "PrestonPlayz",
+        "options": [
+          "PrestonPlayz",
+          "StampyLongnose",
+          "Flamingo",
+          "DanTDM"
+        ]
+      },
+      {
+        "text": "What is PewDiePie's real first name?",
+        "correctAnswer": "Felix",
+        "options": [
+          "Mark",
+          "Daniel",
+          "Jack",
+          "Felix"
+        ]
+      },
+      {
+        "text": "What iconic chair did PewDiePie often promote in his videos?",
+        "correctAnswer": "Gamer Chair",
+        "options": [
+          "Recliner",
+          "Beanbag",
+          "Office Chair",
+          "Gamer Chair"
+        ]
+      },
+      {
+        "text": "What color is Markiplier's signature mustache/hair in some of his personas?",
+        "correctAnswer": "Red",
+        "options": [
+          "Yellow",
+          "Blue",
+          "Red",
+          "Green"
+        ]
+      },
+      {
+        "text": "Markiplier is known for playing many horror games, including what popular animatronic series?",
+        "correctAnswer": "Five Nights at Freddy's",
+        "options": [
+          "Amnesia",
+          "Resident Evil",
+          "Five Nights at Freddy's",
+          "Outlast"
+        ]
+      },
+      {
+        "text": "What is Jacksepticeye's signature color and mascot?",
+        "correctAnswer": "Green",
+        "options": [
+          "Blue",
+          "Yellow",
+          "Green",
+          "Red"
+        ]
+      },
+      {
+        "text": "What is Jacksepticeye's famous intro catchphrase?",
+        "correctAnswer": "Top of the mornin' to ya, laddies!",
+        "options": [
+          "What's up, everybody?",
+          "Let's play some games!",
+          "How's it going, gamers?",
+          "Top of the mornin' to ya, laddies!"
+        ]
+      },
+      {
+        "text": "Skeppy is a Minecraft YouTuber known for his trolling and challenges, often involving which friend?",
+        "correctAnswer": "BadBoyHalo",
+        "options": [
+          "GeorgeNotFound",
+          "Dream",
+          "Sapnap",
+          "BadBoyHalo"
+        ]
+      },
+      {
+        "text": "What is Skeppy's signature color in his Minecraft skin?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Red",
+          "Yellow",
+          "Blue",
+          "Green"
+        ]
+      },
+      {
+        "text": "CaptainSparklez is famous for his Minecraft parodies of popular songs, especially which one?",
+        "correctAnswer": "Revenge",
+        "options": [
+          "Mining Diamonds",
+          "TNT",
+          "Revenge",
+          "Fallen Kingdom"
+        ]
+      },
+      {
+        "text": "What kind of pet does CaptainSparklez often have in his Minecraft series?",
+        "correctAnswer": "A slime",
+        "options": [
+          "A wolf",
+          "A parrot",
+          "A cat",
+          "A slime"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "obby_tycoon",
+    "title": "Obbys & Tycoons",
+    "description": "Classic Roblox games trivia.",
+    "icon": "🧗",
+    "bgColor": "FB8C00",
+    "questions": [
+      {
+        "text": "What do you usually step on in an obby to save your progress and restart from that spot if you fall?",
+        "correctAnswer": "Checkpoint",
+        "options": [
+          "Teleporter",
+          "Save Point",
+          "Start Line",
+          "Checkpoint"
+        ]
+      },
+      {
+        "text": "In most tycoon games, what machine continuously drops money or resources for you to collect?",
+        "correctAnswer": "Dropper",
+        "options": [
+          "Generator",
+          "Dropper",
+          "Conveyor",
+          "Cashier"
+        ]
+      },
+      {
+        "text": "Which common obby obstacle makes parts of the floor disappear and reappear, requiring good timing?",
+        "correctAnswer": "Disappearing blocks",
+        "options": [
+          "Spinning platforms",
+          "Laser beams",
+          "Lava blocks",
+          "Disappearing blocks"
+        ]
+      },
+      {
+        "text": "What do you often press in a tycoon game to buy new parts for your base or business?",
+        "correctAnswer": "Button",
+        "options": [
+          "Switch",
+          "Button",
+          "Lever",
+          "Panel"
+        ]
+      },
+      {
+        "text": "What item might you pick up in an obby to jump higher than usual?",
+        "correctAnswer": "Gravity Coil",
+        "options": [
+          "Jump Pad",
+          "Gravity Coil",
+          "Speed Coil",
+          "Teleporter"
+        ]
+      },
+      {
+        "text": "In a classic pizza tycoon, what machine cooks the pizzas you make?",
+        "correctAnswer": "Oven",
+        "options": [
+          "Microwave",
+          "Blender",
+          "Oven",
+          "Toaster"
+        ]
+      },
+      {
+        "text": "What color is typically associated with 'kill bricks' or dangerous areas in an obby?",
+        "correctAnswer": "Red",
+        "options": [
+          "Green",
+          "Blue",
+          "Red",
+          "Yellow"
+        ]
+      },
+      {
+        "text": "What is the main goal in most tycoon games?",
+        "correctAnswer": "Build and expand your business",
+        "options": [
+          "Explore a map",
+          "Build and expand your business",
+          "Defeat enemies",
+          "Solve puzzles"
+        ]
+      },
+      {
+        "text": "What type of obby is known for having a very high number of stages, sometimes hundreds or thousands?",
+        "correctAnswer": "Mega Obby",
+        "options": [
+          "Speed Obby",
+          "Mega Obby",
+          "Mini Obby",
+          "Tower Obby"
+        ]
+      },
+      {
+        "text": "What do you call the area where customers pay for items in a store-based tycoon?",
+        "correctAnswer": "Cashier",
+        "options": [
+          "Bank",
+          "Deposit Box",
+          "Vault",
+          "Cashier"
+        ]
+      },
+      {
+        "text": "What happens to your character if you touch a laser beam in many obbys?",
+        "correctAnswer": "You get eliminated",
+        "options": [
+          "You get teleported",
+          "You get eliminated",
+          "You slow down",
+          "You gain a power-up"
+        ]
+      },
+      {
+        "text": "What is a common way to earn more money faster in a tycoon game, often by buying upgrades?",
+        "correctAnswer": "Increase dropper output",
+        "options": [
+          "Shrink your base",
+          "Decrease customer count",
+          "Increase dropper output",
+          "Sell items for less"
+        ]
+      },
+      {
+        "text": "What is a common power-up that makes your character move much faster in an obby?",
+        "correctAnswer": "Speed Coil",
+        "options": [
+          "Jump Coil",
+          "Fly Coil",
+          "Speed Coil",
+          "Gravity Coil"
+        ]
+      },
+      {
+        "text": "What feature allows you to reset your progress in some tycoons to gain a permanent bonus, often called 'rebirth'?",
+        "correctAnswer": "Rebirth",
+        "options": [
+          "Reset",
+          "New Game+",
+          "Rebirth",
+          "Restart"
+        ]
+      },
+      {
+        "text": "What is the final achievement you usually get for completing an obby for the first time?",
+        "correctAnswer": "A badge",
+        "options": [
+          "A pet",
+          "A badge",
+          "A new avatar",
+          "A weapon"
+        ]
+      },
+      {
+        "text": "What does 'VIP' often stand for when you buy a game pass in a tycoon?",
+        "correctAnswer": "Very Important Player",
+        "options": [
+          "Very Important Player",
+          "Virtual Income Power",
+          "Valuable Item Pack",
+          "Victory Is Possible"
+        ]
+      },
+      {
+        "text": "What type of obby challenges players to complete stages as quickly as possible?",
+        "correctAnswer": "Speedrun Obby",
+        "options": [
+          "Story Obby",
+          "Puzzle Obby",
+          "Speedrun Obby",
+          "Combat Obby"
+        ]
+      },
+      {
+        "text": "What currency do you use to buy upgrades and items in most Roblox tycoon games?",
+        "correctAnswer": "In-game cash",
+        "options": [
+          "Tickets",
+          "In-game cash",
+          "Robux",
+          "Gems"
+        ]
+      },
+      {
+        "text": "What are the moving platforms that often spin around called in an obby?",
+        "correctAnswer": "Spinning platforms",
+        "options": [
+          "Rotating discs",
+          "Moving blocks",
+          "Spinning platforms",
+          "Circular pads"
+        ]
+      },
+      {
+        "text": "In a superhero tycoon, what might you build to protect your base from other players or enemies?",
+        "correctAnswer": "Walls and defenses",
+        "options": [
+          "A garden",
+          "More droppers",
+          "Walls and defenses",
+          "A dance floor"
+        ]
+      },
+      {
+        "text": "What happens if you fall off the map in most obbys?",
+        "correctAnswer": "You respawn at the last checkpoint",
+        "options": [
+          "The game ends",
+          "You lose all your progress",
+          "You get a penalty",
+          "You respawn at the last checkpoint"
+        ]
+      },
+      {
+        "text": "What is a common way to get more space for your tycoon base?",
+        "correctAnswer": "Buy more land",
+        "options": [
+          "Dig underground",
+          "Buy more land",
+          "Shrink your buildings",
+          "Teleport to another map"
+        ]
+      },
+      {
+        "text": "What is the primary action you perform to get across gaps in an obby?",
+        "correctAnswer": "Jumping",
+        "options": [
+          "Flying",
+          "Running",
+          "Swimming",
+          "Jumping"
+        ]
+      },
+      {
+        "text": "What type of machine transports money or resources from droppers to a collection point?",
+        "correctAnswer": "Conveyor belt",
+        "options": [
+          "Elevator",
+          "Conveyor belt",
+          "Teleporter",
+          "Crane"
+        ]
+      },
+      {
+        "text": "Which common obby challenge involves moving across a path where parts constantly appear and disappear?",
+        "correctAnswer": "Disappearing bridge",
+        "options": [
+          "Invisible bridge",
+          "Disappearing bridge",
+          "Ice bridge",
+          "Rope bridge"
+        ]
+      },
+      {
+        "text": "What is a popular type of tycoon where you build a business that makes food?",
+        "correctAnswer": "Restaurant Tycoon",
+        "options": [
+          "Battle Tycoon",
+          "Restaurant Tycoon",
+          "Exploration Tycoon",
+          "Pet Tycoon"
+        ]
+      },
+      {
+        "text": "What is the main currency used across the Roblox platform to buy game passes and items?",
+        "correctAnswer": "Robux",
+        "options": [
+          "Gems",
+          "Tickets",
+          "Coins",
+          "Robux"
+        ]
+      },
+      {
+        "text": "What is a common upgrade in many tycoons that helps collect money from droppers automatically?",
+        "correctAnswer": "Collector",
+        "options": [
+          "Hoover",
+          "Sweeper",
+          "Collector",
+          "Magnet"
+        ]
+      },
+      {
+        "text": "What kind of obby often features a towering structure with many levels to climb?",
+        "correctAnswer": "Tower Obby",
+        "options": [
+          "Sky Obby",
+          "Ground Obby",
+          "Tower Obby",
+          "Underground Obby"
+        ]
+      },
+      {
+        "text": "What happens when you press a button to buy a new wall or floor in your tycoon base?",
+        "correctAnswer": "It instantly appears",
+        "options": [
+          "You have to build it yourself",
+          "It gets delivered later",
+          "It instantly appears",
+          "You have to wait for it"
+        ]
+      },
+      {
+        "text": "What is the most common goal when playing an Obby?",
+        "correctAnswer": "Reach the end",
+        "options": [
+          "Collect all items",
+          "Reach the end",
+          "Defeat enemies",
+          "Build a base"
+        ]
+      },
+      {
+        "text": "In a mining tycoon, what resource might you collect from the ground using tools or machines?",
+        "correctAnswer": "Ores",
+        "options": [
+          "Wood",
+          "Air",
+          "Water",
+          "Ores"
+        ]
+      },
+      {
+        "text": "What is a common item you might step on that launches you high into the air in an obby?",
+        "correctAnswer": "Jump pad",
+        "options": [
+          "Trampoline",
+          "Springboard",
+          "Jump pad",
+          "Elevator"
+        ]
+      },
+      {
+        "text": "What is a common feature in tycoons that allows players to save their progress and continue later?",
+        "correctAnswer": "Auto-save",
+        "options": [
+          "Cloud save",
+          "Save station",
+          "Auto-save",
+          "Manual save"
+        ]
+      },
+      {
+        "text": "What is the name for a type of obby where the difficulty of the stages gradually increases?",
+        "correctAnswer": "Difficulty Chart Obby",
+        "options": [
+          "Easy Obby",
+          "Random Obby",
+          "Difficulty Chart Obby",
+          "Hard Obby"
+        ]
+      },
+      {
+        "text": "In a car wash tycoon, what do customers typically pay you for?",
+        "correctAnswer": "Cleaning their cars",
+        "options": [
+          "Buying new cars",
+          "Repairing their cars",
+          "Cleaning their cars",
+          "Fueling their cars"
+        ]
+      },
+      {
+        "text": "What is the main color of the \"lava\" that eliminates you in many obbys?",
+        "correctAnswer": "Red or orange",
+        "options": [
+          "Purple or pink",
+          "Red or orange",
+          "Blue or green",
+          "Black or grey"
+        ]
+      },
+      {
+        "text": "What do you purchase to get more advanced or efficient droppers in a tycoon game?",
+        "correctAnswer": "Upgrades",
+        "options": [
+          "Decorations",
+          "Upgrades",
+          "Downgrades",
+          "Furniture"
+        ]
+      },
+      {
+        "text": "What is a common feature that lets you skip a difficult stage in an obby, often by paying Robux?",
+        "correctAnswer": "Skip stage game pass",
+        "options": [
+          "Admin commands",
+          "Skip stage game pass",
+          "Teleport cheat",
+          "Stage bypass key"
+        ]
+      },
+      {
+        "text": "What is a common type of tycoon game where you build a base and produce resources to sell?",
+        "correctAnswer": "Factory Tycoon",
+        "options": [
+          "Farm Tycoon",
+          "Factory Tycoon",
+          "Sports Tycoon",
+          "Exploration Tycoon"
+        ]
+      },
+      {
+        "text": "What is a common phrase seen at the end of a completed obby?",
+        "correctAnswer": "You Win!",
+        "options": [
+          "Try Again!",
+          "Game Over!",
+          "You Win!",
+          "Next Level!"
+        ]
+      },
+      {
+        "text": "If you want your droppers to produce more money per drop, what kind of upgrade would you look for?",
+        "correctAnswer": "Output upgrade",
+        "options": [
+          "Size upgrade",
+          "Output upgrade",
+          "Speed upgrade",
+          "Color upgrade"
+        ]
+      },
+      {
+        "text": "What kind of obby often requires players to navigate through a dark or dimly lit area?",
+        "correctAnswer": "Dark Obby",
+        "options": [
+          "Light Obby",
+          "Sunny Obby",
+          "Dark Obby",
+          "Foggy Obby"
+        ]
+      },
+      {
+        "text": "What is the main purpose of conveyor belts in many tycoons?",
+        "correctAnswer": "Transport items",
+        "options": [
+          "Generate power",
+          "Transport items",
+          "Create obstacles",
+          "Store money"
+        ]
+      },
+      {
+        "text": "What is the general term for the various challenges you face in an obby?",
+        "correctAnswer": "Obstacles",
+        "options": [
+          "Puzzles",
+          "Traps",
+          "Obstacles",
+          "Enemies"
+        ]
+      },
+      {
+        "text": "In a classic retail tycoon, what do you need to buy to display items for customers to purchase?",
+        "correctAnswer": "Shelves or display cases",
+        "options": [
+          "Cash registers",
+          "Security cameras",
+          "Shelves or display cases",
+          "Customer seats"
+        ]
+      },
+      {
+        "text": "What color usually indicates a safe spot or platform in an obby, contrasting with red kill bricks?",
+        "correctAnswer": "Green or blue",
+        "options": [
+          "Black or grey",
+          "Yellow or orange",
+          "Green or blue",
+          "Purple or pink"
+        ]
+      },
+      {
+        "text": "What is a popular way to make your tycoon base look more appealing or unique?",
+        "correctAnswer": "Buy decorations",
+        "options": [
+          "Sell your items",
+          "Remove droppers",
+          "Buy decorations",
+          "Shrink your walls"
+        ]
+      },
+      {
+        "text": "What is the name given to the game mode where players complete obstacle courses?",
+        "correctAnswer": "Obby",
+        "options": [
+          "Simulator",
+          "Tycoon",
+          "Obby",
+          "Roleplay"
+        ]
+      },
+      {
+        "text": "What feature in some tycoons allows you to protect your base from other players attacking it?",
+        "correctAnswer": "Player vs Player (PvP) defenses",
+        "options": [
+          "More droppers",
+          "Bigger cashiers",
+          "Player vs Player (PvP) defenses",
+          "Faster conveyors"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "general_gaming",
+    "title": "General Gaming",
+    "description": "Fun trivia about popular video games.",
+    "icon": "🕹️",
+    "bgColor": "3949AB",
+    "questions": [
+      {
+        "text": "What block is famously used to craft tools and weapons in Minecraft?",
+        "correctAnswer": "Crafting Table",
+        "options": [
+          "Furnace",
+          "Crafting Table",
+          "Chest",
+          "Anvil"
+        ]
+      },
+      {
+        "text": "What hostile mob explodes if it gets too close to you in Minecraft?",
+        "correctAnswer": "Creeper",
+        "options": [
+          "Skeleton",
+          "Creeper",
+          "Zombie",
+          "Spider"
+        ]
+      },
+      {
+        "text": "What is the main currency used to buy items in Roblox?",
+        "correctAnswer": "Robux",
+        "options": [
+          "Gems",
+          "Robux",
+          "Coins",
+          "Tix"
+        ]
+      },
+      {
+        "text": "What do players jump out of at the start of a battle royale match in Fortnite?",
+        "correctAnswer": "Battle Bus",
+        "options": [
+          "Supply Drop",
+          "Battle Bus",
+          "Party Plane",
+          "V-Bucks Express"
+        ]
+      },
+      {
+        "text": "What is the name of Mario's green-clad brother?",
+        "correctAnswer": "Luigi",
+        "options": [
+          "Wario",
+          "Toad",
+          "Luigi",
+          "Waluigi"
+        ]
+      },
+      {
+        "text": "What is the name of the electric type Pokémon that is Pikachu's evolved form?",
+        "correctAnswer": "Raichu",
+        "options": [
+          "Electabuzz",
+          "Pichu",
+          "Raichu",
+          "Jolteon"
+        ]
+      },
+      {
+        "text": "What instrument does Link often play in The Legend of Zelda: Ocarina of Time?",
+        "correctAnswer": "Ocarina",
+        "options": [
+          "Flute",
+          "Ocarina",
+          "Trumpet",
+          "Lyre"
+        ]
+      },
+      {
+        "text": "What type of animal is Tom Nook in Animal Crossing?",
+        "correctAnswer": "Raccoon",
+        "options": [
+          "Fox",
+          "Raccoon",
+          "Dog",
+          "Bear"
+        ]
+      },
+      {
+        "text": "What are the impostors trying to do to the crewmates in Among Us?",
+        "correctAnswer": "Eliminate them",
+        "options": [
+          "Help them",
+          "Eliminate them",
+          "Befriend them",
+          "Decorate the ship"
+        ]
+      },
+      {
+        "text": "What is the goal in Fall Guys?",
+        "correctAnswer": "Be the last bean standing",
+        "options": [
+          "Build the tallest tower",
+          "Be the last bean standing",
+          "Collect all the coins",
+          "Defeat the boss"
+        ]
+      },
+      {
+        "text": "What is a common weapon type used to cover the arena in ink in Splatoon?",
+        "correctAnswer": "Splattershot",
+        "options": [
+          "Water gun",
+          "Splattershot",
+          "Paintball gun",
+          "Laser blaster"
+        ]
+      },
+      {
+        "text": "What special ability does Kirby have?",
+        "correctAnswer": "Inhaling enemies and copying abilities",
+        "options": [
+          "Flying with wings",
+          "Inhaling enemies and copying abilities",
+          "Shooting lasers",
+          "Building structures"
+        ]
+      },
+      {
+        "text": "What color is Sonic the Hedgehog?",
+        "correctAnswer": "Blue",
+        "options": [
+          "Green",
+          "Yellow",
+          "Blue",
+          "Red"
+        ]
+      },
+      {
+        "text": "What item can you throw behind you to make opponents spin out in Mario Kart?",
+        "correctAnswer": "Banana Peel",
+        "options": [
+          "Coin",
+          "Banana Peel",
+          "Mushroom",
+          "Star"
+        ]
+      },
+      {
+        "text": "Which Nintendo character is known for throwing fireballs and jumping high?",
+        "correctAnswer": "Mario",
+        "options": [
+          "Kirby",
+          "Link",
+          "Mario",
+          "Pikachu"
+        ]
+      },
+      {
+        "text": "What are the enemies in Pac-Man called?",
+        "correctAnswer": "Ghosts",
+        "options": [
+          "Monsters",
+          "Ghosts",
+          "Zombies",
+          "Aliens"
+        ]
+      },
+      {
+        "text": "What are the falling blocks in Tetris called?",
+        "correctAnswer": "Tetrominoes",
+        "options": [
+          "Triangles",
+          "Tetrominoes",
+          "Circles",
+          "Stars"
+        ]
+      },
+      {
+        "text": "What resource is needed to create a Nether portal in Minecraft?",
+        "correctAnswer": "Obsidian",
+        "options": [
+          "Gold",
+          "Obsidian",
+          "Diamond",
+          "Iron"
+        ]
+      },
+      {
+        "text": "What platform allows users to create their own games and experiences in Roblox?",
+        "correctAnswer": "Roblox Studio",
+        "options": [
+          "Game Maker",
+          "Roblox Studio",
+          "Build-A-Game",
+          "Roblox Creator"
+        ]
+      },
+      {
+        "text": "What is the name of the in-game currency used to buy cosmetics in Fortnite?",
+        "correctAnswer": "V-Bucks",
+        "options": [
+          "Fortnite Dollars",
+          "V-Bucks",
+          "Gems",
+          "Battle Coins"
+        ]
+      },
+      {
+        "text": "What power-up makes Mario grow big and allows him to break blocks?",
+        "correctAnswer": "Super Mushroom",
+        "options": [
+          "Starman",
+          "Super Mushroom",
+          "Fire Flower",
+          "Super Leaf"
+        ]
+      },
+      {
+        "text": "What do trainers use to catch wild Pokémon?",
+        "correctAnswer": "Poké Balls",
+        "options": [
+          "Capture Nets",
+          "Poké Balls",
+          "Monster Traps",
+          "Trainer Balls"
+        ]
+      },
+      {
+        "text": "What princess does Link often have to rescue in The Legend of Zelda?",
+        "correctAnswer": "Princess Zelda",
+        "options": [
+          "Princess Peach",
+          "Princess Zelda",
+          "Princess Daisy",
+          "Princess Rosalina"
+        ]
+      },
+      {
+        "text": "What is a common way to earn Bells in Animal Crossing?",
+        "correctAnswer": "Selling fruit and fish",
+        "options": [
+          "Sleeping",
+          "Selling fruit and fish",
+          "Digging holes",
+          "Running around"
+        ]
+      },
+      {
+        "text": "If you are a crewmate in Among Us, what do you need to complete to win?",
+        "correctAnswer": "Tasks",
+        "options": [
+          "Quests",
+          "Tasks",
+          "Missions",
+          "Jobs"
+        ]
+      },
+      {
+        "text": "What do the little characters in Fall Guys look like?",
+        "correctAnswer": "Beans",
+        "options": [
+          "Stars",
+          "Beans",
+          "Squares",
+          "Circles"
+        ]
+      },
+      {
+        "text": "What is the main goal in Turf War mode in Splatoon?",
+        "correctAnswer": "Cover the most ground with your team's ink",
+        "options": [
+          "Capture the flag",
+          "Cover the most ground with your team's ink",
+          "Collect the most coins",
+          "Defeat the most enemies"
+        ]
+      },
+      {
+        "text": "What color is Kirby's main body?",
+        "correctAnswer": "Pink",
+        "options": [
+          "Yellow",
+          "Red",
+          "Pink",
+          "Blue"
+        ]
+      },
+      {
+        "text": "What are the golden rings Sonic collects used for?",
+        "correctAnswer": "Protecting him from damage",
+        "options": [
+          "Gaining speed",
+          "Protecting him from damage",
+          "Buying items",
+          "Unlocking levels"
+        ]
+      },
+      {
+        "text": "What item makes you temporarily invincible and faster in Mario Kart?",
+        "correctAnswer": "Star",
+        "options": [
+          "Green Shell",
+          "Star",
+          "Mushroom",
+          "Banana Peel"
+        ]
+      },
+      {
+        "text": "What is the name of the main villain who often kidnaps Princess Peach?",
+        "correctAnswer": "Bowser",
+        "options": [
+          "Ganondorf",
+          "Bowser",
+          "King K. Rool",
+          "Ridley"
+        ]
+      },
+      {
+        "text": "What happens if Pac-Man eats a Power Pellet?",
+        "correctAnswer": "He can eat the ghosts",
+        "options": [
+          "He speeds up",
+          "He can eat the ghosts",
+          "He shrinks",
+          "He becomes invisible"
+        ]
+      },
+      {
+        "text": "What is the name of the block that allows you to fly to the End dimension in Minecraft?",
+        "correctAnswer": "End Portal Frame",
+        "options": [
+          "Nether Portal",
+          "End Portal Frame",
+          "Dragon Egg",
+          "Ender Chest"
+        ]
+      },
+      {
+        "text": "What is a common way for players to express themselves in Roblox?",
+        "correctAnswer": "Customizing avatars",
+        "options": [
+          "Racing cars",
+          "Customizing avatars",
+          "Building houses",
+          "Solving puzzles"
+        ]
+      },
+      {
+        "text": "What is the final goal in a typical Battle Royale match in Fortnite?",
+        "correctAnswer": "Be the last player or team alive",
+        "options": [
+          "Collect the most V-Bucks",
+          "Be the last player or team alive",
+          "Build the biggest fort",
+          "Defeat the boss"
+        ]
+      },
+      {
+        "text": "What enemy is a small, brown mushroom-like creature that walks around in Super Mario Bros.?",
+        "correctAnswer": "Goomba",
+        "options": [
+          "Piranha Plant",
+          "Goomba",
+          "Koopa Troopa",
+          "Shy Guy"
+        ]
+      },
+      {
+        "text": "What is the starting Pokémon type that is weak to water?",
+        "correctAnswer": "Fire",
+        "options": [
+          "Electric",
+          "Fire",
+          "Grass",
+          "Psychic"
+        ]
+      },
+      {
+        "text": "What weapon does Link usually wield in The Legend of Zelda?",
+        "correctAnswer": "Sword",
+        "options": [
+          "Bow and Arrow",
+          "Sword",
+          "Axe",
+          "Spear"
+        ]
+      },
+      {
+        "text": "What is the main way to travel between islands in Animal Crossing: New Horizons?",
+        "correctAnswer": "Dodo Airlines",
+        "options": [
+          "Bus",
+          "Dodo Airlines",
+          "Train",
+          "Hot Air Balloon"
+        ]
+      },
+      {
+        "text": "What is it called when players discuss who they think the impostor is in Among Us?",
+        "correctAnswer": "Emergency Meeting",
+        "options": [
+          "Strategy Session",
+          "Emergency Meeting",
+          "Crewmate Chat",
+          "Impostor Talk"
+        ]
+      },
+      {
+        "text": "What tool is best for mining stone and ore in Minecraft?",
+        "correctAnswer": "Pickaxe",
+        "options": [
+          "Shovel",
+          "Pickaxe",
+          "Axe",
+          "Hoe"
+        ]
+      },
+      {
+        "text": "What is the name of the popular game inside Roblox where you adopt and raise pets?",
+        "correctAnswer": "Adopt Me!",
+        "options": [
+          "Pet Simulator X",
+          "Bloxburg",
+          "Adopt Me!",
+          "Murder Mystery 2"
+        ]
+      },
+      {
+        "text": "What is the term for a player who eliminates all opponents in a squad by themselves in Fortnite?",
+        "correctAnswer": "Squad Wipe",
+        "options": [
+          "Victory Royale",
+          "Squad Wipe",
+          "Elimination King",
+          "Rampage"
+        ]
+      },
+      {
+        "text": "What is the name of the large, pink obstacle that can push you off the map in Fall Guys?",
+        "correctAnswer": "Big Yeetus",
+        "options": [
+          "The Smasher",
+          "Big Yeetus",
+          "The Pusher",
+          "The Hammer"
+        ]
+      },
+      {
+        "text": "What are the playable characters in Splatoon called?",
+        "correctAnswer": "Inklings",
+        "options": [
+          "Octos",
+          "Inklings",
+          "Squids",
+          "Paint Kids"
+        ]
+      },
+      {
+        "text": "What is the name of Kirby's arch-rival who often wields a hammer?",
+        "correctAnswer": "King Dedede",
+        "options": [
+          "Meta Knight",
+          "King Dedede",
+          "Waddle Dee",
+          "Bandana Waddle Dee"
+        ]
+      },
+      {
+        "text": "What is the name of Sonic's two-tailed fox friend?",
+        "correctAnswer": "Tails",
+        "options": [
+          "Knuckles",
+          "Silver",
+          "Tails",
+          "Shadow"
+        ]
+      },
+      {
+        "text": "What item allows you to shoot three shells at once in Mario Kart?",
+        "correctAnswer": "Triple Red Shells",
+        "options": [
+          "Triple Mushrooms",
+          "Triple Red Shells",
+          "Triple Bananas",
+          "Triple Stars"
+        ]
+      },
+      {
+        "text": "What is the main goal in a Super Smash Bros. match?",
+        "correctAnswer": "Knock opponents off the stage",
+        "options": [
+          "Collect coins",
+          "Knock opponents off the stage",
+          "Capture flags",
+          "Defeat a boss"
+        ]
+      },
+      {
+        "text": "What fruit gives Pac-Man bonus points if he eats it?",
+        "correctAnswer": "Cherry",
+        "options": [
+          "Apple",
+          "Grape",
+          "Cherry",
+          "Banana"
+        ]
+      }
+    ]
+  }
+]

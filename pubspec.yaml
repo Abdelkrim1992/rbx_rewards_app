@@ -39,6 +39,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/json/
     - assets/icons/
     - assets/images/
     - assets/images/onboarding_screen_main_image.jpeg

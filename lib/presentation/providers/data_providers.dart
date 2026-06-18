@@ -1,6 +1,7 @@
+import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers.dart';
-
 // Provides a cached list of offers from the backend (with Redis backing)
 final offersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repo = ref.read(supabaseRepositoryProvider);
@@ -28,8 +29,9 @@ final leaderboardProvider = FutureProvider.family<List<Map<String, dynamic>>, St
   return [];
 });
 
-// Provides quiz categories and questions from the backend
+// Provides quiz categories and questions from local JSON
 final quizzesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final repo = ref.read(supabaseRepositoryProvider);
-  return repo.getQuizzes();
+  final jsonString = await rootBundle.loadString('assets/json/quizzes.json');
+  final List<dynamic> jsonList = jsonDecode(jsonString);
+  return jsonList.cast<Map<String, dynamic>>();
 });

@@ -40,7 +40,12 @@ class PubscaleService {
 
     // App Key from PubScale dashboard (NOT the numeric App ID).
     // Pass via --dart-define-from-file=.env at build time.
-    const appKey = String.fromEnvironment('PUBSCALE_APP_ID', defaultValue: '');
+    final String appKey;
+    if (Platform.isIOS) {
+      appKey = const String.fromEnvironment('PUBSCALE_APP_ID_IOS', defaultValue: '');
+    } else {
+      appKey = const String.fromEnvironment('PUBSCALE_APP_ID', defaultValue: '');
+    }
     // Sandbox mode: set PUBSCALE_SANDBOX=true in .env for testing.
     const sandboxStr = String.fromEnvironment('PUBSCALE_SANDBOX', defaultValue: 'false');
     final isSandbox = sandboxStr.toLowerCase() == 'true';

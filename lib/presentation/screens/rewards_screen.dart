@@ -1094,11 +1094,11 @@ class _InteractiveCardState extends State<_InteractiveCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap?.call();
+      onTapDown: (_) {
+        setState(() => _scale = 0.97);
+        if (widget.onTap != null) widget.onTap!();
       },
+      onTapUp: (_) => setState(() => _scale = 1.0),
       onTapCancel: () => setState(() => _scale = 1.0),
       child: AnimatedScale(
         scale: _scale,

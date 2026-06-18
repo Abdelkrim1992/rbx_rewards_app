@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/coin_provider.dart';
+import '../../widgets/interactive_button.dart';
 import '../providers/spin_provider.dart';
 import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
@@ -22,13 +23,14 @@ class SpinScreen extends ConsumerStatefulWidget {
   ConsumerState<SpinScreen> createState() => _SpinScreenState();
 }
 
-class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStateMixin {
+class _SpinScreenState extends ConsumerState<SpinScreen>
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late AnimationController _pulseController;
   late Animation<double> _animation;
   late Animation<double> _pulseAnimation;
   bool _isSpinning = false;
-  double _adButtonScale = 1.0;
+  bool _isProcessing = false;
   static int _spinCount = 0; // Track spins for ad display
 
   final List<_WheelSegment> segments = const [
@@ -158,7 +160,9 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
     if (!mounted || claimRequested != true) {
       _spinCount++;
       if (_spinCount % 3 == 0 && mounted) {
-        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.spinForced);
+        await ref
+            .read(adProvider.notifier)
+            .showInterstitialAfterClaim(AdPlacement.spinForced);
       }
       return;
     }
@@ -176,13 +180,17 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
         }
         _spinCount++;
         if (_spinCount % 3 == 0 && mounted) {
-          await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.spinForced);
+          await ref
+              .read(adProvider.notifier)
+              .showInterstitialAfterClaim(AdPlacement.spinForced);
         }
       },
       onCancel: () async {
         _spinCount++;
         if (_spinCount % 3 == 0 && mounted) {
-          await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.spinForced);
+          await ref
+              .read(adProvider.notifier)
+              .showInterstitialAfterClaim(AdPlacement.spinForced);
         }
       },
     );
@@ -192,7 +200,8 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
   Widget build(BuildContext context) {
     final spinState = ref.watch(spinProvider);
     final freeSpins = spinState.spinsRemaining;
-    final cooldownRemaining = ref.watch(spinProvider.notifier).cooldownRemaining;
+    final cooldownRemaining =
+        ref.watch(spinProvider.notifier).cooldownRemaining;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
@@ -435,18 +444,25 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
                                                         '...',
                                                         style: TextStyle(
                                                           fontSize: 16,
-                                                          fontWeight: FontWeight.w900,
-                                                          color: AppColors.primary,
+                                                          fontWeight:
+                                                              FontWeight.w900,
+                                                          color:
+                                                              AppColors.primary,
                                                           letterSpacing: 1,
                                                         ),
                                                       )
                                                     : (freeSpins == 0)
                                                         ? Text(
-                                                            _formatDuration(cooldownRemaining),
-                                                            style: const TextStyle(
+                                                            _formatDuration(
+                                                                cooldownRemaining),
+                                                            style:
+                                                                const TextStyle(
                                                               fontSize: 14,
-                                                              fontWeight: FontWeight.w900,
-                                                              color: Colors.grey,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w900,
+                                                              color:
+                                                                  Colors.grey,
                                                               letterSpacing: 1,
                                                             ),
                                                           )
@@ -454,8 +470,11 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
                                                             'SPIN',
                                                             style: TextStyle(
                                                               fontSize: 16,
-                                                              fontWeight: FontWeight.w900,
-                                                              color: AppColors.primary,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w900,
+                                                              color: AppColors
+                                                                  .primary,
                                                               letterSpacing: 1,
                                                             ),
                                                           ),
@@ -532,54 +551,60 @@ class _SpinScreenState extends ConsumerState<SpinScreen> with TickerProviderStat
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // Watch Ad button — shows real interstitial then awards free spin
-                      GestureDetector(
-                        onTapDown: (_) => setState(() => _adButtonScale = 0.95),
-                        onTapUp: (_) async {
-                          setState(() => _adButtonScale = 1.0);
-                          // Show interstitial ad first
-                          await ref
-                              .read(adProvider.notifier)
-                              .showInterstitialAfterClaim(AdPlacement.spinExtra);
-                          if (!mounted) return;
-                          // Award the free spin after the ad is dismissed
-                          await ref.read(spinProvider.notifier).addFreeSpinLocal();
-                        },
-                        onTapCancel: () => setState(() => _adButtonScale = 1.0),
-                        child: AnimatedScale(
-                          scale: _adButtonScale,
-                          duration: const Duration(milliseconds: 100),
-                          child: Container(
-                            height: 52,
-                            decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                      // Watch Ad button
+                      InteractiveButton(
+                        height: 52,
+                        gradient: AppColors.primaryGradient,
+                        textColor: Colors.white,
+                        onTap: (_isProcessing || _isSpinning)
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isProcessing = true;
+                                });
+                                // Show rewarded ad
+                                await ref.read(adProvider.notifier).showOptionalAd(
+                                  AdPlacement.spinExtra,
+                                  onReward: (amount) async {
+                                    if (!mounted) return;
+                                    // Award the free spin after the ad is successfully watched
+                                    await ref.read(spinProvider.notifier).addFreeSpinLocal();
+                                  },
+                                  onAdDismissed: () {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isProcessing = false;
+                                      });
+                                    }
+                                  },
+                                  onAdFailed: (error) async {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isProcessing = false;
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Failed to load ad or limit reached')),
+                                      );
+                                    }
+                                  },
+                                );
+                              },
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.play_circle_fill,
+                                color: Colors.white, size: 22),
+                            SizedBox(width: 8),
+                            Text(
+                              'Watch Ad for Extra Spin',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.5,
+                              ),
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.play_circle_fill,
-                                    color: Colors.white, size: 22),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Watch Ad for Extra Spin',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -1459,4 +1484,3 @@ class _InteractiveCardState extends State<_InteractiveCard> {
     );
   }
 }
-
