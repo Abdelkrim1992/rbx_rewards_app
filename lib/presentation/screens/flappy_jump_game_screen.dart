@@ -1229,10 +1229,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     _game.onStateChanged = () async {
       if (_game.isGameOver && !_handledGameOver && mounted) {
         _handledGameOver = true;
-        _claimCount++;
-        if (_claimCount % 3 == 0) {
-          await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.dailyReward);
-        }
       }
       if (mounted) setState(() {});
     };
@@ -1279,6 +1275,13 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     }
 
     _showCoinClaimAnimation = true;
+
+    if (!_adWatched) {
+      _claimCount++;
+      if (_claimCount % 3 == 0) {
+        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+      }
+    }
 
     final currentCoins = ref.read(coinProvider);
     final duration = _gameStartTime != null
@@ -1643,13 +1646,18 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          '$_coins',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final coinBalance = ref.watch(coinProvider);
+                            return Text(
+                              coinBalance.toString(),
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFFFFCC44),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -2057,14 +2065,23 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                         child: GestureDetector(
                           onTap: () async {
                             final adNotifier = ref.read(adProvider.notifier);
-                            await adNotifier.showInterstitialAfterClaim(AdPlacement.dailyReward);
-                            adNotifier.recordOptionalAdWatched();
-                            if (!mounted) return;
-                            setState(() {
-                              _originalCoinsEarned = _game.coinsEarned;
-                              _game.coinsEarned = (_game.coinsEarned * 2).clamp(0, 30); // 2x capped at 30
-                              _adWatched = true;
-                            });
+                            await adNotifier.showOptionalAd(
+                              AdPlacement.doubleReward,
+                              onReward: (_) async {
+                                if (!mounted) return;
+                                setState(() {
+                                  _originalCoinsEarned = _game.coinsEarned;
+                                  _game.coinsEarned = (_game.coinsEarned * 2).clamp(0, 30); // 2x capped at 30
+                                  _adWatched = true;
+                                });
+                              },
+                              onAdFailed: (error) async {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to load ad: $error')),
+                                );
+                              },
+                            );
                           },
                           child: Container(
                             width: double.infinity,

@@ -70,8 +70,6 @@ class AppAssets {
   static const String quizMasterGame = 'assets/images/math_quiz_mini_game.jpeg';
   static const String quizMasterQuickActions =
       'assets/images/quiz_master_quick_actions.jpeg';
-  static const String quizMasterEarnMore =
-      'assets/images/quiz_master_earn_more.jpeg';
   static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.PNG';
   static const String goldCoin = 'assets/images/robux_coins.png';
   static const String chevronRight =

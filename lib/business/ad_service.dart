@@ -58,8 +58,8 @@ class AdService {
   };
 
   final List<RewardedAd> _preloadedAds = [];
-  final Map<AdPlacement, InterstitialAd?> _preloadedInterstitials = {};
-  final Map<AdPlacement, RewardedInterstitialAd?> _preloadedRewardedInterstitials = {};
+  final Map<AdPlacement, RewardedAd?> _preloadedInterstitials = {};
+  final Map<AdPlacement, RewardedAd?> _preloadedRewardedInterstitials = {};
   final Map<String, int> _retryAttempts = {};
   bool _isInitialized = false;
   // Set USE_TEST_ADS=true in your .env and pass --dart-define-from-file=.env to force
@@ -307,52 +307,25 @@ class AdService {
   // ===== INTERSTITIAL AD METHODS =====
 
   /// Load an interstitial ad for a placement. Returns null on failure or web.
-  Future<InterstitialAd?> loadInterstitialAd(AdPlacement placement) async {
-    if (kIsWeb) return null;
-
-    final adUnitId = _getInterstitialAdUnitId(placement);
-    final completer = Completer<InterstitialAd?>();
-    final timeout = Timer(const Duration(seconds: 10), () {
-      if (!completer.isCompleted) completer.complete(null);
-    });
-
-    try {
-      await InterstitialAd.load(
-        adUnitId: adUnitId,
-        request: const AdRequest(),
-        adLoadCallback: InterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            timeout.cancel();
-            if (!completer.isCompleted) completer.complete(ad);
-          },
-          onAdFailedToLoad: (error) {
-            timeout.cancel();
-            debugPrint(
-                'AdService: interstitial failed to load for ${placement.name}: ${error.message}');
-            if (!completer.isCompleted) completer.complete(null);
-          },
-        ),
-      );
-    } catch (e) {
-      timeout.cancel();
-      if (!completer.isCompleted) completer.complete(null);
-    }
-
-    return completer.future;
+  /// Modified to load a Rewarded Video Ad under the hood.
+  Future<RewardedAd?> loadInterstitialAd(AdPlacement placement) async {
+    return loadRewardedAd(placement);
   }
 
   /// Preload an interstitial ad for a specific placement.
+  /// Modified to preload a Rewarded Video Ad under the hood.
   Future<void> preloadInterstitial(AdPlacement placement) async {
     if (kIsWeb || _preloadedInterstitials[placement] != null) return;
     final ad = await loadInterstitialAd(placement);
     if (ad != null) {
       _preloadedInterstitials[placement] = ad;
-      debugPrint('AdService: interstitial preloaded for ${placement.name}');
+      debugPrint('AdService: interstitial (rewarded ad) preloaded for ${placement.name}');
     }
   }
 
   /// Show a preloaded interstitial ad. Returns immediately if none loaded.
   /// After showing, automatically preloads the next one.
+  /// Modified to show a Rewarded Video Ad under the hood.
   Future<void> showInterstitial(AdPlacement placement,
       {VoidCallback? onAdDismissed}) async {
     if (kIsWeb) {
@@ -360,9 +333,9 @@ class AdService {
       return;
     }
 
-    InterstitialAd? ad = _preloadedInterstitials[placement];
+    RewardedAd? ad = _preloadedInterstitials[placement];
     if (ad == null) {
-      debugPrint('AdService: no interstitial preloaded for ${placement.name}, loading on demand...');
+      debugPrint('AdService: no interstitial (rewarded ad) preloaded for ${placement.name}, loading on demand...');
       ad = await loadInterstitialAd(placement);
       if (ad == null) {
         debugPrint('AdService: failed to load on demand for ${placement.name}');
@@ -372,32 +345,22 @@ class AdService {
     } else {
       _preloadedInterstitials[placement] = null;
     }
-    final completer = Completer<void>();
 
-    ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (_) {
-        debugPrint('AdService: interstitial showed for ${placement.name}');
+    await showRewardedAd(
+      ad,
+      placement: placement,
+      onReward: (amount) async {
+        debugPrint('AdService: interstitial (rewarded ad) reward earned: $amount');
       },
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        if (!completer.isCompleted) completer.complete();
-        onAdDismissed?.call();
-        // Preload next interstitial in background
-        preloadInterstitial(placement);
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        if (!completer.isCompleted) completer.complete();
+      onAdDismissed: () {
         onAdDismissed?.call();
         preloadInterstitial(placement);
+      },
+      onAdFailedToShow: (error) async {
+        preloadInterstitial(placement);
+        onAdDismissed?.call();
       },
     );
-
-    // Enable immersive mode to cover the entire screen including top bar
-    // This ensures no margins or padding around the ad
-    await ad.setImmersiveMode(true);
-    await ad.show();
-    return completer.future;
   }
 
   String _getInterstitialAdUnitId(AdPlacement placement) {
@@ -444,53 +407,25 @@ class AdService {
 
   /// Load a rewarded interstitial ad for a placement. Returns null on failure or web.
   /// Rewarded interstitials combine interstitial format with rewards - perfect for two-tier systems.
-  Future<RewardedInterstitialAd?> loadRewardedInterstitialAd(AdPlacement placement) async {
-    if (kIsWeb) return null;
-
-    final adUnitId = _getRewardedInterstitialAdUnitId(placement);
-    final completer = Completer<RewardedInterstitialAd?>();
-    final timeout = Timer(const Duration(seconds: 10), () {
-      if (!completer.isCompleted) completer.complete(null);
-    });
-
-    try {
-      await RewardedInterstitialAd.load(
-        adUnitId: adUnitId,
-        request: const AdRequest(),
-        rewardedInterstitialAdLoadCallback: RewardedInterstitialAdLoadCallback(
-          onAdLoaded: (ad) {
-            timeout.cancel();
-            if (!completer.isCompleted) completer.complete(ad);
-          },
-          onAdFailedToLoad: (error) {
-            timeout.cancel();
-            debugPrint(
-                'AdService: rewarded interstitial failed to load for ${placement.name}: ${error.message}');
-            if (!completer.isCompleted) completer.complete(null);
-          },
-        ),
-      );
-    } catch (e) {
-      timeout.cancel();
-      if (!completer.isCompleted) completer.complete(null);
-    }
-
-    return completer.future;
+  /// Load a rewarded interstitial ad for a placement. Returns null on failure or web.
+  /// Modified to load a Rewarded Video Ad under the hood.
+  Future<RewardedAd?> loadRewardedInterstitialAd(AdPlacement placement) async {
+    return loadRewardedAd(placement);
   }
 
   /// Preload a rewarded interstitial ad for a specific placement.
+  /// Modified to preload a Rewarded Video Ad under the hood.
   Future<void> preloadRewardedInterstitial(AdPlacement placement) async {
     if (kIsWeb || _preloadedRewardedInterstitials[placement] != null) return;
     final ad = await loadRewardedInterstitialAd(placement);
     if (ad != null) {
       _preloadedRewardedInterstitials[placement] = ad;
-      debugPrint('AdService: rewarded interstitial preloaded for ${placement.name}');
+      debugPrint('AdService: rewarded interstitial (rewarded ad) preloaded for ${placement.name}');
     }
   }
 
   /// Show a rewarded interstitial ad and invoke [onReward] when the user earns the reward.
-  /// This is used for the "Quick Claim" option in two-tier reward systems.
-  /// Returns true if user watched and earned reward, false otherwise.
+  /// Modified to show a Rewarded Video Ad under the hood.
   Future<bool> showRewardedInterstitial(
     AdPlacement placement, {
     required Future<void> Function(int amount) onReward,
@@ -502,9 +437,9 @@ class AdService {
       return false;
     }
 
-    RewardedInterstitialAd? ad = _preloadedRewardedInterstitials[placement];
+    RewardedAd? ad = _preloadedRewardedInterstitials[placement];
     if (ad == null) {
-      debugPrint('AdService: no rewarded interstitial preloaded for ${placement.name}, loading on demand...');
+      debugPrint('AdService: no rewarded interstitial (rewarded ad) preloaded for ${placement.name}, loading on demand...');
       ad = await loadRewardedInterstitialAd(placement);
       if (ad == null) {
         debugPrint('AdService: failed to load rewarded interstitial on demand for ${placement.name}');
@@ -515,38 +450,19 @@ class AdService {
       _preloadedRewardedInterstitials[placement] = null;
     }
 
-    final completer = Completer<bool>();
-
-    ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdShowedFullScreenContent: (_) {
-        debugPrint('AdService: rewarded interstitial showed for ${placement.name}');
-        _recordImpression(placement);
-      },
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
+    return showRewardedAd(
+      ad,
+      placement: placement,
+      onReward: onReward,
+      onAdDismissed: () {
         onAdDismissed?.call();
-        // Preload next rewarded interstitial in background
         preloadRewardedInterstitial(placement);
-        if (!completer.isCompleted) completer.complete(false);
       },
-      onAdFailedToShowFullScreenContent: (ad, error) async {
-        ad.dispose();
+      onAdFailedToShow: (error) async {
         await onAdFailed?.call(error.message);
         preloadRewardedInterstitial(placement);
-        if (!completer.isCompleted) completer.complete(false);
       },
     );
-
-    await ad.setImmersiveMode(true);
-    await ad.show(
-      onUserEarnedReward: (ad, reward) async {
-        final amount = reward.amount.toInt();
-        await onReward(amount);
-        if (!completer.isCompleted) completer.complete(true);
-      },
-    );
-
-    return completer.future;
   }
 
   String _getRewardedInterstitialAdUnitId(AdPlacement placement) {

@@ -59,4 +59,32 @@ class GamePrefs {
       await prefs.setString(_keyProfilePhotoUrl, url);
     }
   }
+
+  // --- Daily Scratch Card Limit ---
+  static const String _keyScratchDate = 'scratch_date';
+  static const String _keyScratchesRemaining = 'scratches_remaining';
+  static const int maxScratchesPerDay = 10;
+
+  static Future<int> getScratchesRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastDateStr = prefs.getString(_keyScratchDate);
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD
+
+    if (lastDateStr != todayStr) {
+      // New day, reset the count
+      await prefs.setString(_keyScratchDate, todayStr);
+      await prefs.setInt(_keyScratchesRemaining, maxScratchesPerDay);
+      return maxScratchesPerDay;
+    }
+
+    return prefs.getInt(_keyScratchesRemaining) ?? maxScratchesPerDay;
+  }
+
+  static Future<void> decrementScratchesRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remaining = await getScratchesRemaining();
+    if (remaining > 0) {
+      await prefs.setInt(_keyScratchesRemaining, remaining - 1);
+    }
+  }
 }

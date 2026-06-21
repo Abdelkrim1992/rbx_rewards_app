@@ -44,48 +44,53 @@ class RbxAppHeader extends ConsumerWidget {
               const SizedBox(width: 10),
             ],
           ),
-          GestureDetector(
-            onTap: () {
-              // Use the navigation callback to switch to profile tab (index 4)
-              if (onNavTap != null) {
-                onNavTap!(4);
-              }
-            },
-            child: Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.purple, width: 1.5),
-                color: Colors.white,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
-                  )
-                ],
+          Row(
+            children: [
+
+              GestureDetector(
+                onTap: () {
+                  // Use the navigation callback to switch to profile tab (index 4)
+                  if (onNavTap != null) {
+                    onNavTap!(4);
+                  }
+                },
+                child: Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.purple, width: 1.5),
+                    color: Colors.white,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0D000000),
+                        blurRadius: 2,
+                        offset: Offset(0, 1),
+                      )
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: profilePhotoUrl != null
+                      ? Image.network(
+                          profilePhotoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            AppAssets.profileAvatar,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.person, color: AppColors.purple),
+                          ),
+                        )
+                      : Image.asset(
+                          AppAssets.profileAvatar,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const Icon(Icons.person, color: AppColors.purple),
+                        ),
+                  ),
+                ),
               ),
-              child: ClipOval(
-                child: profilePhotoUrl != null
-                  ? Image.network(
-                      profilePhotoUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Image.asset(
-                        AppAssets.profileAvatar,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.person, color: AppColors.purple),
-                      ),
-                    )
-                  : Image.asset(
-                      AppAssets.profileAvatar,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const Icon(Icons.person, color: AppColors.purple),
-                    ),
-              ),
-            ),
+            ],
           ),
         ],
       ),

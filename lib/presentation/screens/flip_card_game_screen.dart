@@ -250,11 +250,6 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
 
     _loadHighScoreAndCoins();
 
-    // Show interstitial before the result popup appears
-    _claimCount++;
-    if (_claimCount % 3 == 0 && mounted) {
-      await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.dailyReward);
-    }
     if (!mounted) return;
 
     _matchPopController.reset();
@@ -266,6 +261,13 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
         ? DateTime.now().difference(_gameStartTime!).inSeconds
         : 1;
     final finalScore = _originalCoinsEarned * (_adWatched ? 2 : 1);
+
+    if (!_adWatched) {
+      _claimCount++;
+      if (_claimCount % 3 == 0 && mounted) {
+        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+      }
+    }
 
     if (finalScore > 0) {
       if (!mounted) return;
@@ -495,6 +497,40 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF131326),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final coinBalance = ref.watch(coinProvider);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          AppAssets.goldRbxCoin,
+                          width: 18,
+                          height: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          coinBalance.toString(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -1014,13 +1050,22 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                   child: GestureDetector(
                     onTap: () async {
                       final adNotifier = ref.read(adProvider.notifier);
-                      await adNotifier.showInterstitialAfterClaim(AdPlacement.dailyReward);
-                      adNotifier.recordOptionalAdWatched();
-                      if (!mounted) return;
-                      setState(() {
-                        _coinsEarned = _originalCoinsEarned * 2;
-                        _adWatched = true;
-                      });
+                      await adNotifier.showOptionalAd(
+                        AdPlacement.doubleReward,
+                        onReward: (_) async {
+                          if (!mounted) return;
+                          setState(() {
+                            _coinsEarned = _originalCoinsEarned * 2;
+                            _adWatched = true;
+                          });
+                        },
+                        onAdFailed: (error) async {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to load ad: $error')),
+                          );
+                        },
+                      );
                     },
                     child: Container(
                       width: double.infinity,

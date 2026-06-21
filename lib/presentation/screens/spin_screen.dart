@@ -158,12 +158,6 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     );
 
     if (!mounted || claimRequested != true) {
-      _spinCount++;
-      if (_spinCount % 3 == 0 && mounted) {
-        await ref
-            .read(adProvider.notifier)
-            .showInterstitialAfterClaim(AdPlacement.spinForced);
-      }
       return;
     }
 
@@ -177,20 +171,6 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
         final result = await ref.read(spinProvider.notifier).spin();
         if (result != null) {
           await ref.read(coinProvider.notifier).credit(coins, 'spin');
-        }
-        _spinCount++;
-        if (_spinCount % 3 == 0 && mounted) {
-          await ref
-              .read(adProvider.notifier)
-              .showInterstitialAfterClaim(AdPlacement.spinForced);
-        }
-      },
-      onCancel: () async {
-        _spinCount++;
-        if (_spinCount % 3 == 0 && mounted) {
-          await ref
-              .read(adProvider.notifier)
-              .showInterstitialAfterClaim(AdPlacement.spinForced);
         }
       },
     );
@@ -261,6 +241,40 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF131326),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Consumer(
+                          builder: (context, ref, child) {
+                            final coinBalance = ref.watch(coinProvider);
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset(
+                                    AppAssets.goldRbxCoin,
+                                    width: 18,
+                                    height: 18,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    coinBalance.toString(),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primaryText,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

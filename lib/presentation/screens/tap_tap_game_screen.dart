@@ -324,13 +324,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
       }
     }
     
-    if (!finalIsFailed) {
-      _claimCount++;
-      if (_claimCount % 3 == 0) {
-        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.dailyReward);
-        if (!mounted) return;
-      }
-    }
+    // Claim logic and ads are handled in the button callbacks
 
     setState(() {
       _isGameFailed = finalIsFailed;
@@ -658,30 +652,66 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                           ),
                           Align(
                             alignment: Alignment.centerRight,
-                            child: Container(
-                              height: 38,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.bolt,
-                                      color: AppColors.purple, size: 20),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '$_score',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF131326),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final coinBalance = ref.watch(coinProvider);
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primarySoft,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Image.asset(
+                                            AppAssets.goldRbxCoin,
+                                            width: 18,
+                                            height: 18,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            coinBalance.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primaryText,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 8),
+                                // Container(
+                                //   height: 38,
+                                //   padding: const EdgeInsets.symmetric(horizontal: 14),
+                                //   decoration: BoxDecoration(
+                                //     color: AppColors.primarySoft,
+                                //     borderRadius: BorderRadius.circular(12),
+                                //   ),
+                                //   child: Row(
+                                //     mainAxisSize: MainAxisSize.min,
+                                //     children: [
+                                //       const Icon(Icons.bolt,
+                                //           color: AppColors.purple, size: 20),
+                                //       const SizedBox(width: 6),
+                                //       Text(
+                                //         '$_score',
+                                //         style: const TextStyle(
+                                //           fontSize: 16,
+                                //           fontWeight: FontWeight.w800,
+                                //           color: Color(0xFF131326),
+                                //         ),
+                                //       ),
+                                //     ],
+                                //   ),
+                                // ),
+                              ],
                             ),
                           ),
                         ],
@@ -1186,13 +1216,22 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                             ? null
                             : () async {
                                 final adNotifier = ref.read(adProvider.notifier);
-                                await adNotifier.showInterstitialAfterClaim(AdPlacement.dailyReward);
-                                adNotifier.recordOptionalAdWatched();
-                                if (!mounted) return;
-                                setState(() {
-                                  _coinsEarned = _originalCoinsEarned * 2;
-                                  _adWatched = true;
-                                });
+                                await adNotifier.showOptionalAd(
+                                  AdPlacement.doubleReward,
+                                  onReward: (_) async {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _coinsEarned = _originalCoinsEarned * 2;
+                                      _adWatched = true;
+                                    });
+                                  },
+                                  onAdFailed: (error) async {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to load ad: $error')),
+                                    );
+                                  },
+                                );
                               },
                         child: Container(
                           width: double.infinity,
@@ -1238,8 +1277,16 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (_isClaiming) return;
+
+                            if (!_adWatched) {
+                              _claimCount++;
+                              if (_claimCount % 3 == 0) {
+                                await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+                              }
+                            }
+                            if (!mounted) return;
 
                             // Find absolute coordinate of button to launch coins from
                             final RenderBox box =

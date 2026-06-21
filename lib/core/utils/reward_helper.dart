@@ -10,6 +10,8 @@ import '../../widgets/congratulations_dialog.dart';
 /// This implements the "Normal + Double" strategy:
 /// - Normal: baseReward + Rewarded Interstitial (shorter ad)
 /// - Double: baseReward * 2 + Rewarded Ad (longer ad)
+int _normalClaimCounter = 0;
+
 Future<void> showRewardChoice({
   required BuildContext context,
   required String featureName,
@@ -32,31 +34,44 @@ Future<void> showRewardChoice({
       quickLabel: 'Claim $baseReward RBX',
       premiumReward: baseReward * 2,
       onQuickClaim: () async {
-        await adNotifier.showRewardedInterstitial(
-          quickPlacement,
-          onReward: (_) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-              );
-            }
-          },
-          onAdFailed: (error) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-              );
-            }
-          },
-        );
+        _normalClaimCounter++;
+        if (_normalClaimCounter % 3 == 0) {
+          await adNotifier.showRewardedInterstitial(
+            quickPlacement,
+            onReward: (_) async {
+              await onSuccess(baseReward);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+                await showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
+                );
+              }
+            },
+            onAdFailed: (error) async {
+              await onSuccess(baseReward);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+                await showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
+                );
+              }
+            },
+          );
+        } else {
+          await onSuccess(baseReward);
+          if (context.mounted) {
+            Navigator.of(context).pop();
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
+            );
+          }
+        }
       },
       onPremiumClaim: () async {
         await adNotifier.showOptionalAd(

@@ -8,6 +8,7 @@ import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
 import 'math_quiz_screen.dart';
 import 'flip_card_game_screen.dart';
+import 'scratch_card_screen.dart';
 
 class GamesScreen extends StatelessWidget {
   final Function(int) onNavTap;
@@ -40,6 +41,12 @@ class GamesScreen extends StatelessWidget {
         title: 'Flip Cards',
         coins: '+200',
         bgColor: Color(0xFFFFE8F0),
+      ),
+      const _GameData(
+        imageUrl: AppAssets.dailyRewardImage,
+        title: 'Scratch Card',
+        coins: '+200',
+        bgColor: Color(0xFFEAF3FF),
       ),
     ];
 
@@ -208,6 +215,18 @@ class GamesScreen extends StatelessWidget {
                                   if (coinsEarned != null) {
                                     onNavTap(0);
                                   }
+                                });
+                              } else if (game.title == 'Scratch Card') {
+                                Navigator.of(context)
+                                    .push<void>(
+                                  MaterialPageRoute(
+                                    builder: (context) => ScratchCardScreen(
+                                      onBack: () => Navigator.of(context).pop(),
+                                    ),
+                                  ),
+                                )
+                                    .then((_) {
+                                  // Can trigger updates if necessary, though it updates through providers
                                 });
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(

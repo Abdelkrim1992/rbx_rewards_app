@@ -156,6 +156,40 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
                         color: Color(0xFF131326),
                       ),
                     ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Consumer(
+                        builder: (context, ref, child) {
+                          final coinBalance = ref.watch(coinProvider);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySoft,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  AppAssets.goldRbxCoin,
+                                  width: 18,
+                                  height: 18,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  coinBalance.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),

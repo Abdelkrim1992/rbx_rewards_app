@@ -289,9 +289,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     final saved = await _syncQuizResult(finalScore, duration);
     if (!saved) return;
 
-    _claimCount++;
-    if (_claimCount % 2 == 0 && mounted) {
-      await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+    if (!_watchedRewardedAd) {
+      _claimCount++;
+      if (_claimCount % 3 == 0 && mounted) {
+        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+      }
     }
 
     if (mounted) {
@@ -311,9 +313,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       if (!saved) return;
     }
 
-    _claimCount++;
-    if (_claimCount % 2 == 0 && mounted) {
-      await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+    if (!_watchedRewardedAd) {
+      _claimCount++;
+      if (_claimCount % 3 == 0 && mounted) {
+        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
+      }
     }
 
     if (mounted) {
@@ -325,7 +329,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     if (_watchedRewardedAd) return;
 
     final reward = await ref.read(adProvider.notifier).showOptionalAd(
-      AdPlacement.miniGameCompletion,
+      AdPlacement.doubleReward,
       onReward: (amount) async {
         // Reward callback
       },
@@ -456,6 +460,40 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF131326),
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final coinBalance = ref.watch(coinProvider);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          AppAssets.goldRbxCoin,
+                          width: 18,
+                          height: 18,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          coinBalance.toString(),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
