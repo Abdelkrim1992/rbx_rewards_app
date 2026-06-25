@@ -6,9 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/two_tier_reward_dialog.dart';
 import '../../widgets/congratulations_dialog.dart';
-import '../../core/utils/reward_helper.dart';
+import '../../core/utils/game_reward_helper.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
 
@@ -58,6 +57,8 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   int _questionIndex = 1;
   final int _totalQuestions = 10;
   int _coinsEarned = 0;
+  int _originalCoinsEarned = 0;
+  bool _hasClaimed = false;
 
   late QuizQuestion _currentQuestion;
   int? _selectedAnswer;
@@ -70,6 +71,10 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   late AnimationController _floatController;
   final math.Random _random = math.Random();
 
+  // Scale pop animation for results screen
+  late AnimationController _matchPopController;
+  late Animation<double> _matchPopScale;
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +82,14 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
+
+    _matchPopController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _matchPopScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _matchPopController, curve: Curves.elasticOut),
+    );
   }
 
   // Categories
@@ -118,6 +131,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   void dispose() {
     _quizTimer?.cancel();
     _floatController.dispose();
+    _matchPopController.dispose();
     super.dispose();
   }
 
@@ -134,11 +148,13 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       _questionIndex = 1;
       _score = 0;
       _coinsEarned = 0;
+      _originalCoinsEarned = 0;
       _secondsLeft = 90;
       _timerProgress = 1.0;
       _selectedAnswer = null;
       _isCorrectAnswer = null;
       _currentQuestion = _sessionQuestions[0];
+      _hasClaimed = false;
     });
 
     _startSessionTimer();
@@ -209,9 +225,12 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     _quizTimer?.cancel();
     final coins = (_correctCount * 3).clamp(0, 30); // 3 coins per correct, max 30 base
     setState(() {
+      _originalCoinsEarned = coins;
       _coinsEarned = coins;
       _gameState = 'GAMEOVER';
     });
+    _matchPopController.reset();
+    _matchPopController.forward();
   }
 
   Future<void> _processQuizClaim(int baseReward, {required VoidCallback onComplete}) async {
@@ -220,15 +239,39 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       return;
     }
 
-    await showRewardChoice(
-       context: context,
-       featureName: 'Quiz Reward',
+    await showGameRewardChoice(
+      context: context,
+      featureName: 'Quizzes',
+      description: 'Great job! Choose your quiz reward:',
       baseReward: baseReward,
       quickPlacement: AdPlacement.miniGameCompletion,
-      premiumPlacement: AdPlacement.miniGameCompletion,
-      onSuccess: (coins) async {
-        await ref.read(coinProvider.notifier).credit(coins, 'quiz');
-        onComplete();
+      premiumPlacement: AdPlacement.doubleReward,
+      icon: Icons.quiz,
+      iconBgColor: AppColors.primarySoft,
+      iconColor: AppColors.primary,
+      premiumGradient: AppColors.primaryGradient,
+      quickTextColor: AppColors.primary,
+      quickBorderColor: const Color(0xFFE5E7EB),
+      onSuccess: (coins) {
+        Future.delayed(Duration.zero, () async {
+          if (!mounted) return;
+          await ref.read(coinProvider.notifier).credit(coins, 'quiz');
+          if (context.mounted) {
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => CongratulationsDialog(earnedCoins: coins),
+            );
+          }
+          if (mounted) {
+            setState(() {
+              _hasClaimed = true;
+              _coinsEarned = coins;
+            });
+          }
+          onComplete();
+        });
+        return Future.value();
       },
       onCancel: () {
         onComplete();
@@ -237,15 +280,23 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   }
 
   void _claimQuizCoins() async {
-    await _processQuizClaim(_coinsEarned, onComplete: () {
-      if (mounted) {
-        Navigator.of(context).pop(_coinsEarned);
-      }
-    });
+    if (_originalCoinsEarned <= 0 || _hasClaimed) {
+      Navigator.of(context).pop();
+      return;
+    }
+    await _processQuizClaim(_originalCoinsEarned, onComplete: () {});
   }
 
   void _playAgain() async {
-    await _processQuizClaim(_coinsEarned, onComplete: () {
+    if (_originalCoinsEarned <= 0 || _hasClaimed) {
+      if (_activeCategory != null) {
+        _startQuizRound(_activeCategory!);
+      } else {
+        _backToMenu();
+      }
+      return;
+    }
+    await _processQuizClaim(_originalCoinsEarned, onComplete: () {
       if (mounted) {
         if (_activeCategory != null) {
           _startQuizRound(_activeCategory!);
@@ -655,14 +706,14 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [Color(0xFF00B4D8), Color(0xFF0077B6)],
+                colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0077B6).withOpacity(0.25),
+                  color: const Color(0xFF6338F9).withOpacity(0.25),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -716,7 +767,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                     widthFactor: _timerProgress,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0077B6),
+                        color: const Color(0xFF6338F9),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -785,11 +836,34 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   // --- GAMEOVER SCREEN ---
   Widget _buildGameOverScreen() {
+    final bool didWin = _correctCount >= 5;
+    
     return Column(
       key: const ValueKey('GAMEOVER'),
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Spacer(),
+
+        // Trophy icon with pop animation
+        ScaleTransition(
+          scale: _matchPopScale,
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              didWin ? Icons.emoji_events : Icons.replay,
+              color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
+              size: 50,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Result Header
         Text(
           'Quiz Complete!',
           style: GoogleFonts.outfit(
@@ -798,54 +872,83 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
             color: const Color(0xFF181C32),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
+
+        // Stats Summary Subtitle
         Text(
           '$_correctCount/${_sessionQuestions.length} Correct',
           style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF181C32),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Earned:',
-          style: GoogleFonts.inter(
             fontSize: 16,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             color: const Color(0xFF64748B),
           ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              AppAssets.goldCoin,
-              width: 28,
-              height: 28,
-              errorBuilder: (_, __, ___) => const Icon(
-                Icons.monetization_on,
-                color: Color(0xFFFFB000),
-                size: 28,
-              ),
+        const SizedBox(height: 24),
+
+        // Breakdown Card
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFECFF),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E2F5)),
             ),
-            const SizedBox(width: 8),
-            Text(
-              '+$_coinsEarned RBX Coins',
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF181C32),
-              ),
+            child: Column(
+              children: [
+                _buildRewardRow('Correct Answers', '$_correctCount/${_sessionQuestions.length}'),
+                const SizedBox(height: 8),
+                _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
+                if (_coinsEarned > _originalCoinsEarned) ...[
+                  const SizedBox(height: 8),
+                  _buildRewardRow('Ad Multiplier', '2x'),
+                ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(color: Color(0xFFE2E2F5)),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF181C32),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.currency_bitcoin,
+                            color: Color(0xFFFFB000), size: 20),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+$_coinsEarned RBX',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF181C32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
         ),
+
         const Spacer(),
+
+        // Action Buttons
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
+              // Play Again
               GestureDetector(
                 onTap: _playAgain,
                 child: Container(
@@ -853,14 +956,14 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                   height: 60,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF00B4D8), Color(0xFF0077B6)],
+                      colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(30),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF0077B6).withOpacity(0.3),
+                        color: const Color(0xFF562EE6).withOpacity(0.3),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
@@ -878,30 +981,58 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              GestureDetector(
-                onTap: _claimQuizCoins,
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F4FF),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Claim Reward',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF0077B6),
+              if (!_hasClaimed) ...[
+                const SizedBox(height: 14),
+
+                // Claim Reward
+                GestureDetector(
+                  onTap: _claimQuizCoins,
+                  child: Container(
+                    width: double.infinity,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFECFF),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Claim Reward',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF562EE6),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 30),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRewardRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF6E3AFF),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF131326),
           ),
         ),
       ],
