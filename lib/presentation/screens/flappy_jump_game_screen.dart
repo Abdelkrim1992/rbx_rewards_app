@@ -1378,6 +1378,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : finalScore;
         ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
       } else {
         setState(() {
           _showCoinClaimAnimation = false;
@@ -1486,6 +1487,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : finalScore;
         ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
 
         // Immediately reset game back to the menu overlay
         _game.hasStarted = false;
@@ -1604,6 +1606,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             if (result.success || result.queued) {
               final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
               ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
               
               _claimAnimController.reset();
               _flyingCoins.clear();

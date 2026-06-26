@@ -307,6 +307,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
             if (result.success || result.queued) {
               final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
               ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
               
               await showDialog(
                 context: context,
@@ -382,6 +383,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
               if (result.success || result.queued) {
                 final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
                 ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+                ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
                 
                 await showDialog(
                   context: context,

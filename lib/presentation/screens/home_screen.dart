@@ -106,6 +106,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isOnline = ref.watch(connectivityProvider).value ?? true;
     final dailyCooldown = ref.watch(dailyRewardCooldownProvider);
     final isDailyClaimed = dailyCooldown.inSeconds > 0;
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isDailyCapReached = capService.isCapReachedFor('daily_reward');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isDailyBlocked = isDailyClaimed || isDailyCapReached || isFeaturesCapReached;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -307,8 +311,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      isDailyClaimed
-                                          ? 'You earned 100 coins today.'
+                                      isDailyBlocked
+                                          ? (isDailyClaimed
+                                              ? 'You claimed your daily login reward.'
+                                              : 'Daily login limit or feature cap reached today.')
                                           : 'Come back every day and claim awesome rewards.',
                                       style: const TextStyle(
                                         fontSize: 12,
@@ -319,22 +325,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     const SizedBox(height: 14),
                                     _InteractiveCard(
                                       onTap:
-                                          isDailyClaimed ? null : _claimDaily,
+                                          isDailyBlocked ? null : _claimDaily,
                                       child: Container(
                                         height: 38,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 16),
                                         decoration: BoxDecoration(
-                                          gradient: isDailyClaimed
+                                          gradient: isDailyBlocked
                                               ? null
                                               : AppColors.primaryGradient,
-                                          color: isDailyClaimed
+                                          color: isDailyBlocked
                                               ? Colors.white
                                                   .withValues(alpha: 0.5)
                                               : null,
                                           borderRadius:
                                               BorderRadius.circular(14),
-                                          boxShadow: isDailyClaimed
+                                          boxShadow: isDailyBlocked
                                               ? null
                                               : [
                                                   BoxShadow(
@@ -350,15 +356,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            if (isDailyClaimed)
+                                            if (isDailyBlocked && isDailyClaimed)
                                               const Icon(Icons.timer_outlined,
                                                   size: 16,
                                                   color: AppColors.primary),
-                                            if (isDailyClaimed)
+                                            if (isDailyBlocked && isDailyClaimed)
                                               const SizedBox(width: 6),
-                                            isDailyClaimed
+                                            isDailyBlocked
                                                 ? Text(
-                                                    'Ends ${_formatDuration(dailyCooldown)}',
+                                                    isDailyClaimed
+                                                        ? 'Ends ${_formatDuration(dailyCooldown)}'
+                                                        : 'Cap Reached',
                                                     style: const TextStyle(
                                                       fontSize: 13,
                                                       fontWeight: FontWeight.w800,

@@ -9,6 +9,7 @@ import '../../widgets/coin_burst.dart';
 import '../../widgets/game_prefs.dart';
 import '../../core/utils/reward_helper.dart';
 import '../providers/coin_provider.dart';
+import '../providers/providers.dart';
 
 class ChestScreen extends ConsumerStatefulWidget {
   const ChestScreen({super.key});
@@ -114,6 +115,11 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
     int m = (_secondsRemaining % 3600) ~/ 60;
     int s = _secondsRemaining % 60;
 
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isChestCapReached = capService.isCapReachedFor('chest');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isChestBlocked = isChestCapReached || isFeaturesCapReached;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -195,9 +201,11 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Open chests and get amazing rewards!',
-              style: TextStyle(
+            Text(
+              isChestBlocked
+                  ? 'Daily limit or feature cap reached today.'
+                  : 'Open chests and get amazing rewards!',
+              style: const TextStyle(
                 color: Color(0xFF6B7280),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -304,8 +312,10 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
               child: Column(
                 children: [
                   _PrimaryButton(
-                    text: 'Open Chest',
-                    onTap: _secondsRemaining == 0 ? _openChest : null,
+                    text: isChestBlocked
+                        ? 'Cap Reached'
+                        : (_secondsRemaining == 0 ? 'Open Chest' : 'Locked'),
+                    onTap: (isChestBlocked || _secondsRemaining > 0) ? null : _openChest,
                   ),
                 ],
               ),

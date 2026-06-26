@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
+import '../providers/providers.dart';
 import 'leaderboard_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
@@ -10,43 +12,56 @@ import 'math_quiz_screen.dart';
 import 'flip_card_game_screen.dart';
 import 'scratch_card_screen.dart';
 
-class GamesScreen extends StatelessWidget {
+class GamesScreen extends ConsumerWidget {
   final Function(int) onNavTap;
 
   const GamesScreen({super.key, required this.onNavTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final capService = ref.watch(dailyCapServiceProvider);
+    
+    final tapTapRemaining = capService.getRemainingCap('tap_tap');
+    final mathQuizRemaining = capService.getRemainingCap('math_quiz');
+    final flappyRemaining = capService.getRemainingCap('flappy_jump');
+    final flipRemaining = capService.getRemainingCap('flip_card');
+    final scratchRemaining = capService.getRemainingCap('scratch');
+
     final games = [
-      const _GameData(
+      _GameData(
         imageUrl: AppAssets.tapTapGame,
         title: 'Tap Tap',
-        coins: '+200',
-        bgColor: Color(0xFFEAF3FF),
+        coins: '$tapTapRemaining left',
+        isBlocked: tapTapRemaining <= 0,
+        bgColor: const Color(0xFFEAF3FF),
       ),
-      const _GameData(
+      _GameData(
         imageUrl: AppAssets.quizMasterGame,
         title: 'Math Quiz',
-        coins: '+200',
-        bgColor: Color(0xFFE3F8EB),
+        coins: '$mathQuizRemaining left',
+        isBlocked: mathQuizRemaining <= 0,
+        bgColor: const Color(0xFFE3F8EB),
       ),
-      const _GameData(
+      _GameData(
         imageUrl: AppAssets.flappyJumpGame,
         title: 'Flappy Jump',
-        coins: '+200',
-        bgColor: Color(0xFFFFF3E3),
+        coins: '$flappyRemaining left',
+        isBlocked: flappyRemaining <= 0,
+        bgColor: const Color(0xFFFFF3E3),
       ),
-      const _GameData(
+      _GameData(
         imageUrl: AppAssets.memoryMatchGame,
         title: 'Flip Cards',
-        coins: '+200',
-        bgColor: Color(0xFFFFE8F0),
+        coins: '$flipRemaining left',
+        isBlocked: flipRemaining <= 0,
+        bgColor: const Color(0xFFFFE8F0),
       ),
-      const _GameData(
+      _GameData(
         imageUrl: AppAssets.dailyRewardImage,
         title: 'Scratch Card',
-        coins: '+200',
-        bgColor: Color(0xFFEAF3FF),
+        coins: '$scratchRemaining left',
+        isBlocked: scratchRemaining <= 0,
+        bgColor: const Color(0xFFEAF3FF),
       ),
     ];
 
@@ -164,6 +179,17 @@ class GamesScreen extends StatelessWidget {
                           final game = games[i];
                           return GestureDetector(
                             onTap: () {
+                              if (game.isBlocked) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Daily limit reached for ${game.title}!'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: AppColors.purple,
+                                  ),
+                                );
+                                return;
+                              }
                               if (game.title == 'Tap Tap') {
                                 Navigator.of(context)
                                     .push<int>(
@@ -226,17 +252,8 @@ class GamesScreen extends StatelessWidget {
                                   ),
                                 )
                                     .then((_) {
-                                  // Can trigger updates if necessary, though it updates through providers
+                                  // Re-fetch cap values if scratch state changed
                                 });
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content:
-                                        Text('${game.title} is coming soon! ✨'),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
                               }
                             },
                             child: _GameCard(data: game),
@@ -320,12 +337,14 @@ class _GameData {
   final String title;
   final String coins;
   final Color bgColor;
+  final bool isBlocked;
 
   const _GameData({
     required this.imageUrl,
     required this.title,
     required this.coins,
     required this.bgColor,
+    required this.isBlocked,
   });
 }
 
@@ -336,132 +355,131 @@ class _GameCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Game image
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                color: data.bgColor,
-                child: data.imageUrl.startsWith('http')
-                    ? Image.network(
-                        data.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.sports_esports,
-                          size: 48,
-                          color: data.bgColor == const Color(0xFFEAF3FF)
-                              ? Colors.blue
-                              : AppColors.primary,
-                        ),
-                      )
-                    : Image.asset(
-                        data.imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.sports_esports,
-                          size: 48,
-                          color: data.bgColor == const Color(0xFFEAF3FF)
-                              ? Colors.blue
-                              : AppColors.primary,
-                        ),
-                      ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    data.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              AppAssets.goldCoin,
-                              width: 20,
-                              height: 20,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.monetization_on,
-                                  size: 20,
-                                  color: Color(0xFFFFCC44)),
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                data.coins,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.purple,
-                                ),
-                              ),
-                            ),
-                            const Text(
-                              ' RBX',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.secondaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x446035EE),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.play_arrow,
-                            color: Colors.white, size: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    return Opacity(
+      opacity: data.isBlocked ? 0.6 : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFF3F4F6)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 2,
+              spreadRadius: 0,
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Game image
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  color: data.bgColor,
+                  child: data.imageUrl.startsWith('http')
+                      ? Image.network(
+                          data.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.sports_esports,
+                            size: 48,
+                            color: data.bgColor == const Color(0xFFEAF3FF)
+                                ? Colors.blue
+                                : AppColors.primary,
+                          ),
+                        )
+                      : Image.asset(
+                          data.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.sports_esports,
+                            size: 48,
+                            color: data.bgColor == const Color(0xFFEAF3FF)
+                                ? Colors.blue
+                                : AppColors.primary,
+                          ),
+                        ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      data.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Image.asset(
+                                AppAssets.goldCoin,
+                                width: 18,
+                                height: 18,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.monetization_on,
+                                    size: 18,
+                                    color: Color(0xFFFFCC44)),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  data.coins,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: data.isBlocked ? Colors.grey : AppColors.purple,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            gradient: data.isBlocked ? null : AppColors.primaryGradient,
+                            color: data.isBlocked ? Colors.grey : null,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: data.isBlocked
+                                ? null
+                                : const [
+                                    BoxShadow(
+                                      color: Color(0x446035EE),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 4),
+                                    ),
+                                  ],
+                          ),
+                          child: Icon(data.isBlocked ? Icons.lock : Icons.play_arrow,
+                              color: Colors.white, size: 16),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

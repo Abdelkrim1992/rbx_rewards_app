@@ -126,6 +126,13 @@ class SupabaseRepository {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getCoinDistributions() async {
+    return _call(() async {
+      final data = await _client.from('coin_distributions').select();
+      return List<Map<String, dynamic>>.from(data);
+    });
+  }
+
   bool _isJwtFutureError(Object e) {
     final msg = e.toString().toLowerCase();
     if (e is PostgrestException) {

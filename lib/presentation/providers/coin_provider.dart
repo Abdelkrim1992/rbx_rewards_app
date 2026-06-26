@@ -26,6 +26,7 @@ class CoinNotifier extends Notifier<int> {
       if (_mounted) {
         _loadFromLocal();
         _syncFromBackend();
+        ref.read(dailyCapServiceProvider).load();
       }
     });
 
@@ -66,14 +67,21 @@ class CoinNotifier extends Notifier<int> {
   /// then syncs to the backend. UI never waits for the network.
   Future<int> credit(int amount, String source) async {
     if (!_mounted) return 0;
+    
+    final dailyCapService = ref.read(dailyCapServiceProvider);
+    final allowedAmount = dailyCapService.addCoins(amount, source);
+    if (allowedAmount <= 0) {
+      return state;
+    }
+
     final txId = UuidGenerator.generateV4();
-    final optimisticBalance = state + amount;
+    final optimisticBalance = state + allowedAmount;
     state = optimisticBalance; // immediate UI update
     _saveLocally(optimisticBalance);
     
     try {
       final newBalance = await ref.read(coinServiceProvider).creditCoins(
-        amount,
+        allowedAmount,
         source: source,
         txId: txId,
       );

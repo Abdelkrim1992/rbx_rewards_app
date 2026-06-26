@@ -120,6 +120,16 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
   // --- Game Flow Mechanics ---
   void _startQuizRound() {
+    final isMathBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('math_quiz') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
+    if (isMathBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Daily math quiz limit or feature cap reached today.'),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+      return;
+    }
     setState(() {
       _gameState = 'PLAYING';
       _correctCount = 0;
@@ -248,8 +258,8 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
 
-    // 3 coins per correct answer, max 30 base coins
-    final coins = (_correctCount * 3).clamp(0, 30);
+    // 2 coins per correct answer, max 20 base coins
+    final coins = (_correctCount * 2).clamp(0, 20);
 
     setState(() {
       _originalCoinsEarned = coins;
@@ -305,10 +315,10 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
               originalScore: _originalCoinsEarned,
               multiplier: _watchedRewardedAd ? 2 : 1,
             );
-            if (!mounted) return;
             if (result.success || result.queued) {
               final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
               ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
               
               await showDialog(
                 context: context,
@@ -376,10 +386,10 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                 originalScore: _originalCoinsEarned,
                 multiplier: _watchedRewardedAd ? 2 : 1,
               );
-              if (!mounted) return;
               if (result.success || result.queued) {
                 final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
                 ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+                ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
                 
                 await showDialog(
                   context: context,
@@ -422,6 +432,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   @override
   Widget build(BuildContext context) {
     final isPlaying = _gameState == 'PLAYING';
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isMathCapReached = capService.isCapReachedFor('math_quiz');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isMathBlocked = isMathCapReached || isFeaturesCapReached;
+
     return PopScope(
       canPop: !isPlaying || _isQuitting,
       onPopInvokedWithResult: (didPop, result) async {
@@ -453,7 +468,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: _buildCurrentStateView(),
+                      child: _buildCurrentStateView(isMathBlocked),
                     ),
                   ),
                 ],
@@ -564,7 +579,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     );
   }
 
-  Widget _buildCurrentStateView() {
+  Widget _buildCurrentStateView(bool isMathBlocked) {
     switch (_gameState) {
       case 'PLAYING':
         return _buildGameplayScreen();
@@ -572,12 +587,12 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         return _buildGameOverScreen();
       case 'MENU':
       default:
-        return _buildMenuScreen();
+        return _buildMenuScreen(isMathBlocked);
     }
   }
 
   // --- 1. MENU SCREEN ---
-  Widget _buildMenuScreen() {
+  Widget _buildMenuScreen(bool isMathBlocked) {
     return Column(
       key: const ValueKey('MENU'),
       children: [
@@ -595,12 +610,14 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         const SizedBox(height: 12),
         // Subtitle
         Text(
-          'Challenge your brain &\nearn RBX Coins!',
+          isMathBlocked 
+              ? 'Daily limit or feature cap reached today.'
+              : 'Challenge your brain &\nearn RBX Coins!',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF64748B),
+            color: isMathBlocked ? Colors.redAccent : const Color(0xFF64748B),
             height: 1.35,
           ),
         ),
@@ -608,7 +625,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
         // Glowing Big Pulse Play Button
         GestureDetector(
-          onTap: _startQuizRound,
+          onTap: isMathBlocked ? null : _startQuizRound,
           child: Column(
             children: [
               Container(
@@ -616,23 +633,27 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                 height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
+                  gradient: LinearGradient(
+                    colors: isMathBlocked
+                        ? [Colors.grey, Colors.grey.shade400]
+                        : [const Color(0xFF6338F9), const Color(0xFF8B64FF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6338F9).withOpacity(0.35),
+                      color: isMathBlocked
+                          ? Colors.grey.withOpacity(0.2)
+                          : const Color(0xFF6338F9).withOpacity(0.35),
                       blurRadius: 25,
                       spreadRadius: 4,
                       offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(
-                    Icons.play_arrow_rounded,
+                    isMathBlocked ? Icons.lock_clock_rounded : Icons.play_arrow_rounded,
                     color: Colors.white,
                     size: 70,
                   ),
@@ -640,11 +661,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
               ),
               const SizedBox(height: 18),
               Text(
-                'Start Quiz',
+                isMathBlocked ? 'Cap Reached' : 'Start Quiz',
                 style: GoogleFonts.outfit(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF181C32),
+                  color: isMathBlocked ? Colors.grey : const Color(0xFF181C32),
                 ),
               ),
             ],

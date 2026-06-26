@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/coin_provider.dart';
+import '../providers/providers.dart';
 import '../../widgets/interactive_button.dart';
 import '../providers/spin_provider.dart';
 import '../providers/ad_provider.dart';
@@ -96,7 +97,8 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
   Future<void> _spin() async {
     final freeSpins = ref.read(spinProvider).spinsRemaining;
-    if (_isSpinning || freeSpins == 0) return;
+    final isSpinBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('spin') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
+    if (_isSpinning || freeSpins == 0 || isSpinBlocked) return;
     final random = Random();
     final targetSegment = _pickWeightedSegment(random);
     final baseRotations = 2 + random.nextInt(6);
@@ -182,6 +184,10 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final freeSpins = spinState.spinsRemaining;
     final cooldownRemaining =
         ref.watch(spinProvider.notifier).cooldownRemaining;
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isSpinCapReached = capService.isCapReachedFor('spin');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isSpinBlocked = isSpinCapReached || isFeaturesCapReached;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
@@ -409,13 +415,13 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
                                     // Center SPIN button (Fixed, not rotating)
                                     GestureDetector(
-                                      onTap: _spin,
+                                      onTap: isSpinBlocked ? null : _spin,
                                       child: AnimatedBuilder(
                                         animation: _pulseAnimation,
                                         builder: (context, child) {
                                           return Transform.scale(
                                             scale:
-                                                _isSpinning || (freeSpins == 0)
+                                                _isSpinning || (freeSpins == 0) || isSpinBlocked
                                                     ? 1.0
                                                     : _pulseAnimation.value,
                                             child: child,
@@ -465,35 +471,46 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                           letterSpacing: 1,
                                                         ),
                                                       )
-                                                    : (freeSpins == 0)
-                                                        ? Text(
-                                                            _formatDuration(
-                                                                cooldownRemaining),
-                                                            style:
-                                                                const TextStyle(
+                                                    : isSpinBlocked
+                                                        ? const Text(
+                                                            'LIMIT',
+                                                            style: TextStyle(
                                                               fontSize: 14,
                                                               fontWeight:
-                                                                  FontWeight
-                                                                      .w900,
-                                                              color:
-                                                                  Colors.grey,
+                                                                  FontWeight.w900,
+                                                              color: Colors.grey,
                                                               letterSpacing: 1,
                                                             ),
                                                           )
-                                                        : const Text(
-                                                            'SPIN',
-                                                            style: TextStyle(
-                                                              fontSize: 16,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w900,
-                                                              color: AppColors
-                                                                  .primary,
-                                                              letterSpacing: 1,
-                                                            ),
-                                                          ),
+                                                        : (freeSpins == 0)
+                                                            ? Text(
+                                                                _formatDuration(
+                                                                    cooldownRemaining),
+                                                                style:
+                                                                    const TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w900,
+                                                                  color:
+                                                                      Colors.grey,
+                                                                  letterSpacing: 1,
+                                                                ),
+                                                              )
+                                                            : const Text(
+                                                                'SPIN',
+                                                                style: TextStyle(
+                                                                  fontSize: 16,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w900,
+                                                                  color: AppColors
+                                                                      .primary,
+                                                                  letterSpacing: 1,
+                                                                ),
+                                                              ),
                                                 if (!_isSpinning &&
-                                                    !(freeSpins == 0))
+                                                    !(freeSpins == 0) && !isSpinBlocked)
                                                   const Icon(Icons.touch_app,
                                                       size: 14,
                                                       color: AppColors

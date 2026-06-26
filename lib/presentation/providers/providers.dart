@@ -64,4 +64,4 @@ final profileServiceProvider = Provider((ref) {
 final adServiceProvider = Provider((ref) => AdService());
 final adTrackerServiceProvider = Provider((ref) => AdTrackerService());
 final badgeServiceProvider = Provider((ref) => BadgeService());
-final dailyCapServiceProvider = Provider((ref) => DailyCapService());
+final dailyCapServiceProvider = Provider((ref) => DailyCapService(ref.watch(supabaseRepositoryProvider)));

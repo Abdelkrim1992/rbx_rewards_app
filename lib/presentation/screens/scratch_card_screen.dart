@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scratcher/scratcher.dart';
 import '../providers/coin_provider.dart';
+import '../providers/providers.dart';
 import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
@@ -119,6 +120,11 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isScratchCapReached = capService.isCapReachedFor('scratch');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isScratchBlocked = isScratchCapReached || isFeaturesCapReached;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -226,7 +232,9 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: Text(
-                            'Scratches remaining today: $_scratchesRemaining/${GamePrefs.maxScratchesPerDay}',
+                            isScratchBlocked
+                                ? 'Daily limit or feature cap reached today.'
+                                : 'Scratches remaining today: $_scratchesRemaining/${GamePrefs.maxScratchesPerDay}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -263,7 +271,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                             ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: IgnorePointer(
-                                ignoring: _scratchesRemaining <= 0 || _isLoadingLimit,
+                                ignoring: _scratchesRemaining <= 0 || _isLoadingLimit || isScratchBlocked,
                                 child: Scratcher(
                                   key: _scratcherKey,
                                   brushSize: 40,
@@ -332,13 +340,13 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _scratchesRemaining <= 0 ? Icons.timer : Icons.touch_app, 
+                              (_scratchesRemaining <= 0 || isScratchBlocked) ? Icons.timer : Icons.touch_app, 
                               color: Colors.white, 
                               size: 22
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _scratchesRemaining <= 0 
+                              (_scratchesRemaining <= 0 || isScratchBlocked) 
                                   ? 'Limit Reached for Today' 
                                   : 'Scratch the card above!',
                               style: const TextStyle(

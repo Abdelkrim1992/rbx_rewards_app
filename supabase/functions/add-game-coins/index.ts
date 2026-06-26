@@ -1,7 +1,14 @@
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
 import { redis } from "../_shared/redis.ts";
 
-const GAME_DAILY_CAP = 50;
+const GAME_DAILY_CAP = 1000;
+
+const SUB_GAME_LIMITS: Record<string, number> = {
+  math_quiz: 120,
+  flappy_jump: 150,
+  tap_tap: 150,
+  flip_card: 60,
+};
 
 // Strict game whitelist — unknown games are REJECTED
 const GAME_FEASIBILITY: Record<string, { maxScorePerMinute: number }> = {
@@ -86,13 +93,44 @@ Deno.serve(async (req) => {
   const scoreToValidate = (originalScore !== undefined && originalScore > 0) ? originalScore : amount;
   const finalScore = scoreToValidate * (multiplier ?? 1);
 
-  // 2. Daily Cap Check in Redis
+  // 2. Fetch limits dynamically from coin_distributions table
+  let gameDailyCap = GAME_DAILY_CAP;
+  let subGameLimit = SUB_GAME_LIMITS[gameName] ?? 0;
+
+  try {
+    const { data: distData, error: distError } = await supabase
+      .from("coin_distributions")
+      .select("id, daily_cap");
+    
+    if (!distError && distData) {
+      const globalFeatures = distData.find((d) => d.id === "global_features");
+      if (globalFeatures) {
+        gameDailyCap = globalFeatures.daily_cap;
+      }
+      const specificGame = distData.find((d) => d.id === gameName);
+      if (specificGame) {
+        subGameLimit = specificGame.daily_cap;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to query coin_distributions:", e);
+  }
+
+  // Daily Cap Check in Redis (overall games limit)
   const todayStr = new Date().toISOString().split("T")[0];
   const capKey = `cap:game:${uid}:${todayStr}`;
   const currentDailyCap = parseInt(await redis.get(capKey) || "0", 10);
-  if (currentDailyCap + finalScore > GAME_DAILY_CAP) {
-    const allowed = Math.max(0, GAME_DAILY_CAP - currentDailyCap);
+  if (currentDailyCap + finalScore > gameDailyCap) {
+    const allowed = Math.max(0, gameDailyCap - currentDailyCap);
     return errorResponse(`Daily game cap reached. Max allowed: ${allowed}`, 400);
+  }
+
+  // Sub-game specific cap check in Redis
+  const subGameCapKey = `cap:game:${uid}:${gameName}:${todayStr}`;
+  const currentSubGameCap = parseInt(await redis.get(subGameCapKey) || "0", 10);
+  if (currentSubGameCap + finalScore > subGameLimit) {
+    const allowed = Math.max(0, subGameLimit - currentSubGameCap);
+    return errorResponse(`Daily limit reached for ${gameName}. Max allowed: ${allowed}`, 400);
   }
 
   // Feasibility check first — reject unknown games and impossible scores
@@ -122,7 +160,7 @@ Deno.serve(async (req) => {
     p_score: finalScore,
     p_duration_seconds: durationSeconds,
     p_tx_id: txId,
-    p_daily_cap: GAME_DAILY_CAP,
+    p_daily_cap: gameDailyCap,
   });
 
   if (processError) {
@@ -137,6 +175,10 @@ Deno.serve(async (req) => {
   // 3. Update Daily Cap in Redis
   await redis.incrby(capKey, finalScore);
   await redis.expire(capKey, 86400);
+
+  // Update sub-game specific cap in Redis
+  await redis.incrby(subGameCapKey, finalScore);
+  await redis.expire(subGameCapKey, 86400);
 
   // 4. Update Game High Score Leaderboard in Redis
   const currentHighScoreStr = await redis.zscore(`leaderboard:${gameName}`, uid);

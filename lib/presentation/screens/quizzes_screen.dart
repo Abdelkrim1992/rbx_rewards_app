@@ -10,6 +10,7 @@ import '../../widgets/congratulations_dialog.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
+import '../providers/providers.dart';
 
 class QuizQuestion {
   final String text;
@@ -136,6 +137,16 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   }
 
   void _startQuizRound(QuizCategory category) {
+    final isQuizBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('quiz') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
+    if (isQuizBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Daily quiz limit or feature cap reached today.'),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+      return;
+    }
     _activeCategory = category;
     final shuffled = List<QuizQuestion>.from(category.questions)
       ..shuffle(_random);
@@ -223,7 +234,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
-    final coins = (_correctCount * 3).clamp(0, 30); // 3 coins per correct, max 30 base
+    final coins = (_correctCount * 2).clamp(0, 20); // 2 coins per correct, max 20 base
     setState(() {
       _originalCoinsEarned = coins;
       _coinsEarned = coins;
@@ -323,6 +334,11 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   @override
   Widget build(BuildContext context) {
     final isPlaying = _gameState == 'PLAYING';
+    final capService = ref.watch(dailyCapServiceProvider);
+    final isQuizCapReached = capService.isCapReachedFor('quiz');
+    final isFeaturesCapReached = capService.isFeaturesCapReached;
+    final isQuizBlocked = isQuizCapReached || isFeaturesCapReached;
+
     return PopScope(
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
@@ -426,7 +442,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: _buildCurrentStateView(),
+                      child: _buildCurrentStateView(isQuizBlocked),
                     ),
                   ),
                 ],
@@ -619,7 +635,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     );
   }
 
-  Widget _buildCurrentStateView() {
+  Widget _buildCurrentStateView(bool isQuizBlocked) {
     switch (_gameState) {
       case 'PLAYING':
         return _buildGameplayScreen();
@@ -627,12 +643,12 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
         return _buildGameOverScreen();
       case 'MENU':
       default:
-        return _buildMenuScreen();
+        return _buildMenuScreen(isQuizBlocked);
     }
   }
 
   // --- MENU SCREEN ---
-  Widget _buildMenuScreen() {
+  Widget _buildMenuScreen(bool isQuizBlocked) {
     final asyncQuizzes = ref.watch(quizzesProvider);
     
     return asyncQuizzes.when(
@@ -671,18 +687,44 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                itemCount: _categories.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (ctx, i) {
-                  final cat = _categories[i];
-                  return _QuizCategoryItem(
-                    category: cat,
-                    onStart: () => _startQuizRound(cat),
-                  );
-                },
-              ),
+              child: isQuizBlocked
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.lock_clock, size: 48, color: Colors.grey),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Daily Limit Reached',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'You have reached the quiz daily limit.',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      itemCount: _categories.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (ctx, i) {
+                        final cat = _categories[i];
+                        return _QuizCategoryItem(
+                          category: cat,
+                          onStart: () => _startQuizRound(cat),
+                        );
+                      },
+                    ),
             ),
           ],
         );
