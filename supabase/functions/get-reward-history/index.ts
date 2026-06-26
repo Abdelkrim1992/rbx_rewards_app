@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     // Ignored
   }
 
-  const cacheKey = `reward_history:${uid}:${limit}`;
+  const cacheKey = `reward_history_v2:${uid}:${limit}`;
   const cached = await redis.get(cacheKey);
 
   if (cached) {
@@ -51,7 +51,8 @@ Deno.serve(async (req) => {
   }
 
   // Cache for 60 seconds
-  await redis.setex(cacheKey, 60, JSON.stringify(data));
+  const responseData = { history: data };
+  await redis.setex(cacheKey, 60, JSON.stringify(responseData));
 
-  return jsonResponse(data, 200, { "X-Cache": "MISS" });
+  return jsonResponse(responseData, 200, { "X-Cache": "MISS" });
 });
