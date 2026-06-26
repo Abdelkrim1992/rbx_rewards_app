@@ -44,6 +44,27 @@ Deno.serve(async (req: Request) => {
     throw e;
   }
 
+  // Security: Fetch dynamic limits to prevent client-side manipulation
+  try {
+    const { data: distData, error: distError } = await supabase
+      .from("coin_distributions")
+      .select("premium_reward")
+      .eq("id", source)
+      .single();
+
+    if (!distError && distData && distData.premium_reward !== null) {
+      // The absolute maximum a client can claim in a single transaction for this source
+      // is the premium_reward multiplied by 2 (to account for "Double Reward" ad placements)
+      const absoluteMaxClaim = distData.premium_reward * 2;
+      if (amount > absoluteMaxClaim) {
+        console.warn(`Security block: User ${uid} tried to claim ${amount} for ${source} (max allowed: ${absoluteMaxClaim})`);
+        return errorResponse("Amount exceeds maximum allowed for this feature", 400);
+      }
+    }
+  } catch (e) {
+    console.error("Failed to query coin_distributions for security check:", e);
+  }
+
   try {
     const { data: newBalance, error: rpcError } = await supabase.rpc("credit_user_coins", {
       p_user_id: uid,

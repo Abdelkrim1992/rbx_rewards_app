@@ -16,17 +16,17 @@ Deno.serve(async (req) => {
 
   const uid = user.id;
 
-  const txId = `chest_${crypto.randomUUID()}`;
+  const txId = `scratch_${crypto.randomUUID()}`;
 
   // 1. Fetch random limits dynamically from coin_distributions table
-  let baseReward = 15;
-  let premiumReward = 45;
+  let baseReward = 5;
+  let premiumReward = 50;
 
   try {
     const { data: distData, error: distError } = await supabase
       .from("coin_distributions")
       .select("base_reward, premium_reward")
-      .eq("id", "chest")
+      .eq("id", "scratch")
       .single();
     
     if (!distError && distData) {
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
       if (distData.premium_reward !== null) premiumReward = distData.premium_reward;
     }
   } catch (e) {
-    console.error("Failed to query coin_distributions for chest:", e);
+    console.error("Failed to query coin_distributions for scratch:", e);
   }
 
   // Ensure minimum valid range
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     premiumReward = baseReward;
   }
 
-  // Parse amount from client (variable chest reward), default to random between base and premium
+  // Parse amount from client (variable scratch reward), default to random between base and premium
   let amount = Math.floor(baseReward + Math.random() * (premiumReward - baseReward + 1));
   try {
     const body = await req.json();
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
   const { data, error } = await supabase.rpc("credit_user_coins", {
     p_user_id: uid,
     p_amount: amount,
-    p_source: "chest",
+    p_source: "scratch",
     p_tx_id: txId,
   });
 

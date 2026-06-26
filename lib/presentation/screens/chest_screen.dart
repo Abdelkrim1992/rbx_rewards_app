@@ -72,12 +72,20 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
   }
 
   Future<void> _openChest() async {
-    // Step 1: Show chest opening animation
+    if (_secondsRemaining > 0) return;
+
+    // Fetch limits for chest
+    final capService = ref.read(dailyCapServiceProvider);
+    final limits = capService.getRewardLimits('chest');
+
     final earnedCoins = await showDialog<int>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
-      builder: (context) => const ChestOpeningDialog(),
+      builder: (context) => ChestOpeningDialog(
+        minReward: limits.$1,
+        maxReward: limits.$2,
+      ),
     );
 
     if (!mounted || earnedCoins == null) return;
@@ -430,7 +438,15 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
 
 // ─── Chest Opening Dialog ───
 class ChestOpeningDialog extends StatefulWidget {
-  const ChestOpeningDialog({super.key});
+  final int minReward;
+  final int maxReward;
+  
+  const ChestOpeningDialog({
+    super.key,
+    required this.minReward,
+    required this.maxReward,
+  });
+
   @override
   State<ChestOpeningDialog> createState() => _ChestOpeningDialogState();
 }
@@ -495,7 +511,12 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
     // Wait for the coin burst to fully finish (2 seconds) before closing
     await Future.delayed(const Duration(milliseconds: 2000));
     if (mounted) {
-      final reward = 15 + Random().nextInt(31); // variable 15–45 base coins
+      final min = widget.minReward;
+      final max = widget.maxReward;
+      int reward = min;
+      if (max > min) {
+        reward = min + Random().nextInt((max - min) + 1);
+      }
       Navigator.of(context).pop(reward); // return earned coins to start two-tier flow
     }
   }

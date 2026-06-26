@@ -136,7 +136,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                       child: _OfferwallCard(
                         title: 'Mega Reward Offers',
                         subtitle: 'Play trending games, complete surveys, and download apps for massive coin rewards!',
-                        rewardText: 'Up to 12,000+ RBX',
+                        rewardText: 'Up to 1000+ RBX',
                         badgeText: 'POPULAR',
                         gradientColors: const [Color(0xFF8C62F8), Color(0xFF6035EE)],
                         icon: Icons.star_rounded,
@@ -151,7 +151,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                       child: _OfferwallCard(
                         title: 'Express Coin Offers',
                         subtitle: 'Complete simple tasks, quick surveys, and app downloads for fast payouts!',
-                        rewardText: 'Up to 15,000+ RBX',
+                        rewardText: 'Up to 1000+ RBX',
                         badgeText: 'FAST PAYOUT',
                         gradientColors: const [Color(0xFF00C6FF), Color(0xFF0072FF)],
                         icon: Icons.bolt_rounded,

@@ -104,23 +104,23 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
     final rewards = [
       const _RewardData(
         icon: Icons.card_giftcard,
-        title: 'Starter Pack (270 Robux)',
-        description: 'Official Roblox Group Payout / Game Pass',
+        title: '\$3 Roblox Gift Card',
+        description: 'Official Roblox Gift Card',
         cost: '20,000',
         bgColor: Color(0xFF2ECC71),
       ),
       const _RewardData(
         icon: Icons.card_giftcard,
-        title: 'Silver Pack (500 Robux)',
-        description: 'Official Roblox Group Payout / Game Pass',
-        cost: '33,333',
+        title: '\$5 Roblox Gift Card',
+        description: 'Official Roblox Gift Card',
+        cost: '40,000',
         bgColor: Color(0xFF9B5CFF),
       ),
       const _RewardData(
         icon: Icons.card_giftcard,
-        title: 'Gold Pack (1,000 Robux)',
-        description: 'Official Roblox Group Payout / Gift Card',
-        cost: '66,667',
+        title: '\$10 Roblox Gift Card',
+        description: 'Official Roblox Gift Card',
+        cost: '70,000',
         bgColor: Color(0xFF6A2FD8),
       ),
     ];

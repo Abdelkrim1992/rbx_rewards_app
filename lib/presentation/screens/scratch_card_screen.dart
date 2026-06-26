@@ -49,20 +49,17 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   }
 
   void _generateReward() {
+    final capService = ref.read(dailyCapServiceProvider);
+    final limits = capService.getRewardLimits('scratch');
+    final min = limits.$1;
+    final max = limits.$2;
     final random = Random();
-    final weights = [30, 30, 20, 15, 5]; // 5, 10, 15, 20, 50
-    final rewards = [5, 10, 15, 20, 50];
-    final total = weights.fold<int>(0, (sum, w) => sum + w);
-    var roll = random.nextInt(total);
-    int selectedIndex = 0;
-    for (int i = 0; i < weights.length; i++) {
-      roll -= weights[i];
-      if (roll < 0) {
-        selectedIndex = i;
-        break;
-      }
+    
+    if (max > min) {
+      _rewardAmount = min + random.nextInt((max - min) + 1);
+    } else {
+      _rewardAmount = min;
     }
-    _rewardAmount = rewards[selectedIndex];
   }
 
   void _resetScratchCard() {

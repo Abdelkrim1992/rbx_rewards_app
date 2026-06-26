@@ -142,6 +142,19 @@ class DailyCapService {
       } catch (_) {}
     }
 
+    try {
+      final chestBase = await _secureStorage.read(key: 'reward_base_chest');
+      final chestPremium = await _secureStorage.read(key: 'reward_premium_chest');
+      if (chestBase != null && chestPremium != null) {
+        _rewardLimits['chest'] = (int.parse(chestBase), int.parse(chestPremium));
+      }
+      final scratchBase = await _secureStorage.read(key: 'reward_base_scratch');
+      final scratchPremium = await _secureStorage.read(key: 'reward_premium_scratch');
+      if (scratchBase != null && scratchPremium != null) {
+        _rewardLimits['scratch'] = (int.parse(scratchBase), int.parse(scratchPremium));
+      }
+    } catch (_) {}
+
     // Async background fetch fresh limits from database
     _fetchFreshLimits();
   }
@@ -152,10 +165,19 @@ class DailyCapService {
       for (final item in list) {
         final id = item['id'] as String?;
         final cap = item['daily_cap'] as int?;
+        final base = item['base_reward'] as int?;
+        final premium = item['premium_reward'] as int?;
+
         if (id != null && cap != null) {
           _limits[id] = cap;
           // Cache in secure storage
           await _secureStorage.write(key: 'cap_limit_$id', value: cap.toString());
+        }
+
+        if (id != null && base != null && premium != null) {
+          _rewardLimits[id] = (base, premium);
+          await _secureStorage.write(key: 'reward_base_$id', value: base.toString());
+          await _secureStorage.write(key: 'reward_premium_$id', value: premium.toString());
         }
       }
     } catch (e) {
@@ -175,6 +197,18 @@ class DailyCapService {
     _todayGameFlappyEarnings = 0;
     _todayGameTapTapEarnings = 0;
     _todayGameFlipCardEarnings = 0;
+  }
+
+  final Map<String, (int, int)> _rewardLimits = {};
+
+  /// Get the random reward range for a feature, defaults to hardcoded values if not in DB
+  (int min, int max) getRewardLimits(String source) {
+    if (_rewardLimits.containsKey(source)) {
+      return _rewardLimits[source]!;
+    }
+    if (source == 'chest') return (15, 45); // Fallback
+    if (source == 'scratch') return (5, 50); // Fallback
+    return (1, 10);
   }
 
   /// Get the remaining cap for a specific feature source.

@@ -5,9 +5,10 @@ const GAME_DAILY_CAP = 1000;
 
 const SUB_GAME_LIMITS: Record<string, number> = {
   math_quiz: 120,
-  flappy_jump: 150,
-  tap_tap: 150,
-  flip_card: 60,
+  flappy_jump: 120,
+  tap_tap: 120,
+  flip_card: 120,
+  quiz: 120,
 };
 
 // Strict game whitelist — unknown games are REJECTED

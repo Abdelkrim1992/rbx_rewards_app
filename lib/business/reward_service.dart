@@ -60,6 +60,15 @@ class RewardService {
     }
   }
 
+  Future<ChestResult> openScratch() async {
+    try {
+      final result = await _remote.callEdgeFunction('open-scratch', body: {});
+      return ChestResult.fromMap(result);
+    } catch (e) {
+      return ChestResult(success: false, coinsEarned: 0, errorMessage: e.toString());
+    }
+  }
+
 
   Future<List<Map<String, dynamic>>> getRedeemedRewards({int limit = 50}) async {
     return _remote.getRedeemedRewards(limit: limit);
