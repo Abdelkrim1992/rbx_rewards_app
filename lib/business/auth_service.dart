@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -63,9 +64,14 @@ class AuthService {
         // 5. If invalid credentials (doesn't exist), sign up!
         if (e.message.contains('Invalid login credentials')) {
           debugPrint('ℹ️ Device account not found. Creating a new one...');
+          
+          final randomNum = Random().nextInt(9000000) + 1000000; // 7 digits
+          final generatedUsername = 'player$randomNum';
+          
           final signUpResponse = await _client.auth.signUp(
             email: email,
             password: password,
+            data: {'display_name': generatedUsername},
           );
           
           // Clear any stale local data since this is a brand new account
@@ -74,7 +80,10 @@ class AuthService {
           // Fail-safe: Ensure the users row is created in case the DB trigger missed it
           if (signUpResponse.user != null) {
             try {
-              await _client.from('users').upsert({'id': signUpResponse.user!.id});
+              await _client.from('users').upsert({
+                'id': signUpResponse.user!.id,
+                'display_name': generatedUsername,
+              });
             } catch (e) {
               debugPrint('Fail-safe users insert error: $e');
             }

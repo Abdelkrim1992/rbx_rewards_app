@@ -124,6 +124,9 @@ CREATE POLICY "Allow public read access to coin_distributions" ON public.coin_di
 CREATE POLICY "Users can read own data" ON public.users
   FOR SELECT USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert own data" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can update own data" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
@@ -890,20 +893,33 @@ BEGIN
     balance,
     total_earned,
     total_spent,
+    games_played,
+    offers_completed,
+    consecutive_days,
+    spin_free_spins,
+    level,
     display_name,
-    profile_photo_url,
-    level
+    profile_photo_url
   )
   VALUES (
     NEW.id,
     0,
     0,
     0,
+    0,
+    0,
+    0,
+    3,
+    1,
     COALESCE(NEW.raw_user_meta_data->>'display_name', 'Player'),
-    NEW.raw_user_meta_data->>'profile_photo_url',
-    1
+    NEW.raw_user_meta_data->>'profile_photo_url'
   )
   ON CONFLICT (id) DO NOTHING;
+  
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  -- Catch any errors so the Auth signup does not fail
+  RAISE WARNING 'handle_new_user failed: %', SQLERRM;
   RETURN NEW;
 END;
 $$;
