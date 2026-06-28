@@ -49,9 +49,9 @@ class RbxAppHeader extends ConsumerWidget {
 
               GestureDetector(
                 onTap: () {
-                  // Use the navigation callback to switch to profile tab (index 4)
+                  // Use the navigation callback to switch to profile tab (index 3)
                   if (onNavTap != null) {
-                    onNavTap!(4);
+                    onNavTap!(3);
                   }
                 },
                 child: Container(

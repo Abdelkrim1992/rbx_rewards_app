@@ -734,105 +734,130 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   // --- GAMEPLAY SCREEN ---
   Widget _buildGameplayScreen() {
-    return Column(
-      key: const ValueKey('PLAYING'),
-      children: [
-        const Spacer(),
-        const SizedBox(height: 10),
-        // Question Card
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Container(
-            width: double.infinity,
-            height: 250,
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF6338F9).withOpacity(0.25),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+        final useSmallStyle = screenHeight < 680;
+
+        // Dynamic sizes
+        final cardHeight = useSmallStyle ? 160.0 : 230.0;
+        final cardPadding = useSmallStyle ? 16.0 : 28.0;
+        final spacingBetween = useSmallStyle ? 12.0 : 24.0;
+        final timerPadding = useSmallStyle ? 12.0 : 24.0;
+
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight,
             ),
-            alignment: Alignment.center,
-            child: Text(
-              _currentQuestion.text,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 24,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                height: 1.3,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 25),
-
-        // Answer Options (vertical list)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: List.generate(_currentQuestion.options.length, (idx) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildAnswerButton(idx),
-              );
-            }),
-          ),
-        ),
-
-        const Spacer(),
-
-        // Timer bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 16,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECEFF1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: _timerProgress,
+            child: IntrinsicHeight(
+              child: Column(
+                key: const ValueKey('PLAYING'),
+                children: [
+                  const Spacer(),
+                  SizedBox(height: useSmallStyle ? 4 : 10),
+                  // Question Card
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Container(
+                      width: double.infinity,
+                      height: cardHeight,
+                      padding: EdgeInsets.all(cardPadding),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6338F9),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(useSmallStyle ? 24 : 32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF6338F9).withOpacity(0.25),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: SingleChildScrollView(
+                        child: Text(
+                          _currentQuestion.text,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: useSmallStyle ? 18 : 24,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.3,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  SizedBox(height: spacingBetween),
+
+                  // Answer Options (vertical list)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: List.generate(_currentQuestion.options.length, (idx) {
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: useSmallStyle ? 8 : 12),
+                          child: _buildAnswerButton(idx, useSmallStyle),
+                        );
+                      }),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Timer bar
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: timerPadding),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 16,
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECEFF1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: _timerProgress,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6338F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          _formatTimerText(),
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Text(
-                _formatTimerText(),
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildAnswerButton(int idx) {
+  Widget _buildAnswerButton(int idx, bool useSmallStyle) {
     final optValue = _currentQuestion.options[idx];
     final isSelected = _selectedAnswer == idx;
     final isCorrectOption = optValue == _currentQuestion.correctAnswer;
@@ -857,17 +882,17 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       onTap: () => _checkAnswer(idx),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        height: 56,
+        height: useSmallStyle ? 46 : 56,
         decoration: BoxDecoration(
           color: bgC,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(useSmallStyle ? 24 : 28),
           border: Border.all(color: borderC, width: 2.0),
         ),
         alignment: Alignment.center,
         child: Text(
           optValue,
           style: GoogleFonts.outfit(
-            fontSize: 18,
+            fontSize: useSmallStyle ? 15 : 18,
             fontWeight: FontWeight.w800,
             color: textC,
           ),
@@ -880,180 +905,199 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   Widget _buildGameOverScreen() {
     final bool didWin = _correctCount >= 5;
     
-    return Column(
-      key: const ValueKey('GAMEOVER'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Spacer(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+        final useSmallStyle = screenHeight < 680;
 
-        // Trophy icon with pop animation
-        ScaleTransition(
-          scale: _matchPopScale,
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
-              shape: BoxShape.circle,
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: screenHeight,
             ),
-            child: Icon(
-              didWin ? Icons.emoji_events : Icons.replay,
-              color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
-              size: 50,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Result Header
-        Text(
-          'Quiz Complete!',
-          style: GoogleFonts.outfit(
-            fontSize: 42,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFF181C32),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Stats Summary Subtitle
-        Text(
-          '$_correctCount/${_sessionQuestions.length} Correct',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Breakdown Card
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFECFF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E2F5)),
-            ),
-            child: Column(
-              children: [
-                _buildRewardRow('Correct Answers', '$_correctCount/${_sessionQuestions.length}'),
-                const SizedBox(height: 8),
-                _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
-                if (_coinsEarned > _originalCoinsEarned) ...[
-                  const SizedBox(height: 8),
-                  _buildRewardRow('Ad Multiplier', '2x'),
-                ],
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(color: Color(0xFFE2E2F5)),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF181C32),
+            child: IntrinsicHeight(
+              child: Column(
+                key: const ValueKey('GAMEOVER'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(),
+                  SizedBox(height: useSmallStyle ? 12 : 24),
+                  
+                  // Trophy icon with pop animation
+                  ScaleTransition(
+                    scale: _matchPopScale,
+                    child: Container(
+                      width: useSmallStyle ? 70 : 90,
+                      height: useSmallStyle ? 70 : 90,
+                      decoration: BoxDecoration(
+                        color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        didWin ? Icons.emoji_events : Icons.replay,
+                        color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
+                        size: useSmallStyle ? 38 : 50,
                       ),
                     ),
-                    Row(
+                  ),
+                  SizedBox(height: useSmallStyle ? 12 : 20),
+
+                  // Result Header
+                  Text(
+                    'Quiz Complete!',
+                    style: GoogleFonts.outfit(
+                      fontSize: useSmallStyle ? 30 : 42,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF181C32),
+                    ),
+                  ),
+                  SizedBox(height: useSmallStyle ? 6 : 12),
+
+                  // Stats Summary Subtitle
+                  Text(
+                    '$_correctCount/${_sessionQuestions.length} Correct',
+                    style: GoogleFonts.inter(
+                      fontSize: useSmallStyle ? 14 : 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                  SizedBox(height: useSmallStyle ? 14 : 24),
+
+                  // Breakdown Card
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: useSmallStyle ? 24 : 40),
+                    child: Container(
+                      padding: EdgeInsets.all(useSmallStyle ? 14 : 18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFECFF),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE2E2F5)),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildRewardRow('Correct Answers', '$_correctCount/${_sessionQuestions.length}'),
+                          const SizedBox(height: 8),
+                          _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
+                          if (_coinsEarned > _originalCoinsEarned) ...[
+                            const SizedBox(height: 8),
+                            _buildRewardRow('Ad Multiplier', '2x'),
+                          ],
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: useSmallStyle ? 8 : 10),
+                            child: const Divider(color: Color(0xFFE2E2F5)),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF181C32),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.currency_bitcoin,
+                                      color: Color(0xFFFFB000), size: 20),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '+$_coinsEarned RBX',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF181C32),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+                  SizedBox(height: useSmallStyle ? 16 : 24),
+
+                  // Action Buttons
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
                       children: [
-                        const Icon(Icons.currency_bitcoin,
-                            color: Color(0xFFFFB000), size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          '+$_coinsEarned RBX',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF181C32),
+                        // Play Again
+                        GestureDetector(
+                          onTap: _playAgain,
+                          child: Container(
+                            width: double.infinity,
+                            height: useSmallStyle ? 50 : 60,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF562EE6).withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Play Again',
+                                style: GoogleFonts.outfit(
+                                  fontSize: useSmallStyle ? 16 : 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
+                        if (!_hasClaimed) ...[
+                          SizedBox(height: useSmallStyle ? 10 : 14),
+
+                          // Claim Reward
+                          GestureDetector(
+                            onTap: _claimQuizCoins,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 50 : 60,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFECFF),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Claim Reward',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: useSmallStyle ? 16 : 18,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF562EE6),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: useSmallStyle ? 16 : 30),
                       ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-
-        const Spacer(),
-
-        // Action Buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              // Play Again
-              GestureDetector(
-                onTap: _playAgain,
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF562EE6).withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Play Again',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (!_hasClaimed) ...[
-                const SizedBox(height: 14),
-
-                // Claim Reward
-                GestureDetector(
-                  onTap: _claimQuizCoins,
-                  child: Container(
-                    width: double.infinity,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFECFF),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Claim Reward',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF562EE6),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 

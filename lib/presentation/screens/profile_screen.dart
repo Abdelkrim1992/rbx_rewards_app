@@ -33,6 +33,13 @@ class ProfileScreen extends ConsumerWidget {
     return totalCoins % 5000;
   }
 
+  String _formatCoins(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfile = ref.watch(userProfileProvider);
@@ -299,43 +306,92 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Stats grid
-                    // Padding(
-                    //   padding: const EdgeInsets.symmetric(
-                    //       horizontal: AppLayout.screenPadding),
-                    //   child: GridView.count(
-                    //     crossAxisCount: 2,
-                    //     shrinkWrap: true,
-                    //     padding: EdgeInsets.zero,
-                    //     physics: const NeverScrollableScrollPhysics(),
-                    //     mainAxisSpacing: 8,
-                    //     crossAxisSpacing: 8,
-                    //     childAspectRatio: 1.8,
-                    //     children: [
-                    //       // _StatCard(
-                    //       //   iconUrl: AppAssets.fireStreak,
-                    //       //   value: '${appState.consecutiveDays}',
-                    //       //   label: 'Day Streak',
-                    //       // ),
-                    //       _StatCard(
-                    //         iconUrl: AppAssets.rbxCoinIcon,
-                    //         value: '${appState.coins}',
-                    //         label: 'Total RBX Coins',
-                    //       ),
-                    //       _StatCard(
-                    //         iconUrl: AppAssets.gamepadStat,
-                    //         value: '${appState.totalGamesPlayed}',
-                    //         label: 'Games Played',
-                    //       ),
-                    //       // _StatCard(
-                    //       //   iconUrl: AppAssets.adsWatched,
-                    //       //   value: '${appState.totalOffersCompleted}',
-                    //       //   label: 'Offers Done',
-                    //       // ),
-                    //     ],
-                    //   ),
-                    // ),
-                    // const SizedBox(height: AppLayout.sectionSpacing),
+                    // Stats cards row
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              title: 'Daily Streak',
+                              icon: const Text('🔥', style: TextStyle(fontSize: 24)),
+                              valueWidget: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '${userProfile.consecutiveDays}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF131326),
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Days',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF868A9F),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _StatCard(
+                              title: 'Total Coins',
+                              icon: Image.asset(
+                                AppAssets.rbxCoinIcon,
+                                width: 24,
+                                height: 24,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.monetization_on,
+                                  color: Color(0xFFFFB000),
+                                  size: 24,
+                                ),
+                              ),
+                              valueWidget: Text(
+                                _formatCoins(userProfile.totalEarned),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF131326),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _StatCard(
+                              title: 'Games Played',
+                              icon: Image.asset(
+                                AppAssets.gamepadStat,
+                                width: 24,
+                                height: 24,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.sports_esports_rounded,
+                                  color: Color(0xFF1E293B),
+                                  size: 24,
+                                ),
+                              ),
+                              valueWidget: Text(
+                                '${userProfile.gamesPlayed}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF131326),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
 
                     // Settings & Support
@@ -403,7 +459,7 @@ class ProfileScreen extends ConsumerWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 4, onTap: onNavTap),
+          child: RbxBottomNav(currentIndex: 3, onTap: onNavTap),
         ),
       ),
     );
@@ -411,81 +467,63 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  final String iconUrl;
-  final String value;
-  final String label;
+  final String title;
+  final Widget icon;
+  final Widget valueWidget;
 
   const _StatCard({
-    required this.iconUrl,
-    required this.value,
-    required this.label,
+    required this.title,
+    required this.icon,
+    required this.valueWidget,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      height: 96,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: const Color(0xFFF3F4F6)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          iconUrl.startsWith('http')
-              ? Image.network(
-                  iconUrl,
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.star,
-                      size: 32, color: AppColors.primary),
-                )
-              : Image.asset(
-                  iconUrl,
-                  width: 32,
-                  height: 32,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.star,
-                      size: 32, color: AppColors.primary),
-                ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF64748B),
-                    height: 1.1,
-                  ),
-                ),
-              ],
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF868A9F),
             ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: valueWidget,
+                ),
+              ),
+            ],
           ),
         ],
       ),

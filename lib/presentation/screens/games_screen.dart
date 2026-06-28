@@ -31,35 +31,35 @@ class GamesScreen extends ConsumerWidget {
       _GameData(
         imageUrl: AppAssets.tapTapGame,
         title: 'Tap Tap',
-        coins: '$tapTapRemaining left',
+        coins: '+$tapTapRemaining RBX',
         isBlocked: tapTapRemaining <= 0,
         bgColor: const Color(0xFFEAF3FF),
       ),
       _GameData(
         imageUrl: AppAssets.quizMasterGame,
         title: 'Math Quiz',
-        coins: '$mathQuizRemaining left',
+        coins: '+$mathQuizRemaining RBX',
         isBlocked: mathQuizRemaining <= 0,
         bgColor: const Color(0xFFE3F8EB),
       ),
       _GameData(
         imageUrl: AppAssets.flappyJumpGame,
         title: 'Flappy Jump',
-        coins: '$flappyRemaining left',
+        coins: '+ $flappyRemaining RBX',
         isBlocked: flappyRemaining <= 0,
         bgColor: const Color(0xFFFFF3E3),
       ),
       _GameData(
         imageUrl: AppAssets.memoryMatchGame,
         title: 'Flip Cards',
-        coins: '$flipRemaining left',
+        coins: '+ $flipRemaining RBX',
         isBlocked: flipRemaining <= 0,
         bgColor: const Color(0xFFFFE8F0),
       ),
       _GameData(
         imageUrl: AppAssets.dailyRewardImage,
         title: 'Scratch Card',
-        coins: '$scratchRemaining left',
+        coins: '+ $scratchRemaining RBX',
         isBlocked: scratchRemaining <= 0,
         bgColor: const Color(0xFFEAF3FF),
       ),
@@ -426,31 +426,50 @@ class _GameCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                AppAssets.goldCoin,
-                                width: 18,
-                                height: 18,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.monetization_on,
-                                    size: 18,
-                                    color: Color(0xFFFFCC44)),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: data.isBlocked
+                                    ? const Color(0xFFF1F5F9)
+                                    : AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  data.coins,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: data.isBlocked ? Colors.grey : AppColors.purple,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      data.coins,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: data.isBlocked
+                                            ? Colors.grey
+                                            : AppColors.purple,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 4),
+                                  Image.asset(
+                                    AppAssets.goldCoin,
+                                    width: 18,
+                                    height: 18,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.monetization_on,
+                                      size: 18,
+                                      color: data.isBlocked
+                                          ? Colors.grey
+                                          : const Color(0xFFFFCC44),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                         Container(

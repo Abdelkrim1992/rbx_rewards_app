@@ -1,7 +1,9 @@
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../widgets/ad_reward_dialog.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../../widgets/interactive_button.dart';
@@ -98,7 +100,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   Future<void> _spin() async {
     final freeSpins = ref.read(spinProvider).spinsRemaining;
     final isSpinBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('spin') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
-    if (_isSpinning || freeSpins == 0 || isSpinBlocked) return;
+    if (_isSpinning || _isProcessing || freeSpins == 0 || isSpinBlocked) return;
     final random = Random();
     final targetSegment = _pickWeightedSegment(random);
     final baseRotations = 2 + random.nextInt(6);
@@ -415,13 +417,13 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
                                     // Center SPIN button (Fixed, not rotating)
                                     GestureDetector(
-                                      onTap: isSpinBlocked ? null : _spin,
+                                      onTap: (isSpinBlocked || _isProcessing || _isSpinning || freeSpins == 0) ? null : _spin,
                                       child: AnimatedBuilder(
                                         animation: _pulseAnimation,
                                         builder: (context, child) {
                                           return Transform.scale(
                                             scale:
-                                                _isSpinning || (freeSpins == 0) || isSpinBlocked
+                                                _isSpinning || _isProcessing || (freeSpins == 0) || isSpinBlocked
                                                     ? 1.0
                                                     : _pulseAnimation.value,
                                             child: child,
@@ -459,7 +461,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                _isSpinning
+                                                _isSpinning || _isProcessing
                                                     ? const Text(
                                                         '...',
                                                         style: TextStyle(
@@ -509,13 +511,13 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                                   letterSpacing: 1,
                                                                 ),
                                                               ),
-                                                if (!_isSpinning &&
+                                                if (!_isSpinning && !_isProcessing &&
                                                     !(freeSpins == 0) && !isSpinBlocked)
                                                   const Icon(Icons.touch_app,
                                                       size: 14,
                                                       color: AppColors
                                                           .primaryText),
-                                                if (!_isSpinning &&
+                                                if (!_isSpinning && !_isProcessing &&
                                                     (freeSpins == 0))
                                                   const Icon(Icons.lock_clock,
                                                       size: 14,
@@ -610,12 +612,31 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                   },
                                   onAdFailed: (error) async {
                                     if (mounted) {
-                                      setState(() {
-                                        _isProcessing = false;
-                                      });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Failed to load ad or limit reached')),
-                                      );
+                                      final isDevMode = ref.read(adServiceProvider).developerModeEnabled;
+                                      if (isDevMode || kDebugMode) {
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (context) => AdRewardDialog(
+                                            onRewardGranted: () async {
+                                              await ref.read(spinProvider.notifier).addFreeSpinLocal();
+                                            },
+                                          ),
+                                        ).then((_) {
+                                          if (mounted) {
+                                            setState(() {
+                                              _isProcessing = false;
+                                            });
+                                          }
+                                        });
+                                      } else {
+                                        setState(() {
+                                          _isProcessing = false;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(error)),
+                                        );
+                                      }
                                     }
                                   },
                                 );

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/coin_provider.dart';
@@ -6,16 +5,15 @@ import '../providers/user_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/reward_provider.dart';
 import '../providers/providers.dart';
+import '../providers/mega_chest_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
-import '../../widgets/two_tier_reward_dialog.dart';
 import '../../widgets/congratulations_dialog.dart';
+import '../../widgets/coin_burst.dart';
 import '../../core/utils/reward_helper.dart';
-import '../../business/tapjoy_service.dart';
-import '../../business/pubscale_service.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
@@ -38,6 +36,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isProcessing = false;
+  bool _showCoinBurst = false;
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -48,10 +47,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _completeClaim() async {
+    final userProfile = ref.read(userProfileProvider);
+    final isWithinFirstWeek = userProfile.consecutiveDays < 7;
+    final nextDay = (userProfile.consecutiveDays % 7) + 1;
+    final rewardAmount = isWithinFirstWeek
+        ? (nextDay == 7 ? 100 : 10 + (nextDay * 5))
+        : 15;
+
     await showRewardChoice(
       context: context,
       featureName: 'Daily Reward',
-      baseReward: 15,
+      baseReward: rewardAmount,
       quickPlacement: AdPlacement.dailyReward,
       premiumPlacement: AdPlacement.dailyReward,
       onSuccess: (coins) async {
@@ -69,40 +75,57 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (mounted) setState(() => _isProcessing = false);
   }
 
+  Future<void> _completeMegaChestClaim() async {
+    setState(() => _isProcessing = true);
+    final success = await ref.read(megaChestMilestoneProvider.notifier).claimReward();
+    setState(() => _isProcessing = false);
 
-  Future<void> _launchOfferwall(String sdkName) async {
-    if (kIsWeb || (Theme.of(context).platform != TargetPlatform.iOS && Theme.of(context).platform != TargetPlatform.android)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Offerwalls are only supported on Android and iOS devices.'),
-            backgroundColor: AppColors.purple,
-          ),
-        );
-      }
-      return;
-    }
-
-    bool success = false;
-    if (sdkName == 'tapjoy') {
-      success = await TapjoyService().showOfferwall();
-    } else if (sdkName == 'pubscale') {
-      success = await PubscaleService().launch();
-    }
-
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${sdkName[0].toUpperCase()}${sdkName.substring(1)} Offerwall is loading. Please try again in a moment.'),
-          backgroundColor: AppColors.purple,
-        ),
+    if (success && mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black87,
+        builder: (_) => const CongratulationsDialog(earnedCoins: 1000),
       );
+      ref.invalidate(userProfileStreamProvider);
     }
   }
+
+
+  // Future<void> _launchOfferwall(String sdkName) async {
+  //   if (kIsWeb || (Theme.of(context).platform != TargetPlatform.iOS && Theme.of(context).platform != TargetPlatform.android)) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Offerwalls are only supported on Android and iOS devices.'),
+  //           backgroundColor: AppColors.purple,
+  //         ),
+  //       );
+  //     }
+  //     return;
+  //   }
+
+  //   bool success = false;
+  //   if (sdkName == 'tapjoy') {
+  //     success = await TapjoyService().showOfferwall();
+  //   } else if (sdkName == 'pubscale') {
+  //     success = await PubscaleService().launch();
+  //   }
+
+  //   if (!success && mounted) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text('${sdkName[0].toUpperCase()}${sdkName.substring(1)} Offerwall is loading. Please try again in a moment.'),
+  //         backgroundColor: AppColors.purple,
+  //       ),
+  //     );
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
     final coins = ref.watch(coinProvider);
+    final userProfile = ref.watch(userProfileProvider);
     final isOnline = ref.watch(connectivityProvider).value ?? true;
     final dailyCooldown = ref.watch(dailyRewardCooldownProvider);
     final isDailyClaimed = dailyCooldown.inSeconds > 0;
@@ -187,7 +210,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: _InteractiveCard(
-                        onTap: () => widget.onNavTap(3), // Navigate to Rewards
+                        onTap: () => widget.onNavTap(2), // Navigate to Rewards
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -417,6 +440,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
+                    // Daily Streak Bonus Card
+                    if (userProfile.consecutiveDays < 7) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppLayout.screenPadding),
+                        child: _DailyStreakCard(
+                          consecutiveDays: userProfile.consecutiveDays,
+                        ),
+                      ),
+                      const SizedBox(height: AppLayout.sectionSpacing),
+                    ],
+
                     // Quick Actions header
                     const Padding(
                       padding: EdgeInsets.symmetric(
@@ -504,7 +539,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               imageUrl: AppAssets.tapTapGame,
                               title: 'Tap Tap',
                               subtitle: 'Tap & earn',
-                              coins: '+200 RBX',
+                              coins: '+120 RBX',
                               bgColor: const Color(0xFFEAF3FF),
                               onTap: isOnline
                                   ? () async {
@@ -527,8 +562,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             child: _GameCard(
                               imageUrl: AppAssets.quizMasterGame,
                               title: 'Math Quiz',
-                              subtitle: 'Answer & win',
-                              coins: '+200 RBX',
+                              subtitle: 'Solve & earn',
+                              coins: '+120 RBX',
                               bgColor: const Color(0xFFE3F8EB),
                               onTap: isOnline
                                   ? () async {
@@ -552,7 +587,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               imageUrl: AppAssets.flappyJumpGame,
                               title: 'Flappy Jump',
                               subtitle: 'Fly & earn',
-                              coins: '+200 RBX',
+                              coins: '+120 RBX',
                               bgColor: const Color(0xFFFFF3E3),
                               onTap: isOnline
                                   ? () async {
@@ -575,50 +610,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Offers & Tasks header
+                    // Mega Chest Progress Card
                     Padding(
                       padding: const EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
-                      child: _SectionHeader(
-                        title: 'Offers & Tasks',
-                        linkText: 'View All',
-                        onTap: () => widget.onNavTap(2),
+                      child: _MegaChestCard(
+                        onClaimTriggered: () {
+                          setState(() {
+                            _showCoinBurst = true;
+                          });
+                        },
                       ),
                     ),
-                    const SizedBox(height: AppLayout.elementSpacing),
-
-                    // Offers & Tasks list (3 items)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: Column(
-                        children: [
-                          _HomeOfferListItem(
-                            icon: Icons.star_rounded,
-                            title: 'Mega Reward Offers',
-                            subtitle: 'Games, surveys & app downloads',
-                            reward: 12000,
-                            difficulty: 'Medium',
-                            estimatedTime: 'Varies',
-                            onTap: () => _launchOfferwall('tapjoy'),
-                          ),
-                          const SizedBox(height: 12),
-                          _HomeOfferListItem(
-                            icon: Icons.bolt_rounded,
-                            title: 'Express Coin Offers',
-                            subtitle: 'Tasks, surveys & fast payouts',
-                            reward: 15000,
-                            difficulty: 'Easy',
-                            estimatedTime: 'Varies',
-                            onTap: () async {
-                              setState(() => _isProcessing = true);
-                              await _launchOfferwall('pubscale');
-                              if (mounted) setState(() => _isProcessing = false);
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -627,6 +631,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+      if (_showCoinBurst)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CoinBurstWidget(
+              isTriggered: _showCoinBurst,
+              onComplete: () {
+                setState(() => _showCoinBurst = false);
+                _completeMegaChestClaim();
+              },
+            ),
+          ),
+        ),
       if (_isProcessing)
         Container(
           color: Colors.black26,
@@ -815,197 +831,6 @@ class _QuickActionCard extends StatelessWidget {
   }
 }
 
-class _HomeOfferListItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final int reward;
-  final String difficulty;
-  final String estimatedTime;
-  final VoidCallback? onTap;
-
-  const _HomeOfferListItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.reward,
-    required this.difficulty,
-    required this.estimatedTime,
-    this.onTap,
-  });
-
-  Color _difficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'Easy':
-        return const Color(0xFF27AE60);
-      case 'Medium':
-        return const Color(0xFFFF9800);
-      case 'Hard':
-        return const Color(0xFFE74C3C);
-      default:
-        return const Color(0xFF868A9F);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 2,
-              spreadRadius: 0,
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Icon
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: Colors.white, size: 26),
-            ),
-            const SizedBox(width: 14),
-
-            // Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF131326),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF868A9F),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      // Difficulty tag
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _difficultyColor(difficulty).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          difficulty,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: _difficultyColor(difficulty),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Time tag
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.timer,
-                              size: 12, color: Color(0xFF868A9F)),
-                          const SizedBox(width: 3),
-                          Text(
-                            estimatedTime,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF868A9F),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Reward
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      AppAssets.goldRbxCoin,
-                      width: 18,
-                      height: 18,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.monetization_on,
-                        size: 18,
-                        color: Color(0xFFFFCC44),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$reward',
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF131326),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 
 class _GameCard extends StatelessWidget {
@@ -1147,3 +972,395 @@ class _GameCard extends StatelessWidget {
     );
   }
 }
+
+class _MegaChestCard extends ConsumerStatefulWidget {
+  final VoidCallback onClaimTriggered;
+
+  const _MegaChestCard({super.key, required this.onClaimTriggered});
+
+  @override
+  ConsumerState<_MegaChestCard> createState() => _MegaChestCardState();
+}
+
+class _MegaChestCardState extends ConsumerState<_MegaChestCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    // Alarm shake/vibration rotation sequence
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.08), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.08, end: -0.08), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.08), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.08, end: -0.06), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.06, end: 0.06), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.06, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.linear,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
+
+  void _showChestInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 20,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                AppAssets.megaChest,
+                width: 100,
+                height: 100,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.card_giftcard,
+                  size: 80,
+                  color: AppColors.purple,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Mega Chest',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF131326),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Earn 10,000 Coins from playing mini-games, completing math quizzes, scratching cards, and opening chests to unlock the Mega Chest and claim an extra 1,000 RBX Coins!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF868A9F),
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.purple,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size(double.infinity, 44),
+                ),
+                child: const Text(
+                  'Start Earning',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coinBalance = ref.watch(coinProvider);
+    var lastClaimedMilestone = ref.watch(megaChestMilestoneProvider);
+
+    // Automatically reset milestone if balance falls below it due to spending
+    if (coinBalance < lastClaimedMilestone * 10000) {
+      final newMilestone = (coinBalance / 10000).floor();
+      lastClaimedMilestone = newMilestone;
+      Future.microtask(() {
+        ref.read(megaChestMilestoneProvider.notifier).setMilestone(newMilestone);
+      });
+    }
+
+    final nextMilestoneLimit = (lastClaimedMilestone + 1) * 10000;
+    final isReadyToClaim = coinBalance >= nextMilestoneLimit;
+
+    // Control shaking repeating animation
+    if (isReadyToClaim) {
+      if (!_shakeController.isAnimating) {
+        _shakeController.repeat();
+      }
+    } else {
+      if (_shakeController.isAnimating) {
+        _shakeController.stop();
+        _shakeController.reset();
+      }
+    }
+
+    // Calculate progress coins (relative to current milestone block)
+    final progressCoins = isReadyToClaim
+        ? 10000
+        : (coinBalance - (lastClaimedMilestone * 10000)).clamp(0, 10000);
+    final progressPercent = progressCoins / 10000.0;
+
+    return _InteractiveCard(
+      onTap: () {
+        if (isReadyToClaim) {
+          widget.onClaimTriggered();
+        } else {
+          _showChestInfoDialog(context);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFF3F3F5)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Left side details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isReadyToClaim ? 'Mega Chest Ready!' : 'Mega Chest Progress',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF131326),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      // Progress Bar
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: LinearProgressIndicator(
+                            value: progressPercent,
+                            color: AppColors.purple,
+                            backgroundColor: const Color(0xFFE9EAF5),
+                            minHeight: 8,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Progress label
+                      Text(
+                        '$progressCoins / 10000',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF131326),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            // Right side Chest Image with Shake Animation
+            Container(
+              width: 56,
+              height: 56,
+              decoration: isReadyToClaim
+                  ? BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.purple.withOpacity(0.3),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    )
+                  : null,
+              child: AnimatedBuilder(
+                animation: _shakeAnimation,
+                builder: (context, child) {
+                  return Transform.rotate(
+                    angle: isReadyToClaim ? _shakeAnimation.value : 0.0,
+                    child: child,
+                  );
+                },
+                child: Image.asset(
+                  AppAssets.megaChest,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.card_giftcard,
+                    size: 40,
+                    color: AppColors.purple,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DailyStreakCard extends StatelessWidget {
+  final int consecutiveDays;
+
+  const _DailyStreakCard({required this.consecutiveDays});
+
+  @override
+  Widget build(BuildContext context) {
+    int activeDayCount = consecutiveDays % 7;
+    if (consecutiveDays > 0 && activeDayCount == 0) {
+      activeDayCount = 7;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFF3F3F5)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            spreadRadius: 0,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Daily Streak Bonus',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF131326),
+                  letterSpacing: -0.2,
+                ),
+              ),
+              Text(
+                '$consecutiveDays Days in a Row!',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF868A9F),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: List.generate(7, (index) {
+              final dayNum = index + 1;
+              final isClaimed = dayNum <= activeDayCount;
+              final isDay7 = dayNum == 7;
+
+              if (isDay7) {
+                return Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isClaimed ? const Color(0xFFFFB017) : Colors.white,
+                    border: Border.all(
+                      color: isClaimed ? const Color(0xFFFFB017) : const Color(0xFFE2E8F0),
+                      width: 2,
+                    ),
+                    boxShadow: isClaimed
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFFFB017).withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '7',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: isClaimed ? Colors.white : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isClaimed ? const Color(0xFFFFF9E6) : Colors.white,
+                  border: Border.all(
+                    color: isClaimed ? const Color(0xFFFFCC44) : const Color(0xFFE2E8F0),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '$dayNum',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: isClaimed ? const Color(0xFF131326) : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+

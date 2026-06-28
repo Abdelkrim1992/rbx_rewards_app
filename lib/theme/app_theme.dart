@@ -72,8 +72,7 @@ class AppAssets {
       'assets/images/quiz_master_quick_actions.jpeg';
   static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.PNG';
   static const String goldCoin = 'assets/images/robux_coins.png';
-  static const String chevronRight =
-      'https://www.figma.com/api/mcp/asset/916d584b-02ff-4889-9930-e32e15172357';
+  static const String megaChest = 'assets/images/mega_chest.png';
 
   // Nav icons
   static const String navHome =
@@ -89,13 +88,10 @@ class AppAssets {
 
   // Profile screen
   static const String profileAvatar = 'assets/images/profile_image.png';
-  static const String fireStreak =
-      'https://www.figma.com/api/mcp/asset/e37e3720-4a49-4671-a975-d17d9310d228';
+
   static const String rbxCoinIcon = 'assets/images/robux_coins.png';
   static const String gamepadStat = 'assets/images/games-played.png';
-  static const String adsWatched =
-      'https://www.figma.com/api/mcp/asset/d5592f50-706e-44b8-9184-978388a85b05';
-  static const String levelBadge =
+ static const String levelBadge =
       'https://www.figma.com/api/mcp/asset/159497f0-c81d-4613-8ec9-67c29e197137';
   static const String helpIcon =
       'https://www.figma.com/api/mcp/asset/c8feb69a-8356-47c3-bb7b-723504e434c1';

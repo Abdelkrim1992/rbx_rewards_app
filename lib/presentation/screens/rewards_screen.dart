@@ -168,13 +168,6 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                               color: AppColors.primaryText,
                             ),
                           ),
-                          // Image.network(
-                          //   AppAssets.chevronRight,
-                          //   width: 48,
-                          //   height: 48,
-                          //   fit: BoxFit.contain,
-                          //   errorBuilder: (_, __, ___) => const SizedBox(),
-                          // ),
                         ],
                       ),
                     ),
@@ -299,7 +292,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 3, onTap: widget.onNavTap),
+          child: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
         ),
       ),
     );

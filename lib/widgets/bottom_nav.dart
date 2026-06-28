@@ -16,7 +16,6 @@ class RbxBottomNav extends StatelessWidget {
     final items = [
       const _NavItem(icon: AppAssets.navHome, label: 'Home'),
       const _NavItem(icon: AppAssets.navGames, label: 'Games'),
-      const _NavItem(icon: AppAssets.navOffers, label: 'Offers'),
       const _NavItem(icon: AppAssets.navRewards, label: 'Rewards'),
       const _NavItem(icon: AppAssets.navProfile, label: 'Profile'),
     ];
@@ -96,10 +95,8 @@ class RbxBottomNav extends StatelessWidget {
       case 1:
         return Icons.sports_esports_outlined;
       case 2:
-        return Icons.local_offer_outlined;
-      case 3:
         return Icons.card_giftcard_outlined;
-      case 4:
+      case 3:
         return Icons.person_outline;
       default:
         return Icons.circle;

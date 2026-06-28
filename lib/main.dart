@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/screens/loading_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/providers/ad_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/spin_screen.dart';
 import 'presentation/screens/games_screen.dart';
-import 'presentation/screens/offers_screen.dart';
 import 'presentation/screens/rewards_screen.dart';
 import 'presentation/screens/profile_screen.dart';
 import 'dart:io';
@@ -153,6 +153,9 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adProvider.notifier).initialize();
+    });
   }
 
   @override
@@ -226,9 +229,8 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
       final screen = switch (_currentTab) {
         0 => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
         1 => GamesScreen(onNavTap: _onNavTap),
-        2 => OffersScreen(onNavTap: _onNavTap),
-        3 => RewardsScreen(onNavTap: _onNavTap),
-        4 => ProfileScreen(onNavTap: _onNavTap),
+        2 => RewardsScreen(onNavTap: _onNavTap),
+        3 => ProfileScreen(onNavTap: _onNavTap),
         _ => HomeScreen(onNavTap: _onNavTap, onSpinTap: _goToSpin),
       };
       destination = PopScope(
