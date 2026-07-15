@@ -360,49 +360,55 @@ class _GameCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 2,
-              spreadRadius: 0,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Game image
+              // Game image with padding and rounded corners
               Expanded(
-                child: Container(
-                  width: double.infinity,
-                  color: data.bgColor,
-                  child: data.imageUrl.startsWith('http')
-                      ? Image.network(
-                          data.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.sports_esports,
-                            size: 48,
-                            color: data.bgColor == const Color(0xFFEAF3FF)
-                                ? Colors.blue
-                                : AppColors.primary,
-                          ),
-                        )
-                      : Image.asset(
-                          data.imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.sports_esports,
-                            size: 48,
-                            color: data.bgColor == const Color(0xFFEAF3FF)
-                                ? Colors.blue
-                                : AppColors.primary,
-                          ),
-                        ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      width: double.infinity,
+                      color: data.bgColor,
+                      child: data.imageUrl.startsWith('http')
+                          ? Image.network(
+                              data.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.sports_esports,
+                                size: 48,
+                                color: data.bgColor == const Color(0xFFEAF3FF)
+                                    ? Colors.blue
+                                    : AppColors.primary,
+                              ),
+                            )
+                          : Image.asset(
+                              data.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.sports_esports,
+                                size: 48,
+                                color: data.bgColor == const Color(0xFFEAF3FF)
+                                    ? Colors.blue
+                                    : AppColors.primary,
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
               ),
               Padding(

@@ -103,6 +103,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
   Widget build(BuildContext context) {
     final rewards = [
       const _RewardData(
+        assetPath: AppAssets.roblox3UsdCard,
         icon: Icons.card_giftcard,
         title: '\$3 Roblox Gift Card',
         description: 'Official Roblox Gift Card',
@@ -110,6 +111,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         bgColor: Color(0xFF2ECC71),
       ),
       const _RewardData(
+        assetPath: AppAssets.roblox5UsdCard,
         icon: Icons.card_giftcard,
         title: '\$5 Roblox Gift Card',
         description: 'Official Roblox Gift Card',
@@ -117,6 +119,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         bgColor: Color(0xFF9B5CFF),
       ),
       const _RewardData(
+        assetPath: AppAssets.roblox10UsdCard,
         icon: Icons.card_giftcard,
         title: '\$10 Roblox Gift Card',
         description: 'Official Roblox Gift Card',
@@ -446,57 +449,49 @@ class _RewardItem extends StatelessWidget {
       height: 88,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Icon
+          // Image / Icon
           Padding(
-            padding: const EdgeInsets.all(8),
-            child: Container(
-              width: 70,
-              height: 70,
-              decoration: BoxDecoration(
-                color: data.bgColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: data.bgColor.withOpacity(0.3), width: 1.5),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(13),
-                child: Padding(
-                  padding: const EdgeInsets.all(9),
-                  child: data.assetPath != null
-                      ? Image.asset(
-                          data.assetPath!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => Icon(
-                            data.icon ?? Icons.card_giftcard,
-                            color: data.bgColor,
-                            size: 36,
-                          ),
-                        )
-                      : Icon(
+            padding: const EdgeInsets.only(left: 8, right: 8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 100,
+                height: 62,
+                color: data.bgColor.withOpacity(0.08),
+                child: data.assetPath != null
+                    ? Image.asset(
+                        data.assetPath!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
                           data.icon ?? Icons.card_giftcard,
                           color: data.bgColor,
-                          size: 36,
+                          size: 32,
                         ),
-                ),
+                      )
+                    : Icon(
+                        data.icon ?? Icons.card_giftcard,
+                        color: data.bgColor,
+                        size: 32,
+                      ),
               ),
             ),
           ),
           // Info
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -506,18 +501,19 @@ class _RewardItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.primaryText,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     data.description,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: AppColors.secondaryText,
                     ),
                   ),
@@ -525,22 +521,25 @@ class _RewardItem extends StatelessWidget {
               ),
             ),
           ),
+          // Spacing padding between cost and title
+          const SizedBox(width: 15),
           // Cost & Redeem
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              // crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
                       AppAssets.goldCoin,
-                      width: 23,
-                      height: 23,
+                      width: 20,
+                      height: 20,
                       errorBuilder: (_, __, ___) => const Icon(
                         Icons.monetization_on,
-                        size: 23,
+                        size: 20,
                         color: Color(0xFFFFCC44),
                       ),
                     ),
@@ -548,8 +547,8 @@ class _RewardItem extends StatelessWidget {
                     Text(
                       data.cost,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
                         color: AppColors.primaryText,
                       ),
                     ),
@@ -612,14 +611,28 @@ class _RedeemButtonState extends State<_RedeemButton> {
                 : null,
           ),
           child: Center(
-            child: Text(
-              widget.canRedeem ? 'Redeem' : 'Locked',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color:
-                    widget.canRedeem ? Colors.white : AppColors.secondaryText,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.canRedeem ? Icons.lock_open_rounded : Icons.lock_rounded,
+                  size: 12,
+                  color: widget.canRedeem
+                      ? Colors.white
+                      : AppColors.secondaryText,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  widget.canRedeem ? 'Redeem' : 'Locked',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: widget.canRedeem
+                        ? Colors.white
+                        : AppColors.secondaryText,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

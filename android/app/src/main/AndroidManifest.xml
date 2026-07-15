@@ -4,7 +4,7 @@
     <application
         android:label="rbx_rewards_app"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:allowBackup="false"
         android:fullBackupContent="false">
         <activity

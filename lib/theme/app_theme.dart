@@ -59,20 +59,26 @@ class AppAssets {
       'assets/images/onboarding_screen_main_image.jpeg';
 
   // Home screen
-  static const String rbxLogo = 'assets/images/logo_image.jpeg';
+  static const String rbxLogo = 'assets/images/logo_image.png';
   static const String goldRbxCoin = 'assets/images/robux_coins.png';
   static const String balanceWidgetImage =
       'assets/images/balance_widget_image.png';
   static const String dailyRewardImage = 'assets/images/daily_reward_image.png';
+  static const String dailyRewardGift = 'assets/images/daily_reward_gift.png';
   static const String chestIcon = 'assets/images/open_chest_quick_actions.png';
   static const String spinWheelIcon = 'assets/images/spin_quick_action.png';
-  static const String tapTapGame = 'assets/images/tap_tap_mini_game.jpeg';
-  static const String quizMasterGame = 'assets/images/math_quiz_mini_game.jpeg';
+  static const String tapTapGame = 'assets/images/tap_tap_mini_game.png';
+  static const String quizMasterGame = 'assets/images/math_quiz_mini_game.png';
   static const String quizMasterQuickActions =
       'assets/images/quiz_master_quick_actions.jpeg';
-  static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.PNG';
+  static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.png';
   static const String goldCoin = 'assets/images/robux_coins.png';
   static const String megaChest = 'assets/images/mega_chest.png';
+  
+  // Redeem rewards cards
+  static const String roblox3UsdCard = 'assets/images/roblox_3usd_card.png';
+  static const String roblox5UsdCard = 'assets/images/roblox_5usd_card.png';
+  static const String roblox10UsdCard = 'assets/images/roblox_10usd_card.png';
 
   // Nav icons
   static const String navHome =
@@ -103,7 +109,7 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/e6dafc79-8710-4cac-a1ec-555574455b53';
 
   // Games screen
-  static const String flappyJumpGame = 'assets/images/flappy_mini_game.jpeg';
+  static const String flappyJumpGame = 'assets/images/flappy_mini_game.png';
 }
 
 class AppLayout {

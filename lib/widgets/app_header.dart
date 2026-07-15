@@ -15,7 +15,7 @@ class RbxAppHeader extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(
-        left: AppLayout.screenPadding,
+        left: 14,
         right: AppLayout.screenPadding,
         top: 10,
         bottom: 20,

@@ -15,8 +15,8 @@ class LoadingScreen extends StatelessWidget {
             children: [
               Image.asset(
                 AppAssets.rbxLogo,
-                width: 120,
-                height: 120,
+                width: 150,
+                height: 150,
                 fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => const Icon(
                   Icons.celebration,

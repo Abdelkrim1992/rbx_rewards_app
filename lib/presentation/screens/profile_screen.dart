@@ -315,7 +315,7 @@ class ProfileScreen extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               title: 'Daily Streak',
-                              icon: const Text('🔥', style: TextStyle(fontSize: 24)),
+                              icon: const Text('🔥', style: TextStyle(fontSize: 20)),
                               valueWidget: Column(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
@@ -328,14 +328,14 @@ class ProfileScreen extends ConsumerWidget {
                                       color: Color(0xFF131326),
                                     ),
                                   ),
-                                  const Text(
-                                    'Days',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF868A9F),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                  // const Text(
+                                  //   'Days',
+                                  //   style: TextStyle(
+                                  //     fontSize: 10,
+                                  //     color: Color(0xFF868A9F),
+                                  //     fontWeight: FontWeight.w600,
+                                  //   ),
+                                  // ),
                                 ],
                               ),
                             ),
@@ -357,7 +357,7 @@ class ProfileScreen extends ConsumerWidget {
                               valueWidget: Text(
                                 _formatCoins(userProfile.totalEarned),
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF131326),
                                 ),

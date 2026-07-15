@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/mini_game_reward_dialog.dart';
-
-int _normalClaimCounter = 0;
+import '../../widgets/game_prefs.dart';
 
 /// Helper function to show game-specific two-tier reward choice dialog and handle ad display.
 ///
@@ -28,6 +27,10 @@ Future<void> showGameRewardChoice({
   final container = ProviderScope.containerOf(context);
   final adNotifier = container.read(adProvider.notifier);
 
+  final gameKey = featureName.toLowerCase().replaceAll(' ', '_');
+  await GamePrefs.incrementGamePlayCount(gameKey);
+  final playCount = await GamePrefs.getGamePlayCount(gameKey);
+
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -44,8 +47,7 @@ Future<void> showGameRewardChoice({
       quickTextColor: quickTextColor,
       quickBorderColor: quickBorderColor,
       onQuickClaim: () async {
-        _normalClaimCounter++;
-        if (_normalClaimCounter % 3 == 0) {
+        if (playCount % 3 == 0) {
           await adNotifier.showRewardedInterstitial(
             quickPlacement,
             onReward: (_) async {

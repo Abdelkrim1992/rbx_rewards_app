@@ -87,4 +87,18 @@ class GamePrefs {
       await prefs.setInt(_keyScratchesRemaining, remaining - 1);
     }
   }
+
+  // --- Game Play Count for Quick Reward Ad Throttling ---
+  static const String _keyGamePlayCountPrefix = 'game_play_count_';
+
+  static Future<int> getGamePlayCount(String gameName) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_keyGamePlayCountPrefix$gameName') ?? 0;
+  }
+
+  static Future<void> incrementGamePlayCount(String gameName) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getGamePlayCount(gameName);
+    await prefs.setInt('$_keyGamePlayCountPrefix$gameName', current + 1);
+  }
 }

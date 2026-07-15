@@ -35,6 +35,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -48,10 +49,19 @@ flutter:
     - assets/images/thirty_feature_card.jpeg
     - assets/images/mega_chest.png
     - assets/images/robux_coins.png
-    - assets/images/tap_tap_mini_game.jpeg
-    - assets/images/math_quiz_mini_game.jpeg
-    - assets/images/flip_cards_mini_game.PNG
-    - assets/images/flappy_mini_game.jpeg
-    - assets/images/logo_image.jpeg
+    - assets/images/tap_tap_mini_game.png
+    - assets/images/math_quiz_mini_game.png
+    - assets/images/flip_cards_mini_game.png
+    - assets/images/flappy_mini_game.png
+    - assets/images/logo_image.png
     - assets/images/daily_reward_image.png
+    - assets/images/daily_reward_gift.png
     - assets/images/games-played.png
+    - assets/images/roblox_3usd_card.png
+    - assets/images/roblox_5usd_card.png
+    - assets/images/roblox_10usd_card.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.jpg"

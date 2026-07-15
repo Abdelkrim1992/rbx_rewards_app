@@ -423,7 +423,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 child: Opacity(
                                   opacity: isDailyClaimed ? 0.7 : 1.0,
                                   child: Image.asset(
-                                    AppAssets.dailyRewardImage,
+                                    AppAssets.dailyRewardGift,
                                     fit: BoxFit.contain,
                                     errorBuilder: (_, __, ___) => const Icon(
                                       Icons.card_giftcard,
@@ -857,42 +857,48 @@ class _GameCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          boxShadow: const [
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
             BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 2,
-              spreadRadius: 0,
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(18),
           child: Column(
             children: [
-              Container(
-                height: 70, // Matched with _EarnMoreVerticalCard image height
-                width: double.infinity,
-                color: bgColor,
-                child: imageUrl.startsWith('http')
-                    ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.sports_esports,
-                          size: 44,
-                          color: AppColors.primary.withOpacity(0.5),
-                        ),
-                      )
-                    : Image.asset(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.sports_esports,
-                          size: 44,
-                          color: AppColors.primary.withOpacity(0.5),
-                        ),
-                      ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 100, // Increased height to make the card bigger
+                    width: double.infinity,
+                    color: bgColor,
+                    child: imageUrl.startsWith('http')
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.sports_esports,
+                              size: 44,
+                              color: AppColors.primary.withOpacity(0.5),
+                            ),
+                          )
+                        : Image.asset(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.sports_esports,
+                              size: 44,
+                              color: AppColors.primary.withOpacity(0.5),
+                            ),
+                          ),
+                  ),
+                ),
               ),
               Padding(
                 padding:
