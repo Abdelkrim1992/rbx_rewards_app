@@ -1,6 +1,6 @@
 {
-    "name": "rbx_rewards_app",
-    "short_name": "rbx_rewards_app",
+    "name": "rbx_rewards",
+    "short_name": "rbx_rewards",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

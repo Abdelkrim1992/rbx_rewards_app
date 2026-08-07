@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rbx_rewards_app/presentation/providers/user_provider.dart';
+import 'package:rbx_rewards/presentation/providers/user_provider.dart';
 import '../../core/utils/uuid_generator.dart';
 import 'providers.dart';
 

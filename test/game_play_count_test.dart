@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:rbx_rewards_app/widgets/game_prefs.dart';
+import 'package:rbx_rewards/widgets/game_prefs.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

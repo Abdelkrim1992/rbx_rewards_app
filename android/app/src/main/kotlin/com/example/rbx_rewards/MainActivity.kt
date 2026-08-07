@@ -1,4 +1,4 @@
-package com.example.rbx_rewards_app
+package com.example.rbx_rewards
 
 import io.flutter.embedding.android.FlutterActivity
 

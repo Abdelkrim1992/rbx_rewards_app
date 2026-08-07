@@ -1,4 +1,4 @@
-# rbx_rewards_app
+# rbx_rewards
 
 A new Flutter project.
 

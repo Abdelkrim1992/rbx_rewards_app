@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:rbx_rewards_app/main.dart';
-import 'package:rbx_rewards_app/presentation/providers/user_provider.dart';
-import 'package:rbx_rewards_app/models/user_profile.dart';
+import 'package:rbx_rewards/main.dart';
+import 'package:rbx_rewards/presentation/providers/user_provider.dart';
+import 'package:rbx_rewards/models/user_profile.dart';
 
 class OnboardingNotifierMock extends OnboardingNotifier {
   OnboardingNotifierMock(bool initialValue) {

@@ -84,7 +84,7 @@ Earned coins can be redeemed for real-world rewards (Robux gift cards, etc.).
 ## 2. Project Structure
 
 ```
-rbx_rewards_app/
+rbx_rewards/
 ├── lib/
 │   ├── main.dart                 # App entry, DI wiring, bootstrap
 │   ├── models/                   # Pure data models
