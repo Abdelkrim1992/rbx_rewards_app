@@ -1235,54 +1235,63 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             if (mounted) _claimCoins();
           });
         } else {
-          // Immediately reset back to menu overlay
-          _game.hasStarted = false;
-          _game.isGameOver = false;
-          _game.paused = false;
-          _game.onStateChanged?.call();
+          // Allow explosion particles and screen shake to render briefly before resetting & showing dialog
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (!mounted) return;
+            // Reset game overlay states and reset game over flag
+            _game.hasStarted = false;
+            _game.isGameOver = false;
+            _game.paused = false;
+            _handledGameOver = false;
 
-          // Show simple failure dialog
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: const Color(0xFF19163D),
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(
-                  color: const Color(0xFFFF52A2).withValues(alpha: 0.4),
-                  width: 1.5,
-                ),
-              ),
-              title: Text(
-                'Game Over',
-                style: GoogleFonts.outfit(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFFFF52A2),
-                ),
-              ),
-              content: Text(
-                "You scored ${_game.score}. You didn't earn any coins this round.",
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  color: Colors.white70,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'OK',
-                    style: GoogleFonts.outfit(
-                      color: const Color(0xFF00FFCC),
-                      fontWeight: FontWeight.w800,
+            if (mounted) {
+              setState(() {});
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: const Color(0xFF19163D),
+                  surfaceTintColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    side: BorderSide(
+                      color: const Color(0xFFFF52A2).withValues(alpha: 0.4),
+                      width: 1.5,
                     ),
                   ),
+                  title: Text(
+                    'Game Over',
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFFF52A2),
+                    ),
+                  ),
+                  content: Text(
+                    "You scored ${_game.score}. You didn't earn any coins this round.",
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        _handledGameOver = false;
+                        Navigator.of(context).pop();
+                      },
+                      child: Text(
+                        'OK',
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF00FFCC),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
+              );
+            }
+          });
         }
       }
       if (mounted) setState(() {});
@@ -1560,6 +1569,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   void _startGame() {
     _sessionId = ref.read(gameServiceProvider).generateSessionId();
     _gameStartTime = DateTime.now();
+    _handledGameOver = false;
     _game.startGame();
   }
 

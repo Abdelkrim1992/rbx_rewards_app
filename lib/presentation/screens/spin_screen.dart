@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/ad_reward_dialog.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
@@ -48,6 +49,8 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     _WheelSegment(label: '15', sublabel: 'RBX', color: Color(0xFF8847F5)),
   ];
 
+  Timer? _countdownTimer;
+
   @override
   void initState() {
     super.initState();
@@ -66,13 +69,28 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     );
 
     _animation = const AlwaysStoppedAnimation(0.0);
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _controller.dispose();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  Duration _getEffectiveCooldown(Duration cooldownRemaining, bool isSpinBlocked) {
+    if (cooldownRemaining > Duration.zero) {
+      return cooldownRemaining;
+    }
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    final remaining = nextMidnight.difference(now);
+    return remaining > Duration.zero ? remaining : Duration.zero;
   }
 
   String _formatDuration(Duration duration) {
@@ -165,19 +183,38 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       return;
     }
 
-    await showRewardChoice(
-      context: context,
-      featureName: 'Spin Prize Reward',
-      baseReward: reward,
-      quickPlacement: AdPlacement.spinExtra,
-      premiumPlacement: AdPlacement.doubleReward,
-      onSuccess: (coins) async {
-        final result = await ref.read(spinProvider.notifier).spin();
-        if (result != null) {
-          await ref.read(coinProvider.notifier).credit(coins, 'spin');
-        }
-      },
-    );
+    _spinCount++;
+    final bool shouldShowAd = (_spinCount % 3 == 0);
+
+    if (shouldShowAd) {
+      // Every 3rd spin: Display the ad reward choice dialog
+      await showRewardChoice(
+        context: context,
+        featureName: 'Spin Prize Reward',
+        baseReward: reward,
+        quickPlacement: AdPlacement.spinExtra,
+        premiumPlacement: AdPlacement.doubleReward,
+        onSuccess: (coins) async {
+          final result = await ref.read(spinProvider.notifier).spin();
+          if (result != null) {
+            await ref.read(coinProvider.notifier).credit(coins, 'spin');
+          }
+        },
+      );
+    } else {
+      // 1st and 2nd spins: Directly award coins without displaying ads
+      final result = await ref.read(spinProvider.notifier).spin();
+      if (result != null) {
+        await ref.read(coinProvider.notifier).credit(reward, 'spin');
+      }
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => CongratulationsDialog(earnedCoins: reward),
+        );
+      }
+    }
   }
 
   @override
@@ -190,6 +227,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final isSpinCapReached = capService.isCapReachedFor('spin');
     final isFeaturesCapReached = capService.isFeaturesCapReached;
     final isSpinBlocked = isSpinCapReached || isFeaturesCapReached;
+    final effectiveCooldown = _getEffectiveCooldown(cooldownRemaining, isSpinBlocked);
 
     final screenWidth = MediaQuery.of(context).size.width;
     final wheelSize = screenWidth * 0.78;
@@ -473,55 +511,52 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                           letterSpacing: 1,
                                                         ),
                                                       )
-                                                    : isSpinBlocked
-                                                        ? const Text(
-                                                            'LIMIT',
-                                                            style: TextStyle(
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight.w900,
-                                                              color: Colors.grey,
-                                                              letterSpacing: 1,
-                                                            ),
-                                                          )
-                                                        : (freeSpins == 0)
-                                                            ? Text(
-                                                                _formatDuration(
-                                                                    cooldownRemaining),
-                                                                style:
-                                                                    const TextStyle(
-                                                                  fontSize: 14,
+                                                    : (isSpinBlocked || freeSpins == 0)
+                                                        ? Column(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment.center,
+                                                            children: [
+                                                              Text(
+                                                                _formatDuration(effectiveCooldown),
+                                                                style: const TextStyle(
+                                                                  fontSize: 12,
                                                                   fontWeight:
-                                                                      FontWeight
-                                                                          .w900,
-                                                                  color:
-                                                                      Colors.grey,
-                                                                  letterSpacing: 1,
+                                                                      FontWeight.w900,
+                                                                  color: Colors.grey,
+                                                                  letterSpacing: 0.5,
                                                                 ),
-                                                              )
-                                                            : const Text(
+                                                              ),
+                                                              const SizedBox(height: 2),
+                                                              const Icon(
+                                                                Icons.lock_clock,
+                                                                size: 14,
+                                                                color: Colors.grey,
+                                                              ),
+                                                            ],
+                                                          )
+                                                        : Column(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment.center,
+                                                            children: [
+                                                              const Text(
                                                                 'SPIN',
                                                                 style: TextStyle(
                                                                   fontSize: 16,
                                                                   fontWeight:
-                                                                      FontWeight
-                                                                          .w900,
+                                                                      FontWeight.w900,
                                                                   color: AppColors
                                                                       .primary,
                                                                   letterSpacing: 1,
                                                                 ),
                                                               ),
-                                                if (!_isSpinning && !_isProcessing &&
-                                                    !(freeSpins == 0) && !isSpinBlocked)
-                                                  const Icon(Icons.touch_app,
-                                                      size: 14,
-                                                      color: AppColors
-                                                          .primaryText),
-                                                if (!_isSpinning && !_isProcessing &&
-                                                    (freeSpins == 0))
-                                                  const Icon(Icons.lock_clock,
-                                                      size: 14,
-                                                      color: Colors.grey),
+                                                              const Icon(
+                                                                Icons.touch_app,
+                                                                size: 14,
+                                                                color: AppColors
+                                                                    .primaryText,
+                                                              ),
+                                                            ],
+                                                          ),
                                               ],
                                             ),
                                           ),
@@ -574,15 +609,47 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                       ),
 
                       const SizedBox(height: 8),
-                      // Free spins info
-                      Text(
-                        'Free Spins: $freeSpins',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF131326),
+                      // Free spins info / 24h Limit Countdown Banner
+                      if (isSpinBlocked || freeSpins == 0) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF0F5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFFFD4E5)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.timer_outlined,
+                                size: 18,
+                                color: Color(0xFFFF52A2),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isSpinBlocked
+                                    ? 'Daily Limit Reached • Resets in ${_formatDuration(effectiveCooldown)}'
+                                    : 'Limit Reached • Resets in ${_formatDuration(effectiveCooldown)}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFFF52A2),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ] else ...[
+                        Text(
+                          'Free Spins: $freeSpins',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF131326),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       // Watch Ad button
                       InteractiveButton(

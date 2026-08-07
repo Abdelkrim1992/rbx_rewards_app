@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.rbx_rewards_app"
+    namespace = "com.example.rbx_rewards"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
