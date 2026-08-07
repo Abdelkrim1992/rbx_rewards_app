@@ -63,8 +63,8 @@ Future<void> main() async {
   await hiveRepo.init();
 
   // Initialize third-party SDK and local services
-  LuckyBonusService()..load();
-  TapjoyService()..initialize();
+  LuckyBonusService().load();
+  TapjoyService().initialize();
 
   // Build temporary provider container to initialize auth service logic
   final container = ProviderContainer(

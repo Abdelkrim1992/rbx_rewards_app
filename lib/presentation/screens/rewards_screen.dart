@@ -5,7 +5,6 @@ import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../providers/coin_provider.dart';
-import '../providers/providers.dart';
 import '../providers/data_providers.dart';
 
 class RewardsScreen extends ConsumerStatefulWidget {

@@ -871,15 +871,15 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: const Color(0xFFEFECFF)),
             ),
-            child: Column(
+            child: const Column(
               children: [
                 Icon(
                   Icons.touch_app,
                   size: 90,
                   color: AppColors.primary,
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16),
+                Text(
                   '3D CRYSTAL RUSH',
                   style: TextStyle(
                     fontSize: 22,
@@ -888,8 +888,8 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                     letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                SizedBox(height: 8),
+                Text(
                   'Tap the central 3D crystal as fast as you can. Build combos to supercharge your score! You need at least 30 points in 15 seconds to claim your reward.',
                   textAlign: TextAlign.center,
                   style: TextStyle(

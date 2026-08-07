@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../providers/providers.dart';
 import '../providers/data_providers.dart';
 import '../../theme/app_theme.dart';
 

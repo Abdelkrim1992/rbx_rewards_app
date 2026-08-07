@@ -462,10 +462,10 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
   late Animation<double> _rewardScale;
   late Animation<double> _rewardOpacity;
 
-  int _earnedCoins = 0;
-  bool _showReward = false;
+  final int _earnedCoins = 0;
+  final bool _showReward = false;
   bool _burstCoins = false;
-  bool _isClaiming = false;
+  final bool _isClaiming = false;
 
   @override
   void initState() {
@@ -577,7 +577,7 @@ class _InteractiveCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
-  const _InteractiveCard({required this.child, this.onTap});
+  const _InteractiveCard(this.onTap, {required this.child});
 
   @override
   State<_InteractiveCard> createState() => _InteractiveCardState();

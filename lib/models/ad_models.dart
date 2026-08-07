@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 /// Placement types for ads across the app.
 enum AdPlacement {

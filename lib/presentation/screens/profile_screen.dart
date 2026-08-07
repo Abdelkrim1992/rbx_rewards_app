@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_profile.dart';
-import '../providers/coin_provider.dart';
 import '../providers/user_provider.dart';
 import '../providers/providers.dart';
 

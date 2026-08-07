@@ -982,7 +982,7 @@ class _GameCard extends StatelessWidget {
 class _MegaChestCard extends ConsumerStatefulWidget {
   final VoidCallback onClaimTriggered;
 
-  const _MegaChestCard({super.key, required this.onClaimTriggered});
+  const _MegaChestCard({required this.onClaimTriggered});
 
   @override
   ConsumerState<_MegaChestCard> createState() => _MegaChestCardState();

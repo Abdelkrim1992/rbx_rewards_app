@@ -38,7 +38,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   int _maxCombo = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
-  static int _claimCount = 0;
+  static final int _claimCount = 0;
 
   // Timer
   int _secondsLeft = 90;

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scratcher/scratcher.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
-import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/interactive_button.dart';

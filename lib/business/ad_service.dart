@@ -20,12 +20,12 @@ class AdService {
   static const String _testRewardedInterstitialIdIOS = String.fromEnvironment('TEST_REWARDED_INTERSTITIAL_ID_IOS');
 
   // Secure Android Production Keys (Injected via --dart-define-from-file=.env)
-  static final String _premiumAdUnitIdAndroid = const String.fromEnvironment('PREMIUM_AD_UNIT_ID');
-  static final String _quickAdUnitIdAndroid = const String.fromEnvironment('QUICK_AD_UNIT_ID');
+  static const String _premiumAdUnitIdAndroid = String.fromEnvironment('PREMIUM_AD_UNIT_ID');
+  static const String _quickAdUnitIdAndroid = String.fromEnvironment('QUICK_AD_UNIT_ID');
 
   // Secure iOS Production Keys (Injected via --dart-define-from-file=.env)
-  static final String _premiumAdUnitIdIOS = const String.fromEnvironment('PREMIUM_AD_UNIT_ID_IOS');
-  static final String _quickAdUnitIdIOS = const String.fromEnvironment('QUICK_AD_UNIT_ID_IOS');
+  static const String _premiumAdUnitIdIOS = String.fromEnvironment('PREMIUM_AD_UNIT_ID_IOS');
+  static const String _quickAdUnitIdIOS = String.fromEnvironment('QUICK_AD_UNIT_ID_IOS');
 
   static const int _maxPreloadedAds = 3;
   static const int _maxRetryAttempts = 5;

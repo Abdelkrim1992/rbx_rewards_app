@@ -8,7 +8,6 @@ import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/game_prefs.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';

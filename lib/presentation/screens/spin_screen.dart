@@ -534,11 +534,11 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                               ),
                                                             ],
                                                           )
-                                                        : Column(
+                                                        : const Column(
                                                             mainAxisAlignment:
                                                                 MainAxisAlignment.center,
                                                             children: [
-                                                              const Text(
+                                                              Text(
                                                                 'SPIN',
                                                                 style: TextStyle(
                                                                   fontSize: 16,
@@ -549,7 +549,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                                   letterSpacing: 1,
                                                                 ),
                                                               ),
-                                                              const Icon(
+                                                              Icon(
                                                                 Icons.touch_app,
                                                                 size: 14,
                                                                 color: AppColors
@@ -1041,7 +1041,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
 
   final List<_ConfettiParticle> _particles = [];
   bool _disposed = false;
-  bool _animationComplete = false;
+  final bool _animationComplete = false;
   bool _isClaiming = false;
 
   @override

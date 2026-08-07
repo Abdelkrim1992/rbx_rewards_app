@@ -51,7 +51,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   bool _isQuitting = false;
   bool _watchedRewardedAd = false;
   bool _hasClaimed = false;
-  static int _claimCount = 0;
+  static final int _claimCount = 0;
 
   // Active question details
   late MathQuestion _currentQuestion;
