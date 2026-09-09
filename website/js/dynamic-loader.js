@@ -38,9 +38,17 @@
     initDynamicDeletionForm();
   });
 
+  function getApiBase() {
+    return (
+      (typeof AppConfig !== 'undefined' && AppConfig.apiBaseUrl) ||
+      (typeof window !== 'undefined' && window.API_BASE_URL) ||
+      ''
+    ).replace(/\/$/, '');
+  }
+
   async function fetchAndApplyDynamicConfig() {
     try {
-      const response = await fetch('/api/v1/public/app-config');
+      const response = await fetch(`${getApiBase()}/api/v1/public/app-config`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -197,7 +205,7 @@
       }
 
       try {
-        const res = await fetch('/api/v1/public/contact', {
+        const res = await fetch(`${getApiBase()}/api/v1/public/contact`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, topic, message }),
@@ -279,7 +287,7 @@
           ...(userId ? { userId } : {}),
         };
 
-        const res = await fetch('/api/v1/public/deletion-request', {
+        const res = await fetch(`${getApiBase()}/api/v1/public/deletion-request`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

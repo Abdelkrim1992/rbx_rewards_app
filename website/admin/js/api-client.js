@@ -3,7 +3,8 @@
  */
 class AdminApiClient {
   constructor() {
-    this.baseUrl = window.location.origin + '/api/v1';
+    const configuredApi = (typeof AppConfig !== 'undefined' && AppConfig.apiBaseUrl) || (typeof window !== 'undefined' && window.API_BASE_URL) || window.location.origin;
+    this.baseUrl = configuredApi.replace(/\/$/, '') + '/api/v1';
     this.tokenKey = 'rbx_admin_jwt_token';
   }
 

@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { authRouter } from './modules/auth/auth.router.js';
 import { antiFraudRouter } from './modules/anti-fraud/anti-fraud.router.js';
@@ -43,11 +44,26 @@ export function createApp() {
     app.use('/api/v1/performance', performanceRouter);
     app.use('/api/v1/compliance', complianceRouter);
     app.use('/api/v1/audit', auditRouter);
-    // Serve Static Frontend Portals
+    // Serve Static Frontend Portals (when running in monolithic local development)
     const websiteAdminPath = path.resolve(__dirname, '../../website/admin');
     const websitePath = path.resolve(__dirname, '../../website');
-    app.use('/admin', express.static(websiteAdminPath));
-    app.use('/', express.static(websitePath));
+    if (fs.existsSync(websiteAdminPath)) {
+        app.use('/admin', express.static(websiteAdminPath));
+    }
+    if (fs.existsSync(websitePath)) {
+        app.use('/', express.static(websitePath));
+    }
+    else {
+        app.get('/', (_req, res) => {
+            res.status(200).json({
+                name: 'RBX Rewards Admin API',
+                status: 'online',
+                version: '1.0.0',
+                health: '/health',
+                apiBase: '/api/v1',
+            });
+        });
+    }
     // Global Error Handler
     app.use(errorHandler);
     return app;

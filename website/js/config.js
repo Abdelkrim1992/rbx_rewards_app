@@ -111,6 +111,10 @@ const AppConfig = {
     adNetworks: ["Google Mobile Ads (AdMob) with Apple App Tracking Transparency (ATT)"]
   },
 
+  // Backend API URL: default empty string uses same origin / Netlify proxy.
+  // Can be set via window.API_BASE_URL = 'https://your-backend.netlify.app'
+  apiBaseUrl: (typeof window !== 'undefined' && window.API_BASE_URL) || "",
+
   robloxDisclaimer: "RBX Rewards is an independent utility and promotional entertainment application and is NOT affiliated with, sponsored by, or endorsed by Roblox Corporation. 'Roblox' and 'Robux' are registered trademarks of Roblox Corporation."
 };
 

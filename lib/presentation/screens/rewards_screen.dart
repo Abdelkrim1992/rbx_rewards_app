@@ -636,28 +636,32 @@ class _RedeemButtonState extends State<_RedeemButton> {
                 : null,
           ),
           child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  widget.canRedeem ? Icons.lock_open_rounded : Icons.lock_rounded,
-                  size: 12,
-                  color: widget.canRedeem
-                      ? Colors.white
-                      : AppColors.secondaryText,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  widget.canRedeem ? 'Redeem' : 'Locked',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    widget.canRedeem ? Icons.lock_open_rounded : Icons.lock_rounded,
+                    size: 12,
                     color: widget.canRedeem
                         ? Colors.white
                         : AppColors.secondaryText,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.canRedeem ? 'Redeem' : 'Locked',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: widget.canRedeem
+                          ? Colors.white
+                          : AppColors.secondaryText,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
