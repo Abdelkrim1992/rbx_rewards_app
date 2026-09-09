@@ -4,7 +4,7 @@ export interface AdminUserRecord {
   id: string;
   email: string;
   role: 'admin' | 'superadmin';
-  passwordHash: string;
+  passwordHash?: string;
 }
 
 export class AuthRepository {

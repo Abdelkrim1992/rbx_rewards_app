@@ -1,3 +1,4 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AuthRepository } from './auth.repository.js';
@@ -15,11 +16,67 @@ export interface AuthSuccessResult {
 }
 
 export class AuthService {
-  constructor(private readonly authRepo: AuthRepository = new AuthRepository()) {}
+  private supabase: SupabaseClient | null = null;
+  private readonly authRepo: AuthRepository;
+
+  constructor(authRepo: AuthRepository = new AuthRepository()) {
+    this.authRepo = authRepo;
+    if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+      this.supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    }
+  }
 
   public async login(dto: LoginDto): Promise<AuthSuccessResult> {
+    // 1. If Supabase is configured, authenticate securely against Supabase Auth
+    // Password is verified in the cloud; no password or hash is ever stored in the project.
+    if (this.supabase) {
+      try {
+        const { data, error } = await this.supabase.auth.signInWithPassword({
+          email: dto.email,
+          password: dto.password,
+        });
+
+        if (!error && data.user) {
+          const userEmail = data.user.email ?? dto.email;
+          const isAdmin =
+            userEmail.toLowerCase() === env.ADMIN_EMAIL.toLowerCase() ||
+            data.user.app_metadata?.role === 'admin' ||
+            data.user.user_metadata?.role === 'admin';
+
+          if (!isAdmin) {
+            throw new UnauthorizedError('Access denied: Admin privileges required');
+          }
+
+          const payload = {
+            adminId: data.user.id,
+            email: userEmail,
+            role: 'superadmin',
+          };
+
+          const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+            expiresIn: '8h',
+          });
+
+          return {
+            accessToken,
+            admin: {
+              id: data.user.id,
+              email: userEmail,
+              role: 'superadmin',
+            },
+          };
+        }
+      } catch (err) {
+        if (err instanceof UnauthorizedError) {
+          throw err;
+        }
+        // Fall through to fallback check if Supabase is offline or in local test mode
+      }
+    }
+
+    // 2. Fallback check (for local offline testing if an env hash is explicitly provided)
     const admin = await this.authRepo.findAdminByEmail(dto.email);
-    if (!admin) {
+    if (!admin || !admin.passwordHash) {
       throw new UnauthorizedError('Invalid email or password');
     }
 

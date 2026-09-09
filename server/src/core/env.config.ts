@@ -6,6 +6,9 @@ import { z } from 'zod';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Prioritize server-local .env, then process.cwd() .env, then monorepo root .env
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const envSchema = z.object({
@@ -13,7 +16,7 @@ const envSchema = z.object({
   PORT: z.string().transform((val) => parseInt(val, 10)).default('4000'),
   JWT_SECRET: z.string().min(16).default('rbx_rewards_admin_super_secret_jwt_key_2026_safe'),
   ADMIN_EMAIL: z.string().email().default('admin@rbxrewards.com'),
-  ADMIN_PASSWORD_HASH: z.string().default('$2b$10$HfSQhQR03CeBvhYNzcoXZu8Myl/QLhffgFibA9hr09UUlWcn2mXwS'), // admin123!
+  ADMIN_PASSWORD_HASH: z.string().optional(),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
