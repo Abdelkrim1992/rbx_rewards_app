@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 class PolicyConstants {
   PolicyConstants._();
 
-  static const String baseWebsiteUrl = 'https://rbxrewards.app';
+  static const String baseWebsiteUrl = 'https://rbxrewardsapp.netlify.app';
   static const String privacyPolicyUrl = '$baseWebsiteUrl/privacy.html';
   static const String termsOfUseUrl = '$baseWebsiteUrl/terms.html';
   static const String rewardsPolicyUrl = '$baseWebsiteUrl/rewards-policy.html';
@@ -13,7 +13,7 @@ class PolicyConstants {
   static const String disclaimerUrl = '$baseWebsiteUrl/disclaimer.html';
   static const String dataDeletionUrl = '$baseWebsiteUrl/data-deletion.html';
   static const String contactSupportUrl = '$baseWebsiteUrl/contact.html';
-  static const String supportEmail = 'support@rbxrewards.app';
+  static const String supportEmail = 'themimo18@gmail.com';
 
   /// Opens the requested policy or terms URL in the external browser.
   static Future<bool> openUrl(String urlString) async {
