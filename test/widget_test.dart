@@ -9,10 +9,6 @@ class OnboardingNotifierMock extends OnboardingNotifier {
     state = initialValue;
   }
 
-  @override
-  Future<void> _load() async {
-    // Sync loading bypassed
-  }
 
   @override
   Future<void> setCompleted(bool completed) async {

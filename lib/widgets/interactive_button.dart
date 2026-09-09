@@ -25,7 +25,7 @@ class InteractiveButton extends StatefulWidget {
     this.textColor,
     this.border,
     this.height = 52,
-    this.borderRadius = 14,
+    this.borderRadius = 14, Color? color,
   });
 
   @override

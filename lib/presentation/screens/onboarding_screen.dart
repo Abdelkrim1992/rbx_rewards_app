@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 
 class OnboardingScreen extends StatelessWidget {
@@ -11,137 +12,210 @@ class OnboardingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  const Spacer(flex: 1),
-                  // Hero Illustration
-                  Flexible(
-                    flex: 50,
+                  // Hero illustration: aligned to bottomCenter so it connects directly to the headline without dead space
+                  Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                              horizontal: AppLayout.screenPadding)
-                          .copyWith(top: 40),
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
                       child: Image.asset(
                         AppAssets.onboardingHero,
-                        width: double.infinity,
                         fit: BoxFit.contain,
+                        alignment: Alignment.bottomCenter,
+                        cacheWidth: 900,
                         errorBuilder: (_, __, ___) => Container(
                           decoration: BoxDecoration(
                             gradient: AppColors.dailyCardGradient,
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: const Center(
-                            child: Icon(Icons.celebration,
-                                size: 100, color: AppColors.primary),
+                            child: Icon(
+                              Icons.celebration,
+                              size: 80,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const Spacer(flex: 3),
-                  // Title
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppLayout.screenPadding),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(
-                            fontSize: 35,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF141620),
-                            letterSpacing: -0.7,
-                            height: 1.2,
-                          ),
-                          children: [
-                            TextSpan(text: 'Earn '),
-                            TextSpan(
-                              text: 'RBX Rewards ',
-                              style: TextStyle(color: Color(0xFF5637E6)),
-                            ),
-                            TextSpan(text: 'Daily'),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(flex: 1),
-                  // Subtitle
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: AppLayout.screenPadding),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'Play mini games, spin the wheel,\nand collect reward coins.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF717688),
-                          height: 1.45,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(flex: 4),
-                  // Feature cards
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: AppLayout.screenPadding),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _FeatureCard(
-                              imagePath:
-                                  'assets/images/first_feature_card.jpeg',
-                              title: 'Play Games',
-                              subtitle: 'Fun mini games to earn coins',
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: _FeatureCard(
-                              imagePath:
-                                  'assets/images/second_feature_card.jpeg',
-                              title: 'Spin & Win',
-                              subtitle: 'Spin the wheel for big prizes',
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: _FeatureCard(
-                              imagePath:
-                                  'assets/images/thirty_feature_card.jpeg',
-                              title: 'Unlock Rewards',
-                              subtitle: 'Redeem coins for amazing rewards',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const Spacer(flex: 5),
+
+                  // Cohesive content block with tight, professional Revolut/Wise style spacing
+                  const SizedBox(height: 80),
+                  const _HeaderTexts(),
+                  const SizedBox(height: 30),
+                  const _FeatureCardsRow(),
+                  const SizedBox(height: 70),
+                  _GetStartedButton(onTap: onGetStarted),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
-            // CTA Button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppLayout.screenPadding, 0, AppLayout.screenPadding, 30),
-              child: Center(
-                child: _GetStartedButton(onTap: onGetStarted),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderTexts extends StatelessWidget {
+  const _HeaderTexts();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: RichText(
+            textAlign: TextAlign.center,
+            text: const TextSpan(
+              style: TextStyle(
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF101828),
+                letterSpacing: -0.7,
+                height: 1.18,
+              ),
+              children: [
+                TextSpan(text: 'Earn '),
+                TextSpan(
+                  text: 'RBX Rewards ',
+                  style: TextStyle(color: Color(0xFF5637E6)),
+                ),
+                TextSpan(text: 'Daily'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'Play mini games, spin the wheel,\nand collect reward coins.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF667085),
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCardsRow extends StatelessWidget {
+  const _FeatureCardsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 96,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _FeatureCard(
+              imagePath: 'assets/images/first_feature_card.jpeg',
+              title: 'Play Games',
+            ),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: _FeatureCard(
+              imagePath: 'assets/images/second_feature_card.jpeg',
+              title: 'Spin & Win',
+            ),
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: _FeatureCard(
+              imagePath: 'assets/images/thirty_feature_card.jpeg',
+              title: 'Unlock Rewards',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final String imagePath;
+  final String title;
+
+  const _FeatureCard({
+    required this.imagePath,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFCFD),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFECECF2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF6F5FD),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0x125637E6)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                imagePath,
+                width: 44,
+                height: 44,
+                fit: BoxFit.cover,
+                cacheWidth: 140,
+                cacheHeight: 140,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.star,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1D2939),
+              letterSpacing: -0.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -160,12 +234,16 @@ class _GetStartedButtonState extends State<_GetStartedButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 100),
+    duration: const Duration(milliseconds: 120),
     lowerBound: 0.0,
-    upperBound: 0.05,
+    upperBound: 0.04,
   );
 
-  void _onTapDown(TapDownDetails details) => _controller.forward();
+  void _onTapDown(TapDownDetails details) {
+    HapticFeedback.lightImpact();
+    _controller.forward();
+  }
+
   void _onTapUp(TapUpDetails details) => _controller.reverse();
   void _onTapCancel() => _controller.reverse();
 
@@ -192,123 +270,33 @@ class _GetStartedButtonState extends State<_GetStartedButton>
         },
         child: Container(
           width: double.infinity,
-          height: 55,
+          height: 54,
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x736035EE),
-                blurRadius: 24,
-                offset: Offset(0, 12),
-                spreadRadius: -8,
+                color: Color(0x595637E6),
+                blurRadius: 0,
+                // offset: Offset(0, 10),
               ),
             ],
           ),
-          child: const Center(
-            child: Text(
-              'Get Started',
-              style: TextStyle(
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Get Started',
+                style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
-                  letterSpacing: 0.45),
-            ),
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FeatureCard extends StatelessWidget {
-  final String imagePath;
-  final String title;
-  final String subtitle;
-
-  const _FeatureCard({
-    required this.imagePath,
-    required this.title,
-    required this.subtitle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0D000000),
-                      blurRadius: 1,
-                      offset: Offset(0, 1),
-                    )
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.asset(
-                    imagePath,
-                    width: 55,
-                    height: 55,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.star,
-                        color: AppColors.primary, size: 24),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF181A24),
-              letterSpacing: -0.1,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 10,
-                color: Color(0xFF8E93A2),
-                height: 1.3,
-              ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

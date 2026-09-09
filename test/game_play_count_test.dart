@@ -55,4 +55,32 @@ void main() {
       expect(count % 3 == 0, isFalse);
     });
   });
+
+  group('GamePrefs Best Score Tests', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('Initial best score is 0', () async {
+      final score = await GamePrefs.getFlappyBestScore();
+      expect(score, equals(0));
+    });
+
+    test('Saving higher score updates best score', () async {
+      await GamePrefs.saveFlappyBestScore(10);
+      var score = await GamePrefs.getFlappyBestScore();
+      expect(score, equals(10));
+
+      await GamePrefs.saveFlappyBestScore(25);
+      score = await GamePrefs.getFlappyBestScore();
+      expect(score, equals(25));
+    });
+
+    test('Saving lower score does not overwrite higher best score', () async {
+      await GamePrefs.saveFlappyBestScore(50);
+      await GamePrefs.saveFlappyBestScore(30);
+      final score = await GamePrefs.getFlappyBestScore();
+      expect(score, equals(50));
+    });
+  });
 }

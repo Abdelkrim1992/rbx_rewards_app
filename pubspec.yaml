@@ -1,5 +1,5 @@
 name: rbx_rewards
-description: RBX Reward App - UI Only
+description: RBX Reward App
 
 publish_to: 'none'
 
@@ -62,6 +62,22 @@ flutter:
     - assets/images/roblox_10usd_card.png
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
-  image_path: "assets/images/app_icon.jpg"
+  image_path_ios: "assets/images/app_icon_ios.png"
+  image_path_android: "assets/images/app_icon_ios.png"
+  image_path: "assets/images/app_icon_ios.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon_android_adaptive_fore.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/images/app_icon_ios.png"

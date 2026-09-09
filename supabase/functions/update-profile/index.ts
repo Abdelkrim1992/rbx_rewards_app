@@ -46,8 +46,9 @@ Deno.serve(async (req) => {
       return errorResponse("Failed to update profile", 500);
     }
 
-    // 2. Invalidate Redis Cache so next fetch is immediate
-    await redis.del(userCacheKey(uid)).catch(console.error);
+    // 2. Invalidate Redis Caches (user profile and compiled leaderboard) in background
+    redis.del(userCacheKey(uid)).catch(() => {});
+    redis.del("leaderboard:compiled:weekly:50").catch(() => {});
 
     return jsonResponse({ success: true });
   } catch (e) {

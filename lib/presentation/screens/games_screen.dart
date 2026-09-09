@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
+import '../../widgets/app_cached_image.dart';
 import '../providers/providers.dart';
 import 'leaderboard_screen.dart';
 import 'tap_tap_game_screen.dart';
@@ -384,29 +385,17 @@ class _GameCard extends StatelessWidget {
                     child: Container(
                       width: double.infinity,
                       color: data.bgColor,
-                      child: data.imageUrl.startsWith('http')
-                          ? Image.network(
-                              data.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.sports_esports,
-                                size: 48,
-                                color: data.bgColor == const Color(0xFFEAF3FF)
-                                    ? Colors.blue
-                                    : AppColors.primary,
-                              ),
-                            )
-                          : Image.asset(
-                              data.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.sports_esports,
-                                size: 48,
-                                color: data.bgColor == const Color(0xFFEAF3FF)
-                                    ? Colors.blue
-                                    : AppColors.primary,
-                              ),
-                            ),
+                      child: AppCachedImage(
+                        imageUrl: data.imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: Icon(
+                          Icons.sports_esports,
+                          size: 48,
+                          color: data.bgColor == const Color(0xFFEAF3FF)
+                              ? Colors.blue
+                              : AppColors.primary,
+                        ),
+                      ),
                     ),
                   ),
                 ),

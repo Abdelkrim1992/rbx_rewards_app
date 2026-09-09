@@ -25,19 +25,26 @@ Deno.serve(async (req) => {
     if (limitParam) {
       limit = parseInt(limitParam, 10) || 50;
     }
-  } catch (e) {
+  } catch (_e) {
     // Ignored
   }
 
-  const cacheKey = `reward_history_v2:${uid}:${limit}`;
-  const cached = await redis.get(cacheKey);
+  if (limit < 1 || limit > 100) limit = 50;
 
-  if (cached) {
-    const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
-    return jsonResponse(parsed, 200, { "X-Cache": "HIT" });
+  const cacheKey = `reward_history_v2:${uid}:${limit}`;
+
+  // 1. Try Redis cache first (fault-tolerant)
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
+      return jsonResponse(parsed, 200, { "X-Cache": "HIT" });
+    }
+  } catch (redisErr) {
+    console.warn("get-reward-history Redis read failed, falling through to Postgres:", redisErr);
   }
 
-  // Fetch from Postgres
+  // 2. Fallback to Postgres
   const { data, error } = await supabase
     .from("redeemed_rewards")
     .select("*")
@@ -50,9 +57,12 @@ Deno.serve(async (req) => {
     return errorResponse(error.message, 500);
   }
 
-  // Cache for 60 seconds
   const responseData = { history: data };
-  await redis.setex(cacheKey, 60, JSON.stringify(responseData));
+
+  // 3. Cache for 60 seconds (fire-and-forget)
+  redis.set(cacheKey, JSON.stringify(responseData), { ex: 60 }).catch((e) =>
+    console.warn("get-reward-history Redis write failed:", e)
+  );
 
   return jsonResponse(responseData, 200, { "X-Cache": "MISS" });
 });

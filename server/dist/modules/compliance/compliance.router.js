@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { ComplianceController } from './compliance.controller.js';
+import { jwtAuthGuard } from '../../core/auth.middleware.js';
+const router = Router();
+const controller = new ComplianceController();
+router.use(jwtAuthGuard);
+router.get('/deletion-queue', controller.getDeletionQueue);
+router.post('/purge-user', controller.executePurge);
+router.get('/tickets', controller.getTickets);
+router.post('/resolve-ticket', controller.resolveTicket);
+export const complianceRouter = router;

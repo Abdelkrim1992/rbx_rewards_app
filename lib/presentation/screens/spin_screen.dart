@@ -13,10 +13,8 @@ import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/refreshable_scroll.dart';
-import '../../widgets/quit_confirmation_dialog.dart';
-import '../../widgets/two_tier_reward_dialog.dart';
 import '../../widgets/congratulations_dialog.dart';
-import '../../core/utils/reward_helper.dart';
+import '../../widgets/game_prefs.dart';
 
 class SpinScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
@@ -35,6 +33,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   late Animation<double> _pulseAnimation;
   bool _isSpinning = false;
   bool _isProcessing = false;
+  int _extraSpinsRemaining = GamePrefs.maxExtraSpinsPerDay;
   static int _spinCount = 0; // Track spins for ad display
 
   final List<_WheelSegment> segments = const [
@@ -73,6 +72,17 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
+
+    _loadExtraSpinsRemaining();
+  }
+
+  Future<void> _loadExtraSpinsRemaining() async {
+    final remaining = await GamePrefs.getExtraSpinsRemaining();
+    if (mounted) {
+      setState(() {
+        _extraSpinsRemaining = remaining;
+      });
+    }
   }
 
   @override
@@ -137,6 +147,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
     setState(() {
       _isSpinning = true;
+      _isProcessing = true;
     });
 
     _pulseController.stop();
@@ -154,7 +165,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
         _isSpinning = false;
       });
       _pulseController.repeat(reverse: true);
-      _showWinDialog(prize, reward);
+      await _showWinDialog(prize, reward);
     });
   }
 
@@ -167,52 +178,120 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     }
   }
 
-  void _showWinDialog(String prize, int reward) async {
-    // Step 1: Animation plays (SpinRewardDialog shows coin flip + reward card)
-    final claimRequested = await showDialog<bool>(
+  Future<void> _showWinDialog(String prize, int reward) async {
+    try {
+      // Step 1: Animation plays (SpinRewardDialog shows coin flip + burst)
+      // While this animation plays, user cannot do any other action
+      final claimRequested = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black87,
+        builder: (context) => SpinRewardDialog(
+          prize: prize,
+          reward: reward,
+        ),
+      );
+
+      if (!mounted || claimRequested != true) {
+        return;
+      }
+
+      _spinCount++;
+      final bool shouldShowAd = (_spinCount % 3 == 0);
+
+      if (shouldShowAd) {
+        // Case 2: When we have ads
+        await _handleWinWithAd(reward);
+      } else {
+        // Case 1: Without ads
+        await _handleWinWithoutAd(reward);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleWinWithoutAd(int reward) async {
+    // 1. Immediately show the felicitation popup BEFORE coins are added to the balance
+    if (!mounted) return;
+    await showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
-      builder: (context) => SpinRewardDialog(
-        prize: prize,
-        reward: reward,
-      ),
+      builder: (context) => CongratulationsDialog(earnedCoins: reward),
     );
 
-    if (!mounted || claimRequested != true) {
-      return;
+    // 2. Only after user completes/closes the popup, add coins to balance and deduct spin
+    if (!mounted) return;
+    final result = await ref.read(spinProvider.notifier).spin();
+    if (result != null) {
+      await ref.read(coinProvider.notifier).credit(reward, 'spin');
     }
+  }
 
-    _spinCount++;
-    final bool shouldShowAd = (_spinCount % 3 == 0);
+  Future<void> _handleWinWithAd(int reward) async {
+    final adNotifier = ref.read(adProvider.notifier);
+    final isDevMode = ref.read(adServiceProvider).developerModeEnabled;
+    final adDismissedCompleter = Completer<void>();
+    bool isRewardEarned = false;
 
-    if (shouldShowAd) {
-      // Every 3rd spin: Display the ad reward choice dialog
-      await showRewardChoice(
-        context: context,
-        featureName: 'Spin Prize Reward',
-        baseReward: reward,
-        quickPlacement: AdPlacement.spinExtra,
-        premiumPlacement: AdPlacement.doubleReward,
-        onSuccess: (coins) async {
-          final result = await ref.read(spinProvider.notifier).spin();
-          if (result != null) {
-            await ref.read(coinProvider.notifier).credit(coins, 'spin');
+    await adNotifier.showRewardedInterstitial(
+      AdPlacement.spinForced,
+      onReward: (amount) async {
+        isRewardEarned = true;
+      },
+      onAdDismissed: () {
+        if (!adDismissedCompleter.isCompleted) {
+          adDismissedCompleter.complete();
+        }
+      },
+      onAdFailed: (error) async {
+        if (!mounted) {
+          if (!adDismissedCompleter.isCompleted) {
+            adDismissedCompleter.complete();
           }
-        },
+          return;
+        }
+        if (isDevMode || kDebugMode) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AdRewardDialog(
+              onRewardGranted: () async {
+                isRewardEarned = true;
+              },
+            ),
+          );
+        } else {
+          isRewardEarned = true;
+        }
+        if (!adDismissedCompleter.isCompleted) {
+          adDismissedCompleter.complete();
+        }
+      },
+    );
+
+    // Wait until the user completes and closes the ad
+    await adDismissedCompleter.future;
+
+    if (!mounted) return;
+
+    if (isRewardEarned) {
+      // Immediately and instantly show the felicitation popup after closing the ad
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => CongratulationsDialog(earnedCoins: reward),
       );
-    } else {
-      // 1st and 2nd spins: Directly award coins without displaying ads
+
+      // After felicitation popup is dismissed, credit coins and deduct spin
+      if (!mounted) return;
       final result = await ref.read(spinProvider.notifier).spin();
       if (result != null) {
         await ref.read(coinProvider.notifier).credit(reward, 'spin');
-      }
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => CongratulationsDialog(earnedCoins: reward),
-        );
       }
     }
   }
@@ -236,18 +315,11 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (!_isSpinning) {
-          widget.onBack();
+        if (_isSpinning || _isProcessing) {
+          // Action is in progress — block navigation completely
           return;
         }
-        final shouldLeave = await showQuitConfirmationDialog(
-          context,
-          title: 'Quit Spin?',
-          message: 'Your spin is in progress. Are you sure you want to leave?',
-        );
-        if (shouldLeave && mounted) {
-          widget.onBack();
-        }
+        widget.onBack();
       },
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -265,18 +337,21 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: widget.onBack,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.arrow_back_ios_new,
-                              color: AppColors.purple,
-                              size: 18,
+                          onTap: (_isSpinning || _isProcessing) ? null : widget.onBack,
+                          child: Opacity(
+                            opacity: (_isSpinning || _isProcessing) ? 0.4 : 1.0,
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.arrow_back_ios_new,
+                                color: AppColors.purple,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ),
@@ -651,12 +726,19 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                         ),
                       ],
                       const SizedBox(height: 10),
-                      // Watch Ad button
+                      // Watch Ad button with daily 8-spin cap
                       InteractiveButton(
                         height: 52,
-                        gradient: AppColors.primaryGradient,
-                        textColor: Colors.white,
-                        onTap: (_isProcessing || _isSpinning)
+                        gradient: (_extraSpinsRemaining <= 0 || isSpinBlocked)
+                            ? null
+                            : AppColors.primaryGradient,
+                        backgroundColor: (_extraSpinsRemaining <= 0 || isSpinBlocked)
+                            ? const Color(0xFFF1F2F8)
+                            : null,
+                        textColor: (_extraSpinsRemaining <= 0 || isSpinBlocked)
+                            ? const Color(0xFF868A9F)
+                            : Colors.white,
+                        onTap: (_isProcessing || _isSpinning || _extraSpinsRemaining <= 0 || isSpinBlocked)
                             ? null
                             : () async {
                                 setState(() {
@@ -667,6 +749,13 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                   AdPlacement.spinExtra,
                                   onReward: (amount) async {
                                     if (!mounted) return;
+                                    await GamePrefs.decrementExtraSpinsRemaining();
+                                    final updated = await GamePrefs.getExtraSpinsRemaining();
+                                    if (mounted) {
+                                      setState(() {
+                                        _extraSpinsRemaining = updated;
+                                      });
+                                    }
                                     // Award the free spin after the ad is successfully watched
                                     await ref.read(spinProvider.notifier).addFreeSpinLocal();
                                   },
@@ -686,6 +775,13 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                           barrierDismissible: false,
                                           builder: (context) => AdRewardDialog(
                                             onRewardGranted: () async {
+                                              await GamePrefs.decrementExtraSpinsRemaining();
+                                              final updated = await GamePrefs.getExtraSpinsRemaining();
+                                              if (mounted) {
+                                                setState(() {
+                                                  _extraSpinsRemaining = updated;
+                                                });
+                                              }
                                               await ref.read(spinProvider.notifier).addFreeSpinLocal();
                                             },
                                           ),
@@ -708,19 +804,32 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                   },
                                 );
                               },
-                        child: const Row(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.play_circle_fill,
-                                color: Colors.white, size: 22),
-                            SizedBox(width: 8),
+                            Icon(
+                              _extraSpinsRemaining <= 0
+                                  ? Icons.check_circle_outline
+                                  : (isSpinBlocked ? Icons.lock : Icons.play_circle_fill),
+                              color: (_extraSpinsRemaining <= 0 || isSpinBlocked)
+                                  ? const Color(0xFF868A9F)
+                                  : Colors.white,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 8),
                             Text(
-                              'Watch Ad for Extra Spin',
+                              _extraSpinsRemaining <= 0
+                                  ? 'Extra Spins Limit Reached (0/${GamePrefs.maxExtraSpinsPerDay})'
+                                  : isSpinBlocked
+                                      ? 'Daily Spin Cap Reached'
+                                      : 'Watch Ad for Extra Spin ($_extraSpinsRemaining/${GamePrefs.maxExtraSpinsPerDay} left)',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
+                                color: (_extraSpinsRemaining <= 0 || isSpinBlocked)
+                                    ? const Color(0xFF868A9F)
+                                    : Colors.white,
+                                letterSpacing: 0.3,
                               ),
                             ),
                           ],
@@ -1170,7 +1279,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
 
     // Wait for coin animation to fully complete
     await Future.delayed(const Duration(milliseconds: 2000));
-    if (_disposed) return;
+    if (_disposed || !mounted) return;
 
     Navigator.of(context).pop(true);
   }
@@ -1191,84 +1300,87 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
   Widget build(BuildContext context) {
     final isJackpot = widget.prize == 'JACKPOT';
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      insetPadding: const EdgeInsets.all(20),
-      child: Center(
-        child: AnimatedBuilder(
-          animation: Listenable.merge([
-            _burstRotationController,
-            _burstEntranceController,
-            _coinFlipController,
-            _cardController,
-            _particleController,
-          ]),
-          builder: (context, _) {
-            return Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // ── Rotating light burst ──
-                Opacity(
-                  opacity: _burstOpacity.value.clamp(0.0, 1.0),
-                  child: Transform.rotate(
-                    angle: _burstRotation.value,
-                    child: Transform.scale(
-                      scale: _burstScale.value.clamp(0.0, 2.0),
-                      child: CustomPaint(
-                        size: const Size(320, 320),
-                        painter: _LightRaysPainter(
-                          color: isJackpot
-                              ? const Color(0xFFFFD700)
-                              : AppColors.primary,
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(20),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: Listenable.merge([
+              _burstRotationController,
+              _burstEntranceController,
+              _coinFlipController,
+              _cardController,
+              _particleController,
+            ]),
+            builder: (context, _) {
+              return Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // ── Rotating light burst ──
+                  Opacity(
+                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                    child: Transform.rotate(
+                      angle: _burstRotation.value,
+                      child: Transform.scale(
+                        scale: _burstScale.value.clamp(0.0, 2.0),
+                        child: CustomPaint(
+                          size: const Size(320, 320),
+                          painter: _LightRaysPainter(
+                            color: isJackpot
+                                ? const Color(0xFFFFD700)
+                                : AppColors.primary,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                // ── Circular glow ──
-                Opacity(
-                  opacity: _burstOpacity.value.clamp(0.0, 1.0),
-                  child: Container(
-                    width: 280,
-                    height: 280,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          (isJackpot
-                                  ? const Color(0xFFFFD700)
-                                  : AppColors.primary)
-                              .withOpacity(0.4),
-                          (isJackpot
-                                  ? const Color(0xFFFFD700)
-                                  : AppColors.primary)
-                              .withOpacity(0.0),
-                        ],
+                  // ── Circular glow ──
+                  Opacity(
+                    opacity: _burstOpacity.value.clamp(0.0, 1.0),
+                    child: Container(
+                      width: 280,
+                      height: 280,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            (isJackpot
+                                    ? const Color(0xFFFFD700)
+                                    : AppColors.primary)
+                                .withOpacity(0.4),
+                            (isJackpot
+                                    ? const Color(0xFFFFD700)
+                                    : AppColors.primary)
+                                .withOpacity(0.0),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
 
-                // ── Confetti particles ──
-                ..._buildParticles(),
+                  // ── Confetti particles ──
+                  ..._buildParticles(),
 
-                // ── 3D Flipping Coin ──
-                Transform.scale(
-                  scale: _coinScale.value.clamp(0.0, 2.0),
-                  child: Transform(
-                    transform: Matrix4.identity()
-                      ..setEntry(3, 2, 0.002) // perspective
-                      ..rotateY(_coinFlip.value),
-                    alignment: Alignment.center,
-                    child: _buildCoinFace(),
+                  // ── 3D Flipping Coin ──
+                  Transform.scale(
+                    scale: _coinScale.value.clamp(0.0, 2.0),
+                    child: Transform(
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.002) // perspective
+                        ..rotateY(_coinFlip.value),
+                      alignment: Alignment.center,
+                      child: _buildCoinFace(),
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

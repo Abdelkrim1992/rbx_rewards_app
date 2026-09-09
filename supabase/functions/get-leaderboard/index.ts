@@ -1,6 +1,14 @@
 import { supabase, verifyAuth, jsonResponse, errorResponse, corsPreflight } from "../_shared/supabase_client.ts";
 import { redis } from "../_shared/redis.ts";
 
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  display_name: string;
+  score: number;
+  profile_photo_url: string | null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return corsPreflight();
@@ -37,17 +45,36 @@ Deno.serve(async (req) => {
     }
   }
 
-  const key = gameName ? `leaderboard:${gameName}` : "leaderboard:weekly";
+  // Limit capped to safe range
+  if (limit < 1 || limit > 100) limit = 50;
 
+  const key = gameName ? `leaderboard:${gameName}` : "leaderboard:weekly";
+  const compiledCacheKey = `leaderboard:compiled:${gameName || "weekly"}:${limit}`;
+
+  // 2. High-Performance Tier A: Check compiled leaderboard cache in Redis (0 Postgres queries)
   try {
-    // 2. Query Redis for top entries (Sorted Set)
+    const cachedCompiled = await redis.get(compiledCacheKey);
+    if (cachedCompiled) {
+      const parsed = typeof cachedCompiled === "string" ? JSON.parse(cachedCompiled) : cachedCompiled;
+      return jsonResponse(
+        { entries: parsed },
+        200,
+        { "Cache-Control": "public, max-age=15, s-maxage=30", "X-Cache": "HIT" }
+      );
+    }
+  } catch (err) {
+    console.warn("Compiled leaderboard cache read failed:", err);
+  }
+
+  // 3. Tier B: Query Redis Sorted Set
+  let parsedEntries: { userId: string; score: number }[] = [];
+  try {
     const redisEntries = await redis.zrange(key, 0, limit - 1, { rev: true, withScores: true });
 
-    let parsedEntries: { userId: string; score: number }[] = [];
     if (Array.isArray(redisEntries) && redisEntries.length > 0) {
       if (typeof redisEntries[0] === "object" && redisEntries[0] !== null) {
         parsedEntries = redisEntries.map((item: any) => ({
-          userId: item.member,
+          userId: String(item.member),
           score: Number(item.score),
         }));
       } else {
@@ -62,10 +89,15 @@ Deno.serve(async (req) => {
         }
       }
     }
+  } catch (redisErr) {
+    console.warn("Redis zrange failed, falling through to Postgres:", redisErr);
+    parsedEntries = [];
+  }
 
-    // 3. Fallback: If cache is empty, query DB and populate Redis
-    if (parsedEntries.length === 0) {
-      let entries: any[] = [];
+  // 4. Tier C: Fallback to Postgres if Redis sorted set is empty or unavailable
+  if (parsedEntries.length === 0) {
+    try {
+      let entries: LeaderboardEntry[] = [];
       if (gameName) {
         const { data: stats, error } = await supabase
           .from("game_stats")
@@ -78,10 +110,7 @@ Deno.serve(async (req) => {
           .order("high_score", { ascending: false })
           .limit(limit);
 
-        if (error) {
-          console.error("DB stats query error:", error);
-          return errorResponse(error.message, 500);
-        }
+        if (error) throw error;
 
         if (stats) {
           entries = stats.map((item: any, idx: number) => ({
@@ -92,9 +121,9 @@ Deno.serve(async (req) => {
             profile_photo_url: (item.users as any)?.profile_photo_url || null,
           }));
 
-          // Populate cache asynchronously
+          // Seed sorted set asynchronously
           for (const entry of entries) {
-            redis.zadd(key, { score: entry.score, member: entry.user_id }).catch(console.error);
+            redis.zadd(key, { score: entry.score, member: entry.user_id }).catch(() => {});
           }
         }
       } else {
@@ -104,10 +133,7 @@ Deno.serve(async (req) => {
           .order("total_earned", { ascending: false })
           .limit(limit);
 
-        if (error) {
-          console.error("DB users query error:", error);
-          return errorResponse(error.message, 500);
-        }
+        if (error) throw error;
 
         if (users) {
           entries = users.map((item: any, idx: number) => ({
@@ -118,36 +144,45 @@ Deno.serve(async (req) => {
             profile_photo_url: item.profile_photo_url || null,
           }));
 
-          // Populate cache asynchronously
+          // Seed sorted set asynchronously
           for (const entry of entries) {
-            redis.zadd(key, { score: entry.score, member: entry.user_id }).catch(console.error);
+            redis.zadd(key, { score: entry.score, member: entry.user_id }).catch(() => {});
           }
         }
       }
 
-      return jsonResponse({ entries }, 200, { "Cache-Control": "public, max-age=10, s-maxage=30" });
-    }
+      // Populate compiled cache for 30 seconds (fire-and-forget)
+      redis.set(compiledCacheKey, JSON.stringify(entries), { ex: 30 }).catch(() => {});
 
-    // 4. Cache Hit: Fetch profile details (names, avatars) for Redis users from Postgres using efficient PK lookup
+      return jsonResponse(
+        { entries },
+        200,
+        { "Cache-Control": "public, max-age=15, s-maxage=30", "X-Cache": "MISS" }
+      );
+    } catch (dbErr) {
+      console.error("Leaderboard Postgres fallback failed:", dbErr);
+      return errorResponse("Failed to load leaderboard", 500);
+    }
+  }
+
+  // 5. Cache Hit on Sorted Set: Fetch profile details (names, avatars) for Redis users
+  try {
     const userIds = parsedEntries.map((e) => e.userId);
     const { data: users, error: dbError } = await supabase
       .from("users")
       .select("id, display_name, profile_photo_url")
       .in("id", userIds);
 
-    if (dbError) {
-      console.error("DB profiles lookup error:", dbError);
-      return errorResponse(dbError.message, 500);
-    }
+    if (dbError) throw dbError;
 
-    const userMap = new Map();
+    const userMap = new Map<string, any>();
     if (users) {
       for (const u of users) {
         userMap.set(u.id, u);
       }
     }
 
-    const entries = parsedEntries.map((pe, idx) => {
+    const entries: LeaderboardEntry[] = parsedEntries.map((pe, idx) => {
       const u = userMap.get(pe.userId);
       return {
         rank: idx + 1,
@@ -158,9 +193,16 @@ Deno.serve(async (req) => {
       };
     });
 
-    return jsonResponse({ entries }, 200, { "Cache-Control": "public, max-age=10, s-maxage=30" });
+    // Populate compiled cache for 30s so subsequent requests don't hit Postgres
+    redis.set(compiledCacheKey, JSON.stringify(entries), { ex: 30 }).catch(() => {});
+
+    return jsonResponse(
+      { entries },
+      200,
+      { "Cache-Control": "public, max-age=15, s-maxage=30", "X-Cache": "MISS" }
+    );
   } catch (e) {
-    console.error("Get leaderboard error:", e);
+    console.error("Leaderboard profile lookup error:", e);
     return errorResponse("Failed to load leaderboard", 500);
   }
 });

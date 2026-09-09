@@ -78,19 +78,14 @@ Deno.serve(async (req: Request) => {
       return errorResponse(rpcError.message, 500);
     }
 
-    // Fetch updated total_earned to sync with weekly leaderboard
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("total_earned")
-      .eq("id", uid)
-      .single();
-
+    // Sync weekly leaderboard and invalidate user profile cache (non-blocking)
     if (userRow) {
-      await redis.zadd("leaderboard:weekly", { score: userRow.total_earned, member: uid });
+      redis.zadd("leaderboard:weekly", { score: userRow.total_earned, member: uid }).catch(() => {});
+      redis.del("leaderboard:compiled:weekly:50").catch(() => {});
     }
 
     // Invalidate the user profile cache so the next fetch gets the fresh balance
-    redis.del(`user:profile:${uid}`).catch(console.error);
+    redis.del(`user:profile:${uid}`).catch(() => {});
 
     return jsonResponse({ success: true, balance: newBalance });
   } catch (e) {

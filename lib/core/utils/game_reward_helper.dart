@@ -23,6 +23,7 @@ Future<void> showGameRewardChoice({
   Gradient? premiumGradient,
   Color? quickTextColor,
   Color? quickBorderColor,
+  bool enableQuickAd = true,
 }) async {
   final container = ProviderScope.containerOf(context);
   final adNotifier = container.read(adProvider.notifier);
@@ -47,7 +48,7 @@ Future<void> showGameRewardChoice({
       quickTextColor: quickTextColor,
       quickBorderColor: quickBorderColor,
       onQuickClaim: () async {
-        if (playCount % 3 == 0) {
+        if (enableQuickAd && playCount % 3 == 0) {
           await adNotifier.showRewardedInterstitial(
             quickPlacement,
             onReward: (_) async {

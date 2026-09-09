@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help & Player Guide — RBX Rewards</title>
+  <meta name="description" content="Official game guide, earning tutorials, level formulas, and FAQ for the RBX Rewards mobile app.">
+  <link rel="icon" type="image/png" href="assets/app_icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="bg-glow-orb bg-glow-orb-1"></div>
+  <div class="bg-glow-orb bg-glow-orb-2"></div>
+  <div class="reading-progress-container"><div class="reading-progress-bar"></div></div>
+
+  <!-- Disclaimer Strip -->
+  <aside class="disclaimer-strip">
+    <span>⚠️ <strong>Disclaimer:</strong> RBX Rewards is independent and NOT affiliated with or endorsed by Roblox Corporation.</span>
+    <a href="disclaimer.html">Details</a>
+  </aside>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-wrapper">
+        <img src="assets/app_icon.png" alt="RBX Rewards Icon" class="brand-icon">
+        <div class="brand-text">
+          <span class="brand-title">RBX Rewards <span class="brand-badge">Player Guide</span></span>
+          <span class="brand-sub">Official Knowledgebase</span>
+        </div>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Main Navigation">
+        <a href="index.html" class="nav-link">Hub</a>
+        <a href="privacy.html" class="nav-link">Privacy Policy</a>
+        <a href="terms.html" class="nav-link">Terms of Use</a>
+        <a href="rewards-policy.html" class="nav-link">Rewards Policy</a>
+        <a href="help.html" class="nav-link active">Help & FAQ</a>
+        <a href="contact.html" class="nav-link">Contact</a>
+      </nav>
+
+      <div class="header-actions">
+        <button type="button" class="theme-toggle-btn" aria-label="Toggle Dark/Light Mode">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+        <button type="button" class="mobile-toggle-btn" aria-label="Open Mobile Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer -->
+  <div class="mobile-drawer-overlay"></div>
+  <aside class="mobile-drawer">
+    <div class="mobile-drawer-header">
+      <span class="brand-title">RBX Rewards</span>
+      <button type="button" class="mobile-drawer-close" style="background:none;border:none;color:var(--text-main);font-size:1.5rem;cursor:pointer;">✕</button>
+    </div>
+    <div class="mobile-drawer-links">
+      <a href="index.html" class="nav-link">Legal Hub Home</a>
+      <a href="privacy.html" class="nav-link">Privacy Policy</a>
+      <a href="terms.html" class="nav-link">Terms of Use</a>
+      <a href="rewards-policy.html" class="nav-link">Rewards Policy</a>
+      <a href="disclaimer.html" class="nav-link">Roblox Disclaimer</a>
+      <a href="data-deletion.html" class="nav-link">Data Deletion Request</a>
+      <a href="help.html" class="nav-link active">Help & FAQ</a>
+      <a href="contact.html" class="nav-link">Contact Support</a>
+    </div>
+  </aside>
+
+  <!-- Main Document Container -->
+  <main class="site-main">
+    <div class="doc-layout">
+      
+      <!-- Table of Contents Sidebar -->
+      <aside class="doc-sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Guide Sections
+          </div>
+          <ul class="toc-list">
+            <li><a href="#how-to-earn" class="toc-link">1. Core Earning Pillars</a></li>
+            <li><a href="#five-games" class="toc-link">2. The 5 Mini-Games</a></li>
+            <li><a href="#spin-wheel" class="toc-link">3. Lucky Spin Wheel</a></li>
+            <li><a href="#daily-streaks" class="toc-link">4. Streaks & Mega Chest</a></li>
+            <li><a href="#level-formula" class="toc-link">5. Levels & 5,000 XP Formula</a></li>
+            <li><a href="#redeeming-cards" class="toc-link">6. Redeeming Gift Cards</a></li>
+            <li><a href="#faq" class="toc-link">7. Frequently Asked Questions</a></li>
+          </ul>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="sidebar-title">Need Help?</div>
+          <div class="sidebar-actions">
+            <a href="contact.html" class="btn-sidebar btn-sidebar-primary">
+              Contact Support Desk
+            </a>
+            <a href="rewards-policy.html" class="btn-sidebar btn-sidebar-outline">
+              Rewards Payout Rules
+            </a>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Article Content -->
+      <article class="doc-article">
+        <header class="doc-header">
+          <nav class="doc-breadcrumbs">
+            <a href="index.html">Legal Hub</a>
+            <span>/</span>
+            <span>Help & FAQ</span>
+          </nav>
+          <h1 class="doc-title">Player Knowledgebase & Tutorial</h1>
+          <div class="doc-meta">
+            <div class="doc-meta-item">
+              <span>App Status:</span>
+              <strong>Live in Production</strong>
+            </div>
+            <div class="doc-meta-item">
+              <span>Fulfillment Window:</span>
+              <strong>Within 48 Hours</strong>
+            </div>
+            <div class="doc-meta-item">
+              <span>Support Desk:</span>
+              <strong>support@rbxrewards.app</strong>
+            </div>
+          </div>
+        </header>
+
+        <div class="article-content">
+          <div class="callout callout-info">
+            <div class="callout-icon">🎮</div>
+            <div class="callout-body">
+              <strong>Complete In-App Mechanics Guide</strong>
+              This guide covers the exact gameplay modes, streak formulas, wheel spin segments, and 5,000 XP level steps present in the <strong>RBX Rewards</strong> Flutter app.
+            </div>
+          </div>
+
+          <!-- Section 1 -->
+          <h2 id="how-to-earn">1. Core Earning Pillars</h2>
+          <p>
+            As shown directly in your Profile Screen's Help & Support section, there are four primary avenues to earn virtual RBX Coins:
+          </p>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.25rem; margin:1.5rem 0;">
+            <div style="background:var(--bg-surface-elevated); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+              <div style="font-size:1.5rem; margin-bottom:0.5rem;">🕹️ 1. Mini-Games</div>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin:0;">5 arcade games (Tap Tap, Math Quiz, Flappy Jump, Flip Cards, Scratch Card) with independent daily coin caps.</p>
+            </div>
+            <div style="background:var(--bg-surface-elevated); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+              <div style="font-size:1.5rem; margin-bottom:0.5rem;">📝 2. Offers & Surveys</div>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin:0;">Integrated offerwalls powered by Tapjoy (v14.4) and PubScale (v1.0) awarding up to 1,000 coins daily.</p>
+            </div>
+            <div style="background:var(--bg-surface-elevated); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+              <div style="font-size:1.5rem; margin-bottom:0.5rem;">🔥 3. Daily Streaks & Chests</div>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin:0;">Consecutive 24h logins (100 coins on Day 7!) and 1,000 bonus coins inside the Mega Mystery Chest.</p>
+            </div>
+            <div style="background:var(--bg-surface-elevated); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+              <div style="font-size:1.5rem; margin-bottom:0.5rem;">🎡 4. Spin the Wheel</div>
+              <p style="font-size:0.88rem; color:var(--text-muted); margin:0;">Daily lucky wheel offering 5 to 20 coins and a 25 RBX JACKPOT segment.</p>
+            </div>
+          </div>
+
+          <!-- Section 2 -->
+          <h2 id="five-games">2. The 5 Arcade Mini-Games</h2>
+          <p>
+            All five games are built natively in Flutter and monitored by our DailyCapService:
+          </p>
+
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Game Name</th>
+                  <th>Core Gameplay</th>
+                  <th>Daily Cap</th>
+                  <th>Scoring & Rewards</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Tap Tap</strong></td>
+                  <td>Fast reaction clicking on animated targets before the timer expires.</td>
+                  <td><strong data-cap="tapTap">150 RBX</strong></td>
+                  <td>Points awarded per successful hit without missing.</td>
+                </tr>
+                <tr>
+                  <td><strong>Math Quiz</strong></td>
+                  <td>10 fast arithmetic equations with 4 multiple choice answers.</td>
+                  <td><strong data-cap="mathQuiz">120 RBX</strong></td>
+                  <td>Multiplied points for perfect 10/10 streaks.</td>
+                </tr>
+                <tr>
+                  <td><strong>Flappy Jump</strong></td>
+                  <td>Flame engine obstacle physics game navigating gates.</td>
+                  <td><strong data-cap="flappyJump">150 RBX</strong></td>
+                  <td>1 coin per obstacle gate cleared safely.</td>
+                </tr>
+                <tr>
+                  <td><strong>Flip Cards</strong></td>
+                  <td>Visual memory matching puzzle pairing cards under pressure.</td>
+                  <td><strong data-cap="flipCards">60 RBX</strong></td>
+                  <td>Combo multipliers for rapid successive matches.</td>
+                </tr>
+                <tr>
+                  <td><strong>Scratch Card</strong></td>
+                  <td>Tactile scratching surface revealing hidden coin multipliers.</td>
+                  <td><strong data-cap="scratchCard">100 RBX</strong></td>
+                  <td>Instant randomized payouts up to the daily cap.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Section 3 -->
+          <h2 id="spin-wheel">3. Lucky Spin Wheel Breakdown</h2>
+          <p>
+            Located in the Spin tab (<code>spin_screen.dart</code>), the lucky wheel contains 6 precision-balanced segments:
+          </p>
+          <ul>
+            <li><strong>5 RBX</strong> (Purple Segment)</li>
+            <li><strong>8 RBX</strong> (Deep Violet Segment)</li>
+            <li><strong>10 RBX</strong> (Bright Violet Segment)</li>
+            <li><strong>15 RBX</strong> (Indigo Segment)</li>
+            <li><strong>20 RBX</strong> (Royal Purple Segment)</li>
+            <li><strong>JACKPOT: 25 RBX!</strong> (Golden Segment)</li>
+          </ul>
+          <p>
+            Every user gets <strong>3 free spins daily</strong>, plus additional spins by watching rewarded ads (up to the 150 coin daily feature limit).
+          </p>
+
+          <!-- Section 4 -->
+          <h2 id="daily-streaks">4. Daily Check-in Streaks & The Mega Chest</h2>
+          <p>
+            Our daily streak system incentivizes consistent play:
+          </p>
+          <ul>
+            <li><strong>Day 1:</strong> 15 Coins</li>
+            <li><strong>Day 2:</strong> 20 Coins</li>
+            <li><strong>Day 3:</strong> 25 Coins</li>
+            <li><strong>Day 4:</strong> 30 Coins</li>
+            <li><strong>Day 5:</strong> 35 Coins</li>
+            <li><strong>Day 6:</strong> 40 Coins</li>
+            <li><strong>Day 7 Milestone:</strong> <strong>100 Coins!</strong></li>
+            <li><strong>The Mega Mystery Chest:</strong> Complete daily gameplay goals to unlock the Mega Chest and claim an instant <strong>1,000 Coin reward</strong>!</li>
+          </ul>
+
+          <!-- Section 5 -->
+          <h2 id="level-formula">5. Level & 5,000 XP Progression Formula</h2>
+          <p>
+            In [`lib/presentation/screens/profile_screen.dart`](file:///d:/rbx_rewards_app/lib/presentation/screens/profile_screen.dart), your level is dynamically calculated as:
+          </p>
+          <div style="background:var(--bg-surface-elevated); padding:1rem 1.5rem; border-radius:var(--radius-md); font-family:var(--font-mono); font-size:0.95rem; margin:1rem 0; border:1px solid var(--border-active);">
+            Level = Math.floor(totalEarned / 5000) + 1;
+          </div>
+          <p>
+            Every <strong>5,000 total earned coins</strong> automatically advances your profile to the next level (e.g. Level 1 at 0 XP, Level 2 at 5,000 XP, Level 3 at 10,000 XP). Your XP progress bar visually tracks how many coins remain until your next level milestone.
+          </p>
+
+          <!-- Section 6 -->
+          <h2 id="redeeming-cards">6. Redeeming Gift Cards ($3, $5, $10)</h2>
+          <p>
+            Once you accumulate adequate coins, you can redeem official digital Roblox gift card PINs directly from the Rewards tab:
+          </p>
+          <ul>
+            <li><strong>$3 Roblox Gift Card:</strong> 20,000 Coins (~240 Robux)</li>
+            <li><strong>$5 Roblox Gift Card:</strong> 40,000 Coins (~400 Robux)</li>
+            <li><strong>$10 Roblox Gift Card:</strong> 70,000 Coins (~800 Robux)</li>
+          </ul>
+          <p>
+            After confirming, our automated backend logs your claim and dispatches your digital PIN code <strong>within 48 hours</strong>!
+          </p>
+
+          <!-- Section 7: FAQ -->
+          <h2 id="faq">7. Frequently Asked Questions (FAQ)</h2>
+          <div class="faq-list">
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                <span>How are my coins and stats saved?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Your stats are saved locally on your device via SharedPreferences & Hive, and synced seamlessly with our Supabase Postgres database. Whenever you connect to the internet, edge functions synchronize your balance and streak state.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                <span>What is the difference between Quick and Premium rewards?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                The <strong>Quick Option</strong> shows a fast Rewarded Interstitial ad (~5 seconds) and grants standard base coins. The <strong>Premium Option</strong> shows a full Rewarded Video ad and awards <strong>2x Double Coins</strong> for your achievement!
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                <span>Why did my streak reset back to Day 1?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Daily rewards follow a strict 24-hour cycle. If more than 48 hours elapse without claiming your daily reward, the streak multiplier resets back to Day 1 to ensure active, regular participation.
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                <span>How do I redeem my PIN on Roblox?</span>
+                <span class="faq-icon">▼</span>
+              </button>
+              <div class="faq-answer">
+                Visit <a href="https://www.roblox.com/redeem" target="_blank" rel="noopener">roblox.com/redeem</a>, log into your personal Roblox account, and enter the unique PIN code dispatched to your email or in-app history. The Robux will appear on your account immediately.
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-surface-elevated); padding:1.25rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle); margin-top:2rem;">
+            <p style="margin:0 0 0.5rem 0;"><strong>Need Additional Assistance?</strong></p>
+            <p style="margin:0;">Email player support anytime at <a href="mailto:support@rbxrewards.app">support@rbxrewards.app</a> (SLA: 24–48 hours).</p>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <img src="assets/app_icon.png" alt="RBX Rewards" style="width:36px; height:36px; border-radius:8px;">
+          <span style="font-family:var(--font-heading); font-weight:800; font-size:1.15rem;">RBX Rewards</span>
+        </div>
+        <p class="footer-desc">Independent promotional gaming app offering arcade games, daily streaks, and loyalty reward opportunities.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Legal Documents</h4>
+        <ul class="footer-links">
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Use</a></li>
+          <li><a href="rewards-policy.html">Rewards Policy</a></li>
+          <li><a href="disclaimer.html">Roblox Trademark Notice</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Tools</h4>
+        <ul class="footer-links">
+          <li><a href="data-deletion.html">Data Deletion Form</a></li>
+          <li><a href="help.html">Help & FAQ</a></li>
+          <li><a href="contact.html">Contact Us</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Disclaimer</h4>
+        <p style="font-size:0.78rem; color:var(--text-subtle); line-height:1.5;">Not affiliated with, sponsored, or endorsed by Roblox Corporation. Roblox and Robux are registered trademarks of Roblox Corporation.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 RBX Rewards. All rights reserved.</span>
+      <span>Player Knowledgebase v1.4.0</span>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/dynamic-loader.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

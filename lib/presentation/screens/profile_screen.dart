@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_profile.dart';
@@ -8,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
+import '../../core/constants/policy_constants.dart';
 
 // Predefined avatar options
 const List<String> _kAvatarOptions = [
@@ -116,25 +118,28 @@ class ProfileScreen extends ConsumerWidget {
                                           child: Padding(
                                             padding: const EdgeInsets.all(4),
                                             child: ClipOval(
-                                              child: userProfile.profilePhotoUrl !=
-                                                      null
-                                                  ? Image.network(
-                                                      userProfile.profilePhotoUrl!,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder:
-                                                          (_, __, ___) =>
-                                                              Container(
-                                                        color: const Color(
-                                                            0xFFEEEEEF),
-                                                        child: const Icon(
-                                                          Icons.person,
-                                                          size: 40,
-                                                          color:
-                                                              AppColors.purple,
-                                                        ),
+                                              child: (userProfile.profilePhotoUrl !=
+                                                        null &&
+                                                    userProfile
+                                                        .profilePhotoUrl!
+                                                        .isNotEmpty)
+                                                ? CachedNetworkImage(
+                                                    imageUrl: userProfile
+                                                        .profilePhotoUrl!,
+                                                    fit: BoxFit.cover,
+                                                    placeholder: (_, __) =>
+                                                        Container(
+                                                      color: const Color(
+                                                          0xFFEEEEEF),
+                                                      child: const Icon(
+                                                        Icons.person,
+                                                        size: 40,
+                                                        color: AppColors.purple,
                                                       ),
-                                                    )
-                                                  : Image.network(
+                                                    ),
+                                                    errorWidget:
+                                                        (_, __, ___) =>
+                                                            Image.asset(
                                                       AppAssets.profileAvatar,
                                                       fit: BoxFit.cover,
                                                       errorBuilder:
@@ -150,6 +155,22 @@ class ProfileScreen extends ConsumerWidget {
                                                         ),
                                                       ),
                                                     ),
+                                                  )
+                                                : Image.asset(
+                                                    AppAssets.profileAvatar,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (_, __, ___) =>
+                                                            Container(
+                                                      color: const Color(
+                                                          0xFFEEEEEF),
+                                                      child: const Icon(
+                                                        Icons.person,
+                                                        size: 40,
+                                                        color: AppColors.purple,
+                                                      ),
+                                                    ),
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -210,11 +231,16 @@ class ProfileScreen extends ConsumerWidget {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Image.network(
-                                              AppAssets.levelBadge,
+                                            CachedNetworkImage(
+                                              imageUrl: AppAssets.levelBadge,
                                               width: 21,
                                               height: 21,
-                                              errorBuilder: (_, __, ___) =>
+                                              placeholder: (_, __) =>
+                                                  const SizedBox(
+                                                width: 21,
+                                                height: 21,
+                                              ),
+                                              errorWidget: (_, __, ___) =>
                                                   const Icon(
                                                       Icons.military_tech,
                                                       size: 21,
@@ -557,10 +583,12 @@ class _SettingsLink extends StatelessWidget {
                 SizedBox(
                   width: 36,
                   height: 24,
-                  child: Image.network(
-                    iconUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: iconUrl,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.info_outline,
+                    placeholder: (_, __) =>
+                        const SizedBox(width: 24, height: 24),
+                    errorWidget: (_, __, ___) => const Icon(Icons.info_outline,
                         size: 22, color: AppColors.purple),
                   ),
                 ),
@@ -886,10 +914,25 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog>
                               : [],
                         ),
                         child: ClipOval(
-                          child: Image.network(
-                            url,
+                          child: CachedNetworkImage(
+                            imageUrl: url,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            placeholder: (_, __) => Container(
+                              color: const Color(0xFFF1EDFF),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF6035EE),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => Container(
                               color: const Color(0xFFF1EDFF),
                               child: const Icon(
                                 Icons.person,
@@ -986,20 +1029,62 @@ class _EditProfileDialogState extends ConsumerState<_EditProfileDialog>
 void _showHelpDialog(BuildContext context) {
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Help & Support'),
-      content: const Text(
-        'How to earn RBX:\n\n'
-        '1. Play mini-games to earn coins\n'
-        '2. Complete offers and surveys\n'
-        '3. Claim your daily reward every 24h\n'
-        '4. Spin the wheel for bonus coins\n'
-        ''
-        'Reach higher levels by earning more coins!',
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.help_outline_rounded, color: AppColors.purple, size: 24),
+          SizedBox(width: 10),
+          Text(
+            'Help & Support',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+      content: const SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'How to Earn RBX Coins:',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+            SizedBox(height: 8),
+            Text('1. Play mini-games (Flappy Jump, Tap Tap, Math Quiz, Flip Cards)'),
+            SizedBox(height: 4),
+            Text('2. Complete partner offers and surveys via Tapjoy & PubScale'),
+            SizedBox(height: 4),
+            Text('3. Claim daily streak rewards every 24h & open Mega Chests'),
+            SizedBox(height: 4),
+            Text('4. Spin the Lucky Wheel daily for instant multipliers'),
+            SizedBox(height: 12),
+            Text(
+              'XP & Levels: Earn 5,000 coins to advance to the next level!',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.purple,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(ctx);
+            PolicyConstants.openUrl(PolicyConstants.helpSupportUrl);
+          },
+          child: const Text('Open Help Guide', style: TextStyle(color: AppColors.purple, fontWeight: FontWeight.w600)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(ctx),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.purple,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
           child: const Text('Got it'),
         ),
       ],
@@ -1010,20 +1095,49 @@ void _showHelpDialog(BuildContext context) {
 void _showPrivacyDialog(BuildContext context) {
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Privacy Policy'),
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.privacy_tip_outlined, color: AppColors.purple, size: 24),
+          SizedBox(width: 10),
+          Text(
+            'Privacy Policy',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
       content: const SingleChildScrollView(
-        child: Text(
-          'We value your privacy. This app does not collect personal information or require user registration. '
-          'All data is stored locally on your device using SharedPreferences. '
-          'We do not share your data with third parties. '
-          'Coin balances and game progress are kept on-device only.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Your privacy is our priority. In compliance with Google Play and Apple App Store privacy standards:',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            SizedBox(height: 10),
+            Text('• Data Storage: Game stats, streaks, and balances are stored locally and securely synced via Supabase.'),
+            SizedBox(height: 6),
+            Text('• Ad Partners: We integrate Google AdMob, Tapjoy, and PubScale to deliver compliant ads and offerwall rewards.'),
+            SizedBox(height: 6),
+            Text('• Transparency: We respect Apple ATT tracking choices and never sell personal data.'),
+            SizedBox(height: 6),
+            Text('• Child Safety (COPPA): Designed for ages 13+. We never solicit personal data from children under 13.'),
+          ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          onPressed: () {
+            Navigator.pop(ctx);
+            PolicyConstants.openUrl(PolicyConstants.privacyPolicyUrl);
+          },
+          child: const Text('View Full Policy Online', style: TextStyle(color: AppColors.purple, fontWeight: FontWeight.w600)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Close', style: TextStyle(color: Color(0xFF64748B))),
         ),
       ],
     ),
@@ -1033,22 +1147,49 @@ void _showPrivacyDialog(BuildContext context) {
 void _showTermsDialog(BuildContext context) {
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Terms of Use'),
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.gavel_rounded, color: AppColors.purple, size: 24),
+          SizedBox(width: 10),
+          Text(
+            'Terms of Use',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
       content: const SingleChildScrollView(
-        child: Text(
-          'By using this app, you agree to:\n\n'
-          '1. Use the app for entertainment purposes only\n'
-          '2. Not exploit or manipulate reward systems\n'
-          '3. Accept that rewards are virtual and non-transferable\n'
-          '4. Understand that all stats are stored locally on your device\n\n'
-          'We reserve the right to update these terms at any time.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'By playing RBX Rewards, you agree to the following terms:',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+            SizedBox(height: 10),
+            Text('1. Promotional Nature: RBX Coins are promotional virtual points with no cash value.'),
+            SizedBox(height: 6),
+            Text('2. Fair Play: Automation, auto-clickers, emulators, and multiple accounts are strictly prohibited and result in permanent bans.'),
+            SizedBox(height: 6),
+            Text('3. Digital Rewards: Claimed gift cards are fulfilled subject to verification (24–72h) and inventory availability.'),
+            SizedBox(height: 6),
+            Text('4. Non-Affiliation: RBX Rewards is independent and NOT affiliated with or endorsed by Roblox Corporation.'),
+          ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          onPressed: () {
+            Navigator.pop(ctx);
+            PolicyConstants.openUrl(PolicyConstants.termsOfUseUrl);
+          },
+          child: const Text('View Full Terms Online', style: TextStyle(color: AppColors.purple, fontWeight: FontWeight.w600)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Close', style: TextStyle(color: Color(0xFF64748B))),
         ),
       ],
     ),
@@ -1058,17 +1199,62 @@ void _showTermsDialog(BuildContext context) {
 void _showContactDialog(BuildContext context) {
   showDialog(
     context: context,
-    builder: (_) => AlertDialog(
-      title: const Text('Contact Support'),
-      content: const Text(
-        'Need help? Reach out to us at:\n\n'
-        'support@rbxrewards.app\n\n'
-        'We typically respond within 24-48 hours.',
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.mail_outline_rounded, color: AppColors.purple, size: 24),
+          SizedBox(width: 10),
+          Text(
+            'Contact Support',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+      content: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Have questions about your rewards, a bug report, or need account assistance?',
+            style: TextStyle(fontSize: 13, height: 1.4),
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.email, size: 16, color: AppColors.purple),
+              SizedBox(width: 8),
+              SelectableText(
+                'support@rbxrewards.app',
+                style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Expected Response Time: 24 to 48 business hours.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+        ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          onPressed: () {
+            Navigator.pop(ctx);
+            PolicyConstants.sendSupportEmail();
+          },
+          child: const Text('Email Support', style: TextStyle(color: AppColors.purple, fontWeight: FontWeight.w700)),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            PolicyConstants.openUrl(PolicyConstants.contactSupportUrl);
+          },
+          child: const Text('Support Portal', style: TextStyle(color: AppColors.purple)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Close', style: TextStyle(color: Color(0xFF64748B))),
         ),
       ],
     ),

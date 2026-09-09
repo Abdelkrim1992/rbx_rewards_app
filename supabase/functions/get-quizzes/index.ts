@@ -16,11 +16,14 @@ Deno.serve(async (req) => {
   }
 
   const cacheKey = `quizzes:categories`;
-  const cached = await redis.get(cacheKey);
-
-  if (cached) {
-    const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
-    return jsonResponse(parsed, 200, { "Cache-Control": "public, max-age=10, s-maxage=30", "X-Cache": "HIT" });
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsed = typeof cached === "string" ? JSON.parse(cached) : cached;
+      return jsonResponse(parsed, 200, { "Cache-Control": "public, max-age=60, s-maxage=3600", "X-Cache": "HIT" });
+    }
+  } catch (redisErr) {
+    console.warn("get-quizzes Redis read failed, serving fresh:", redisErr);
   }
 
   // Fallback to mock data if not in cache (could be fetched from Postgres later)
@@ -94,8 +97,10 @@ Deno.serve(async (req) => {
     }
   ];
 
-  // Cache indefinitely or for a long time (1 hour here)
-  await redis.setex(cacheKey, 3600, JSON.stringify(categories));
+  // Cache for 1 hour (3600s) — fire-and-forget
+  redis.set(cacheKey, JSON.stringify(categories), { ex: 3600 }).catch((e) =>
+    console.warn("get-quizzes Redis write failed:", e)
+  );
 
   return jsonResponse(categories, 200, { "Cache-Control": "public, max-age=60, s-maxage=3600", "X-Cache": "MISS" });
 });

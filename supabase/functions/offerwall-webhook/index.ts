@@ -206,12 +206,16 @@ Deno.serve(async (req) => {
     return errorResponse("Invalid amount", 400);
   }
 
-  // 5. Deduplication Check (Redis first, then Postgres fallback)
+  // 5. Deduplication Check (Fast Redis check, Postgres transactions table is the ACID authority)
   const txId = `${provider}_${eventId}`;
   const dedupKey = `dedup:webhook:${txId}`;
-  const isNew = await redis.set(dedupKey, "1", { nx: true, ex: 86400 });
-  if (!isNew) {
-    return jsonResponse({ success: true, credited: 0, reason: "already_processed" });
+  try {
+    const isNew = await redis.set(dedupKey, "1", { nx: true, ex: 86400 });
+    if (isNew === null || isNew === 0 || isNew === false) {
+      return jsonResponse({ success: true, credited: 0, reason: "already_processed" });
+    }
+  } catch (redisErr) {
+    console.warn("Redis dedup check failed, relying on Postgres transactions table:", redisErr);
   }
 
   const { data: existingTx } = await supabase

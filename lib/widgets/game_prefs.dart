@@ -101,4 +101,51 @@ class GamePrefs {
     final current = await getGamePlayCount(gameName);
     await prefs.setInt('$_keyGamePlayCountPrefix$gameName', current + 1);
   }
+
+  // --- Daily Extra Spins Limit (Ad-funded spins) ---
+  static const String _keyExtraSpinsDate = 'extra_spins_date';
+  static const String _keyExtraSpinsRemaining = 'extra_spins_remaining';
+  static const int maxExtraSpinsPerDay = 8;
+
+  static Future<int> getExtraSpinsRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastDateStr = prefs.getString(_keyExtraSpinsDate);
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD
+
+    if (lastDateStr != todayStr) {
+      // New day, reset the count
+      await prefs.setString(_keyExtraSpinsDate, todayStr);
+      await prefs.setInt(_keyExtraSpinsRemaining, maxExtraSpinsPerDay);
+      return maxExtraSpinsPerDay;
+    }
+
+    return prefs.getInt(_keyExtraSpinsRemaining) ?? maxExtraSpinsPerDay;
+  }
+
+  static Future<void> decrementExtraSpinsRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remaining = await getExtraSpinsRemaining();
+    if (remaining > 0) {
+      await prefs.setInt(_keyExtraSpinsRemaining, remaining - 1);
+    }
+  }
+
+  // --- Game High / Best Scores ---
+  static const String _keyBestScorePrefix = 'best_score_';
+
+  static Future<int> getBestScore(String gameKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_keyBestScorePrefix$gameKey') ?? 0;
+  }
+
+  static Future<void> saveBestScore(String gameKey, int score) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getInt('$_keyBestScorePrefix$gameKey') ?? 0;
+    if (score > current) {
+      await prefs.setInt('$_keyBestScorePrefix$gameKey', score);
+    }
+  }
+
+  static Future<int> getFlappyBestScore() => getBestScore('flappy_jump');
+  static Future<void> saveFlappyBestScore(int score) => saveBestScore('flappy_jump', score);
 }

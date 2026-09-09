@@ -19,8 +19,13 @@ final onboardingCompletedProvider =
 });
 
 class OnboardingNotifier extends StateNotifier<bool> {
-  OnboardingNotifier() : super(false) {
-    _load();
+  final SharedPreferences? _prefs;
+
+  OnboardingNotifier([this._prefs])
+      : super(_prefs?.getBool('onboarding_completed') ?? false) {
+    if (_prefs == null) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
@@ -29,7 +34,7 @@ class OnboardingNotifier extends StateNotifier<bool> {
   }
 
   Future<void> setCompleted(bool completed) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_completed', completed);
     state = completed;
   }

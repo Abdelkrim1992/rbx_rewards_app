@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RBX Rewards — Admin & Security Command Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/admin.css">
+</head>
+<body class="admin-body">
+  <!-- Top Navigation Bar -->
+  <header class="admin-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <span class="logo-badge">RBX</span>
+        <span class="logo-title">Security & Ops Center</span>
+      </div>
+      <span class="env-pill" id="envBadge">Production Live</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-secondary btn-sm" id="adminThemeToggleBtn" title="Toggle Light/Dark Theme" style="display:inline-flex; align-items:center; gap:0.4rem;" data-testid="admin-theme-toggle">
+        <span id="adminThemeIcon">☀️</span>
+        <span id="adminThemeText">Light</span>
+      </button>
+      <div class="admin-user-info" id="adminUserDisplay">
+        <span class="admin-avatar">🛡️</span>
+        <span class="admin-email" id="headerAdminEmail">admin@rbxrewards.com</span>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="logoutBtn" data-testid="logout-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        Sign Out
+      </button>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="overview" data-testid="nav-overview">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Overview & Metrics</span>
+        </button>
+        <button class="nav-item" data-tab="anti-fraud" data-testid="nav-anti-fraud">
+          <span class="nav-icon">🛡️</span>
+          <span class="nav-label">Anti-Fraud & Defense</span>
+          <span class="badge badge-danger" id="fraudAlertCount">2</span>
+        </button>
+        <button class="nav-item" data-tab="redemptions" data-testid="nav-redemptions">
+          <span class="nav-icon">🎁</span>
+          <span class="nav-label">Redemptions Queue</span>
+          <span class="badge badge-warning" id="pendingRedeemCount">2</span>
+        </button>
+        <button class="nav-item" data-tab="economy" data-testid="nav-economy">
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-label">Economy & Daily Caps</span>
+        </button>
+        <button class="nav-item" data-tab="performance" data-testid="nav-performance">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Redis & Performance</span>
+        </button>
+        <button class="nav-item" data-tab="compliance" data-testid="nav-compliance">
+          <span class="nav-icon">⚖️</span>
+          <span class="nav-label">Compliance & Deletion</span>
+        </button>
+        <button class="nav-item" data-tab="audit" data-testid="nav-audit">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">Immutable Audit Trail</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="health-indicator">
+          <span class="status-dot online"></span>
+          <span>Edge Telemetry: Healthy</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Tabs -->
+    <main class="admin-main">
+      <!-- Toast Container -->
+      <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+      <!-- TAB 1: OVERVIEW -->
+      <section id="tab-overview" class="tab-pane active" data-testid="tab-overview-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Executive Operations Overview</h1>
+            <p class="page-subtitle">Real-time status of fraud defense, gift card SLA fulfillment, and server telemetry.</p>
+          </div>
+          <button class="btn btn-primary" id="refreshOverviewBtn" data-testid="refresh-overview-btn">Refresh Metrics</button>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Pending Redemptions</span>
+              <span class="metric-badge warning">48h SLA Active</span>
+            </div>
+            <div class="metric-value" id="metricPendingRedemptions" data-testid="metric-pending-count">2</div>
+            <div class="metric-footer">Target SLA: Under 48 hours</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Fraud & Bot Flags</span>
+              <span class="metric-badge danger">Action Required</span>
+            </div>
+            <div class="metric-value" id="metricFraudAlerts" data-testid="metric-fraud-count">2</div>
+            <div class="metric-footer">Emulators & Speed Anomalies</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Redis Cache Latency</span>
+              <span class="metric-badge success">Upstash Edge</span>
+            </div>
+            <div class="metric-value" id="metricRedisLatency" data-testid="metric-redis-latency">14 ms</div>
+            <div class="metric-footer">Leaderboard TTL: 60s</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Google Play 7-Day Queue</span>
+              <span class="metric-badge info">GDPR / Store Rule</span>
+            </div>
+            <div class="metric-value" id="metricDeletionCount" data-testid="metric-deletion-count">1</div>
+            <div class="metric-footer">Pending irreversible purge</div>
+          </div>
+        </div>
+
+        <div class="dashboard-split">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Recent Urgent Redemptions</h2>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Card Denomination</th>
+                      <th>Coins</th>
+                      <th>48h SLA Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="overviewRedemptionsTable">
+                    <!-- Populated via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Live Fraud Anomaly Alerts</h2>
+            </div>
+            <div class="card-body">
+              <div id="overviewAlertsList" class="alert-feed">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: ANTI-FRAUD & BOT DEFENSE -->
+      <section id="tab-anti-fraud" class="tab-pane" data-testid="tab-anti-fraud-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Bot & Automation Defense</h1>
+            <p class="page-subtitle">Emulator signatures, mini-game score velocity anomalies, and 1-click ban management.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header flex-between">
+            <h2 class="card-title">Flagged Accounts & Emulators</h2>
+            <span class="text-muted">Instant balance freeze & session revocation</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" data-testid="flagged-users-table">
+                <thead>
+                  <tr>
+                    <th>User Display Name</th>
+                    <th>Email</th>
+                    <th>Device Signature / Emulator</th>
+                    <th>Balance</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="flaggedUsersTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">Multi-Account Device Clusters</h2>
+          </div>
+          <div class="card-body">
+            <div id="clustersContainer" class="clusters-grid">
+              <!-- Injected via JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: REDEMPTIONS QUEUE -->
+      <section id="tab-redemptions" class="tab-pane" data-testid="tab-redemptions-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Roblox Gift Card Fulfillment Queue</h1>
+            <p class="page-subtitle">Manage $3, $5, and $10 gift card requests within the mandatory 48-hour SLA.</p>
+          </div>
+          <div class="filter-group">
+            <button class="btn btn-outline filter-btn active" data-filter="all" data-testid="filter-all">All</button>
+            <button class="btn btn-outline filter-btn" data-filter="pending" data-testid="filter-pending">Pending</button>
+            <button class="btn btn-outline filter-btn" data-filter="fulfilled" data-testid="filter-fulfilled">Fulfilled</button>
+            <button class="btn btn-outline filter-btn" data-filter="rejected" data-testid="filter-rejected">Rejected</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" data-testid="redemptions-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>User</th>
+                    <th>Card</th>
+                    <th>Coins</th>
+                    <th>Status</th>
+                    <th>48h SLA Remaining</th>
+                    <th>PIN / Notes</th>
+                    <th>Fulfillment Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="redemptionsTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: ECONOMY & DAILY CAPS -->
+      <section id="tab-economy" class="tab-pane" data-testid="tab-economy-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Financial & Economy Controls</h1>
+            <p class="page-subtitle">Configure real-time daily coin earning caps and reward card inventory.</p>
+          </div>
+        </div>
+
+        <div class="grid-2col">
+          <!-- Mini Game Daily Caps Form -->
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Mini-Game Daily Earning Caps (Coins/Day)</h2>
+            </div>
+            <div class="card-body">
+              <form id="capsForm" data-testid="caps-form">
+                <div class="form-group">
+                  <label for="capTapTap">Tap Tap Game Limit</label>
+                  <input type="number" id="capTapTap" class="form-input" data-testid="cap-tap-tap" min="10" max="5000" required>
+                  <span class="field-hint">Default: 150 coins/day</span>
+                </div>
+                <div class="form-group">
+                  <label for="capMathQuiz">Math Quiz Limit</label>
+                  <input type="number" id="capMathQuiz" class="form-input" data-testid="cap-math-quiz" min="10" max="5000" required>
+                  <span class="field-hint">Default: 120 coins/day</span>
+                </div>
+                <div class="form-group">
+                  <label for="capFlappyJump">Flappy Jump Limit</label>
+                  <input type="number" id="capFlappyJump" class="form-input" data-testid="cap-flappy-jump" min="10" max="5000" required>
+                  <span class="field-hint">Default: 150 coins/day</span>
+                </div>
+                <div class="form-group">
+                  <label for="capFlipCards">Flip Cards Memory Limit</label>
+                  <input type="number" id="capFlipCards" class="form-input" data-testid="cap-flip-cards" min="10" max="5000" required>
+                  <span class="field-hint">Default: 60 coins/day</span>
+                </div>
+                <div class="form-group">
+                  <label for="capScratchCard">Scratch Card Limit</label>
+                  <input type="number" id="capScratchCard" class="form-input" data-testid="cap-scratch-card" min="10" max="5000" required>
+                  <span class="field-hint">Default: 100 coins/day</span>
+                </div>
+                <button type="submit" class="btn btn-primary" id="saveCapsBtn" data-testid="save-caps-btn">Save Daily Caps</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Reward Cards Inventory & Pricing -->
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Reward Card Denominations & Stock</h2>
+            </div>
+            <div class="card-body">
+              <div id="rewardCardsList" class="cards-inventory" data-testid="reward-cards-list">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: PERFORMANCE & REDIS -->
+      <section id="tab-performance" class="tab-pane" data-testid="tab-performance-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Performance & Redis Edge Caching</h1>
+            <p class="page-subtitle">Manage low-latency Upstash edge caching and instant invalidation controls.</p>
+          </div>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Instant Cache Purge</h2>
+            </div>
+            <div class="card-body">
+              <p class="mb-4">Instantly invalidate distributed Redis cache keys across worldwide Cloudflare / Upstash edge nodes.</p>
+              <div class="btn-group-stacked">
+                <button class="btn btn-danger" id="purgeLeaderboardBtn" data-testid="purge-leaderboard-btn">
+                  Purge Leaderboard Cache (Weekly & All-Time)
+                </button>
+                <button class="btn btn-warning" id="purgeEconomyBtn" data-testid="purge-economy-btn">
+                  Purge Economy & Config Cache
+                </button>
+                <button class="btn btn-outline" id="purgeAllBtn" data-testid="purge-all-btn">
+                  Purge Entire Redis Cluster
+                </button>
+              </div>
+              <div id="purgeResultNotice" class="notice-box mt-4 hidden" data-testid="purge-result-notice"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">TTL Configuration & Live Telemetry</h2>
+            </div>
+            <div class="card-body">
+              <form id="ttlForm" data-testid="ttl-form">
+                <div class="form-group">
+                  <label for="leaderboardTtl">Leaderboard Edge TTL (Seconds)</label>
+                  <input type="range" id="leaderboardTtl" min="10" max="600" value="60" class="range-slider" data-testid="leaderboard-ttl-slider">
+                  <div class="range-value"><span id="ttlDisplay" data-testid="ttl-display">60</span>s</div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="saveTtlBtn" data-testid="save-ttl-btn">Save TTL Settings</button>
+              </form>
+
+              <div class="telemetry-box mt-4">
+                <div class="telemetry-row">
+                  <span>Server Status:</span>
+                  <strong class="text-success" id="telemetryStatus" data-testid="telemetry-status">HEALTHY</strong>
+                </div>
+                <div class="telemetry-row">
+                  <span>Redis Edge Latency:</span>
+                  <strong id="telemetryRedisPing" data-testid="telemetry-ping">12 ms</strong>
+                </div>
+                <div class="telemetry-row">
+                  <span>Supabase Edge Query Time:</span>
+                  <strong id="telemetryDbPing">18 ms</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: COMPLIANCE & OPERATIONS -->
+      <section id="tab-compliance" class="tab-pane" data-testid="tab-compliance-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Compliance, GDPR & Data Deletion</h1>
+            <p class="page-subtitle">Strict compliance with Google Play Store & Apple Store 7-day data deletion SLA.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">7-Day Account Deletion Queue</h2>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" data-testid="deletion-queue-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>User Email</th>
+                    <th>Reason</th>
+                    <th>Days Remaining</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="deletionTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-4">
+          <div class="card-header">
+            <h2 class="card-title">Support Inquiries & Dispute Resolution</h2>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" data-testid="support-tickets-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Message</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="supportTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: IMMUTABLE AUDIT TRAIL -->
+      <section id="tab-audit" class="tab-pane" data-testid="tab-audit-pane">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">Immutable Admin Audit Logs</h1>
+            <p class="page-subtitle">Tamper-evident record of all administrative actions, bans, and payouts.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" data-testid="audit-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Admin</th>
+                    <th>Action</th>
+                    <th>Target Type</th>
+                    <th>Target ID</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- DISPATCH PIN MODAL -->
+  <div id="dispatchPinModal" class="modal-overlay hidden" data-testid="dispatch-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Dispatch Roblox Gift Card PIN</h3>
+        <button class="modal-close-btn" id="closeDispatchModalBtn">&times;</button>
+      </div>
+      <form id="dispatchPinForm" data-testid="dispatch-pin-form">
+        <input type="hidden" id="dispatchRedemptionId">
+        <div class="modal-body">
+          <div class="info-banner mb-3">
+            <span id="dispatchCardDenom" class="badge badge-primary">$3 Card</span>
+            <span id="dispatchUserEmail" class="text-muted">player1@example.com</span>
+          </div>
+          <div class="form-group">
+            <label for="dispatchPinInput">Roblox Digital PIN Code</label>
+            <input type="text" id="dispatchPinInput" class="form-input" placeholder="e.g. RBX-9482-1142-9901" data-testid="dispatch-pin-input" required>
+            <span class="field-hint">Code will be securely delivered to user within 48h SLA</span>
+          </div>
+          <div class="form-group">
+            <label for="dispatchNotesInput">Internal Admin Notes (Optional)</label>
+            <input type="text" id="dispatchNotesInput" class="form-input" placeholder="Supplier or receipt notes" data-testid="dispatch-notes-input">
+          </div>
+          <div id="dispatchPinError" class="error-banner hidden" data-testid="dispatch-error-banner"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelDispatchBtn">Cancel</button>
+          <button type="submit" class="btn btn-success" id="confirmDispatchBtn" data-testid="confirm-dispatch-btn">Confirm & Dispatch Code</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- REJECT & REFUND MODAL -->
+  <div id="rejectModal" class="modal-overlay hidden" data-testid="reject-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Reject Request & Refund Coins</h3>
+        <button class="modal-close-btn" id="closeRejectModalBtn">&times;</button>
+      </div>
+      <form id="rejectForm" data-testid="reject-form">
+        <input type="hidden" id="rejectRedemptionId">
+        <div class="modal-body">
+          <p class="mb-3 text-danger">This will cancel the redemption and automatically credit the coins back to the user's account.</p>
+          <div class="form-group">
+            <label for="rejectReasonInput">Rejection Reason</label>
+            <input type="text" id="rejectReasonInput" class="form-input" placeholder="e.g. Duplicate request or fraud detected" data-testid="reject-reason-input" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelRejectBtn">Cancel</button>
+          <button type="submit" class="btn btn-danger" id="confirmRejectBtn" data-testid="confirm-reject-btn">Reject & Refund</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BAN USER MODAL -->
+  <div id="banModal" class="modal-overlay hidden" data-testid="ban-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">1-Click Ban & Freeze Account</h3>
+        <button class="modal-close-btn" id="closeBanModalBtn">&times;</button>
+      </div>
+      <form id="banForm" data-testid="ban-form">
+        <input type="hidden" id="banUserId">
+        <div class="modal-body">
+          <p class="mb-3 text-warning">Freezes user coin balance, revokes active session locks, and cancels pending redemptions.</p>
+          <div class="form-group">
+            <label for="banReasonInput">Ban Reason</label>
+            <input type="text" id="banReasonInput" class="form-input" placeholder="e.g. Memory injector / BlueStacks emulator detected" data-testid="ban-reason-input" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="cancelBanBtn">Cancel</button>
+          <button type="submit" class="btn btn-danger" id="confirmBanBtn" data-testid="confirm-ban-btn">Confirm Freeze / Ban</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATION GATE MODAL -->
+  <div id="authGateModal" class="auth-gate-overlay" data-testid="auth-gate-modal">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">RBX</div>
+        <h2 class="auth-title">Admin Command Portal</h2>
+        <p class="auth-subtitle">Restricted to authorized system operators</p>
+      </div>
+      <form id="loginForm" data-testid="login-form">
+        <div id="loginErrorBanner" class="error-banner hidden" data-testid="login-error-banner"></div>
+        <div class="form-group">
+          <label for="loginEmail">Operator Email</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="admin@rbxrewards.com" data-testid="login-email" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Security Password</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" data-testid="login-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="submitLoginBtn" data-testid="login-submit-btn">
+          Authenticate & Enter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="./js/api-client.js"></script>
+  <script src="./js/dashboard.js"></script>
+</body>
+</html>

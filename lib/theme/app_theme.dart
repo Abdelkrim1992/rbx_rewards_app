@@ -58,7 +58,8 @@ class AppAssets {
   static const String onboardingHero =
       'assets/images/onboarding_screen_main_image.jpeg';
 
-  // Home screen
+  // App Icon & Logos
+  static const String appIcon = 'assets/images/app_icon.png';
   static const String rbxLogo = 'assets/images/logo_image.png';
   static const String goldRbxCoin = 'assets/images/robux_coins.png';
   static const String balanceWidgetImage =
@@ -88,7 +89,7 @@ class AppAssets {
   static const String navOffers =
       'https://cdn3d.iconscout.com/3d/premium/thumb/gift-box-6848695-5608666.png';
   static const String navRewards =
-      'assets/icons/rewards-nav.svg';
+      'assets/icons/reward-nav.svg';
   static const String navProfile =
       'assets/icons/profile-nav.svg';
 
@@ -97,7 +98,7 @@ class AppAssets {
 
   static const String rbxCoinIcon = 'assets/images/robux_coins.png';
   static const String gamepadStat = 'assets/images/games-played.png';
- static const String levelBadge =
+  static const String levelBadge =
       'https://www.figma.com/api/mcp/asset/159497f0-c81d-4613-8ec9-67c29e197137';
   static const String helpIcon =
       'https://www.figma.com/api/mcp/asset/c8feb69a-8356-47c3-bb7b-723504e434c1';
@@ -110,10 +111,102 @@ class AppAssets {
 
   // Games screen
   static const String flappyJumpGame = 'assets/images/flappy_mini_game.png';
+
+  /// Assets to precache in memory on app startup for instant rendering
+  static const List<String> allPrecacheAssets = [
+    appIcon,
+    rbxLogo,
+    onboardingHero,
+    'assets/images/first_feature_card.jpeg',
+    'assets/images/second_feature_card.jpeg',
+    'assets/images/thirty_feature_card.jpeg',
+    goldRbxCoin,
+    balanceWidgetImage,
+    dailyRewardImage,
+    dailyRewardGift,
+    chestIcon,
+    spinWheelIcon,
+    tapTapGame,
+    quizMasterGame,
+    quizMasterQuickActions,
+    memoryMatchGame,
+    megaChest,
+    roblox3UsdCard,
+    roblox5UsdCard,
+    roblox10UsdCard,
+    profileAvatar,
+    gamepadStat,
+    flappyJumpGame,
+  ];
+
+  /// Navigation SVGs to preload
+  static const List<String> allPrecacheSvgs = [
+    navHome,
+    navGames,
+    navRewards,
+    navProfile,
+  ];
+
+  /// Key remote UI icons to preload and cache persistently in disk storage
+  static const List<String> allPrecacheNetworkImages = [
+    levelBadge,
+    helpIcon,
+    privacyIcon,
+    termsIcon,
+    contactIcon,
+  ];
 }
 
 class AppLayout {
   static const double screenPadding = 15.0;
   static const double sectionSpacing = 24.0;
   static const double elementSpacing = 12.0;
+}
+
+class RevolutPageTransitionsBuilder extends PageTransitionsBuilder {
+  const RevolutPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    final secondaryCurved = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset.zero,
+        end: const Offset(-0.04, 0.0),
+      ).animate(secondaryCurved),
+      child: FadeTransition(
+        opacity: Tween<double>(
+          begin: 1.0,
+          end: 0.88,
+        ).animate(secondaryCurved),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.08, 0.0),
+            end: Offset.zero,
+          ).animate(curvedAnimation),
+          child: FadeTransition(
+            opacity: curvedAnimation,
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
 }

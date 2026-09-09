@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { AntiFraudController } from './anti-fraud.controller.js';
+import { jwtAuthGuard } from '../../core/auth.middleware.js';
+const router = Router();
+const controller = new AntiFraudController();
+router.use(jwtAuthGuard);
+router.get('/alerts', controller.getAlerts);
+router.get('/flagged-users', controller.getFlaggedUsers);
+router.get('/clusters', controller.getClusters);
+router.post('/ban', controller.banUser);
+router.post('/unban', controller.unbanUser);
+export const antiFraudRouter = router;

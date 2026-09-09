@@ -17,6 +17,19 @@ class RewardsScreen extends ConsumerStatefulWidget {
 }
 
 class _RewardsScreenState extends ConsumerState<RewardsScreen> {
+  ScaffoldMessengerState? _scaffoldMessenger;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scaffoldMessenger = ScaffoldMessenger.maybeOf(context);
+  }
+
+  @override
+  void dispose() {
+    _scaffoldMessenger?.clearSnackBars();
+    super.dispose();
+  }
 
   int _parseRewardCost(String cost) {
     return int.tryParse(cost.replaceAll(',', '')) ?? 0;
@@ -36,6 +49,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
 
     if (balance < cost) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -83,6 +97,7 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       Navigator.of(context).pop();
 
       // Show error message
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -142,7 +157,12 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RbxAppHeader(onNavTap: widget.onNavTap),
+                    RbxAppHeader(
+                      onNavTap: (index) {
+                        ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+                        widget.onNavTap(index);
+                      },
+                    ),
                     // Balance widget
                     Padding(
                       padding: const EdgeInsets.only(
@@ -294,7 +314,13 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
+          child: RbxBottomNav(
+            currentIndex: 2,
+            onTap: (index) {
+              ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+              widget.onNavTap(index);
+            },
+          ),
         ),
       ),
     );

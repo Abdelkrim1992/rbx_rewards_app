@@ -13,6 +13,7 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/congratulations_dialog.dart';
 import '../../widgets/coin_burst.dart';
+import '../../widgets/app_cached_image.dart';
 import '../../core/utils/reward_helper.dart';
 import 'chest_screen.dart';
 import 'tap_tap_game_screen.dart';
@@ -775,27 +776,16 @@ class _QuickActionCard extends StatelessWidget {
           ),
           child: Column(
             children: [
-              iconUrl.startsWith('http')
-                  ? Image.network(
-                      iconUrl,
-                      width: 56,
-                      height: 56,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.star,
-                        size: 46,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : Image.asset(
-                      iconUrl,
-                      width: 56,
-                      height: 56,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.star,
-                        size: 46,
-                        color: AppColors.primary,
-                      ),
-                    ),
+              AppCachedImage(
+                imageUrl: iconUrl,
+                width: 56,
+                height: 56,
+                errorWidget: const Icon(
+                  Icons.star,
+                  size: 46,
+                  color: AppColors.primary,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 title,
@@ -878,25 +868,15 @@ class _GameCard extends StatelessWidget {
                     height: 100, // Increased height to make the card bigger
                     width: double.infinity,
                     color: bgColor,
-                    child: imageUrl.startsWith('http')
-                        ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.sports_esports,
-                              size: 44,
-                              color: AppColors.primary.withOpacity(0.5),
-                            ),
-                          )
-                        : Image.asset(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.sports_esports,
-                              size: 44,
-                              color: AppColors.primary.withOpacity(0.5),
-                            ),
-                          ),
+                    child: AppCachedImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      errorWidget: Icon(
+                        Icons.sports_esports,
+                        size: 44,
+                        color: AppColors.primary.withOpacity(0.5),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1278,15 +1258,19 @@ class _DailyStreakCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Daily Streak Bonus',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF131326),
-                  letterSpacing: -0.2,
+              const Flexible(
+                child: Text(
+                  'Daily Streak Bonus',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF131326),
+                    letterSpacing: -0.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '$consecutiveDays Days in a Row!',
                 style: const TextStyle(

@@ -12,6 +12,7 @@ import '../../core/utils/game_reward_helper.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/congratulations_dialog.dart';
+import '../../widgets/game_prefs.dart';
 
 // --- Vector 3D Helper ---
 class Vector3D {
@@ -1206,7 +1207,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   // Game data state
   int _coins = 0;
   int _displayedCoins = 0;
-  final int _highScore = 0;
+  int _highScore = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
 
@@ -1221,14 +1222,29 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   final math.Random _random = math.Random();
   static int _claimCount = 0;
 
+  void _checkAndUpdateHighScore() {
+    if (_game.score > _highScore) {
+      if (mounted) {
+        setState(() {
+          _highScore = _game.score;
+        });
+      } else {
+        _highScore = _game.score;
+      }
+      GamePrefs.saveFlappyBestScore(_game.score);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
 
     _game = FlappyJumpGame();
     _game.onStateChanged = () async {
+      _checkAndUpdateHighScore();
       if (_game.isGameOver && !_handledGameOver && mounted) {
         _handledGameOver = true;
+        _checkAndUpdateHighScore();
         if (_game.coinsEarned > 0) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _claimCoins();
@@ -1335,10 +1351,14 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
 
   Future<void> _loadLocalData() async {
     final currentCoins = ref.read(coinProvider);
-    setState(() {
-      _coins = currentCoins;
-      _displayedCoins = currentCoins;
-    });
+    final bestScore = await GamePrefs.getFlappyBestScore();
+    if (mounted) {
+      setState(() {
+        _coins = currentCoins;
+        _displayedCoins = currentCoins;
+        _highScore = bestScore;
+      });
+    }
   }
 
   @override
@@ -1456,6 +1476,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       ),
       quickTextColor: const Color(0xFFFF52A2),
       quickBorderColor: const Color(0xFFFFD4E5),
+      enableQuickAd: false,
       onSuccess: (coins) async {
         if (!mounted) return;
         setState(() {
@@ -1593,6 +1614,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
         ),
         quickTextColor: const Color(0xFFFF52A2),
         quickBorderColor: const Color(0xFFFFD4E5),
+        enableQuickAd: false,
         onSuccess: (coins) async {
           if (!mounted) return;
           

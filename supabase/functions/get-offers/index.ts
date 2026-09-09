@@ -50,11 +50,14 @@ Deno.serve(async (req) => {
   let fetchedReal = false;
 
   const cacheKey = `offers:${platform}`;
-  const cached = await redis.get(cacheKey);
-
-  if (cached) {
-    const parsedOffers = typeof cached === "string" ? JSON.parse(cached) : cached;
-    return jsonResponse({ success: true, offers: parsedOffers }, 200, { "Cache-Control": "public, max-age=10, s-maxage=30", "X-Cache": "HIT" });
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      const parsedOffers = typeof cached === "string" ? JSON.parse(cached) : cached;
+      return jsonResponse({ success: true, offers: parsedOffers }, 200, { "Cache-Control": "public, max-age=60, s-maxage=300", "X-Cache": "HIT" });
+    }
+  } catch (redisErr) {
+    console.warn("get-offers Redis read failed, serving fresh:", redisErr);
   }
 
   // 5. Fallback to Premium Mock Offers (if no API keys or all failed)
@@ -147,10 +150,12 @@ Deno.serve(async (req) => {
     offers[0].isFeatured = true;
   }
 
-  // Cache the offers for 60 seconds
-  await redis.setex(cacheKey, 60, JSON.stringify(offers));
+  // Cache the offers for 5 minutes (300s) — fire-and-forget
+  redis.set(cacheKey, JSON.stringify(offers), { ex: 300 }).catch((e) =>
+    console.warn("get-offers Redis write failed:", e)
+  );
 
-  return jsonResponse({ success: true, offers }, 200, { "Cache-Control": "public, max-age=10, s-maxage=30", "X-Cache": "MISS" });
+  return jsonResponse({ success: true, offers }, 200, { "Cache-Control": "public, max-age=60, s-maxage=300", "X-Cache": "MISS" });
 });
 
 // Helper: Standardize Categories

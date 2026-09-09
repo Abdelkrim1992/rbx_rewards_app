@@ -62,11 +62,16 @@ Deno.serve(async (req) => {
     return errorResponse("sessionId required", 400);
   }
 
-  // 1. Session Lock: Prevent double-submit race conditions
+  // 1. Session Lock: Prevent double-submit race conditions (Fast Redis path)
   const lockKey = `lock:session:${sessionId}`;
-  const locked = await redis.set(lockKey, "1", { nx: true, ex: 30 });
-  if (!locked) {
-    return errorResponse("Duplicate submission in progress", 409);
+  try {
+    const locked = await redis.set(lockKey, "1", { nx: true, ex: 30 });
+    // If Redis explicitly reported duplicate (locked === null or false)
+    if (locked === null || locked === 0 || locked === false) {
+      return errorResponse("Duplicate submission in progress", 409);
+    }
+  } catch (lockErr) {
+    console.warn("Redis session lock check failed, proceeding to Postgres atomic check:", lockErr);
   }
 
   // Ensure the user row exists (covers legacy accounts created before trigger setup).
@@ -117,21 +122,24 @@ Deno.serve(async (req) => {
     console.error("Failed to query coin_distributions:", e);
   }
 
-  // Daily Cap Check in Redis (overall games limit)
+  // Daily Cap Check in Redis (overall games limit & subgame limit) - Fast path
   const todayStr = new Date().toISOString().split("T")[0];
   const capKey = `cap:game:${uid}:${todayStr}`;
-  const currentDailyCap = parseInt(await redis.get(capKey) || "0", 10);
-  if (currentDailyCap + finalScore > gameDailyCap) {
-    const allowed = Math.max(0, gameDailyCap - currentDailyCap);
-    return errorResponse(`Daily game cap reached. Max allowed: ${allowed}`, 400);
-  }
-
-  // Sub-game specific cap check in Redis
   const subGameCapKey = `cap:game:${uid}:${gameName}:${todayStr}`;
-  const currentSubGameCap = parseInt(await redis.get(subGameCapKey) || "0", 10);
-  if (currentSubGameCap + finalScore > subGameLimit) {
-    const allowed = Math.max(0, subGameLimit - currentSubGameCap);
-    return errorResponse(`Daily limit reached for ${gameName}. Max allowed: ${allowed}`, 400);
+  try {
+    const currentDailyCap = parseInt(await redis.get(capKey) || "0", 10);
+    if (currentDailyCap + finalScore > gameDailyCap) {
+      const allowed = Math.max(0, gameDailyCap - currentDailyCap);
+      return errorResponse(`Daily game cap reached. Max allowed: ${allowed}`, 400);
+    }
+
+    const currentSubGameCap = parseInt(await redis.get(subGameCapKey) || "0", 10);
+    if (currentSubGameCap + finalScore > subGameLimit) {
+      const allowed = Math.max(0, subGameLimit - currentSubGameCap);
+      return errorResponse(`Daily limit reached for ${gameName}. Max allowed: ${allowed}`, 400);
+    }
+  } catch (capErr) {
+    console.warn("Redis cap check failed, relying on Postgres RPC process_game_session:", capErr);
   }
 
   // Feasibility check first — reject unknown games and impossible scores
@@ -173,23 +181,28 @@ Deno.serve(async (req) => {
     return errorResponse(resultJson.error || "Session processing failed", 400);
   }
 
-  // 3. Update Daily Cap in Redis
-  await redis.incrby(capKey, finalScore);
-  await redis.expire(capKey, 86400);
+  // 3. Update Redis caps, leaderboard, and user profile cache in background (best-effort)
+  (async () => {
+    try {
+      await redis.incrby(capKey, finalScore);
+      await redis.expire(capKey, 86400);
+      await redis.incrby(subGameCapKey, finalScore);
+      await redis.expire(subGameCapKey, 86400);
 
-  // Update sub-game specific cap in Redis
-  await redis.incrby(subGameCapKey, finalScore);
-  await redis.expire(subGameCapKey, 86400);
+      // Update Game High Score Leaderboard in Redis
+      const currentHighScoreStr = await redis.zscore(`leaderboard:${gameName}`, uid);
+      const currentHighScore = currentHighScoreStr ? parseInt(currentHighScoreStr, 10) : 0;
+      if (scoreToValidate > currentHighScore) {
+        await redis.zadd(`leaderboard:${gameName}`, { score: scoreToValidate, member: uid });
+      }
 
-  // 4. Update Game High Score Leaderboard in Redis
-  const currentHighScoreStr = await redis.zscore(`leaderboard:${gameName}`, uid);
-  const currentHighScore = currentHighScoreStr ? parseInt(currentHighScoreStr, 10) : 0;
-  if (scoreToValidate > currentHighScore) {
-    await redis.zadd(`leaderboard:${gameName}`, { score: scoreToValidate, member: uid });
-  }
-
-  // Invalidate user profile cache so next get-user-stats returns fresh balance
-  redis.del(`user:profile:${uid}`).catch(console.error);
+      // Invalidate compiled leaderboard and user profile cache
+      await redis.del(`leaderboard:compiled:${gameName}:50`);
+      await redis.del(`user:profile:${uid}`);
+    } catch (e) {
+      console.warn("Post-session Redis update failed (non-fatal):", e);
+    }
+  })();
 
   console.log(`User ${uid} earned ${finalScore} from ${gameName} (session ${sessionId})`);
   return jsonResponse({

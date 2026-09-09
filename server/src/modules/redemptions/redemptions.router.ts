@@ -1,0 +1,13 @@
+import { Router } from 'express';
+import { RedemptionsController } from './redemptions.controller.js';
+import { jwtAuthGuard } from '../../core/auth.middleware.js';
+
+const router = Router();
+const controller = new RedemptionsController();
+
+router.use(jwtAuthGuard);
+router.get('/', controller.getRedemptions);
+router.post('/dispatch', controller.dispatchPin);
+router.post('/reject', controller.rejectReward);
+
+export const redemptionsRouter = router;

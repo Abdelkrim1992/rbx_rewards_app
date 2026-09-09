@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 
 class RbxBottomNav extends StatelessWidget {
@@ -21,20 +22,20 @@ class RbxBottomNav extends StatelessWidget {
     ];
 
     return Container(
-      height: 70,
+      height: 60,
       padding: const EdgeInsets.only(
         left: 5,
         right: 5,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.navBorder),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
             blurRadius: 22.5,
-            offset: Offset(0, 12),
+            // offset: Offset(0, 12),
           ),
         ],
       ),
@@ -56,12 +57,15 @@ class RbxBottomNav extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.network(
+                    SvgPicture.asset(
                       items[i].icon,
                       width: 22,
                       height: 22,
-                      color: isActive ? AppColors.purple : AppColors.mutedText,
-                      errorBuilder: (_, __, ___) => Icon(
+                      colorFilter: ColorFilter.mode(
+                        isActive ? AppColors.purple : AppColors.mutedText,
+                        BlendMode.srcIn,
+                      ),
+                      placeholderBuilder: (_) => Icon(
                         _fallbackIcon(i),
                         size: 22,
                         color:

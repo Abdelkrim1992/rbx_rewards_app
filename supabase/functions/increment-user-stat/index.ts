@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
       return errorResponse("Failed to increment stat", 500);
     }
 
-    // Invalidate Redis Cache so next fetch is immediate
-    await redis.del(`user:profile:${uid}`).catch(console.error);
+    // Invalidate Redis Cache in background
+    redis.del(`user:profile:${uid}`).catch(() => {});
 
     return jsonResponse({ success: true });
   } catch (e) {
