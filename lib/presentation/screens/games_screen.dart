@@ -75,15 +75,18 @@ class GamesScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(top: 12, bottom: 20),
+                padding: const EdgeInsets.only(top: 2, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RbxAppHeader(onNavTap: onNavTap),
                     // Section heading with Leaderboard button
                     Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.only(
+                        left: AppLayout.screenPadding,
+                        right: AppLayout.screenPadding,
+                        top: 5,
+                      ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -128,7 +131,7 @@ class GamesScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.3),
+                                    color: AppColors.primary.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -274,12 +277,12 @@ class GamesScreen extends ConsumerWidget {
                           gradient: LinearGradient(
                             colors: [
                               AppColors.primarySoft,
-                              AppColors.primarySoft.withOpacity(0.7),
+                              AppColors.primarySoft.withValues(alpha: 0.7),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppColors.purple.withOpacity(0.2),
+                            color: AppColors.purple.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
@@ -365,7 +368,7 @@ class _GameCard extends StatelessWidget {
           border: Border.all(color: const Color(0xFFF3F4F6)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

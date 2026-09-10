@@ -1,7 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'presentation/screens/loading_screen.dart';
 import 'presentation/screens/onboarding_screen.dart';
 import 'presentation/providers/ad_provider.dart';
 import 'presentation/screens/home_screen.dart';
@@ -9,8 +11,6 @@ import 'presentation/screens/spin_screen.dart';
 import 'presentation/screens/games_screen.dart';
 import 'presentation/screens/rewards_screen.dart';
 import 'presentation/screens/profile_screen.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/quit_confirmation_dialog.dart';
 import 'data/hive_repository.dart';
 import 'presentation/providers/providers.dart';
@@ -21,12 +21,105 @@ import 'business/tapjoy_service.dart';
 import 'business/pubscale_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/image_precache_helper.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<bool> _initSupabase() async {
+  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    debugPrint(
+        '⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not provided. Running in offline mode.');
+    return false;
+  }
+
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+    debugPrint('✅ Supabase initialized: $supabaseUrl');
+    return true;
+  } catch (e) {
+    debugPrint('❌ Supabase initialization failed: $e');
+    return false;
+  }
+}
+
+Future<ProviderContainer> _initStorageAndServices() async {
+  final prefs = await SharedPreferences.getInstance();
+  final hiveRepo = HiveRepository();
+  try {
+    await hiveRepo.init();
+  } catch (e) {
+    debugPrint('❌ Hive init failed: $e');
+  }
+
+  try {
+    LuckyBonusService().load();
+    TapjoyService().initialize();
+  } catch (e) {
+    debugPrint('❌ Third-party SDK init failed: $e');
+  }
+
+  return ProviderContainer(
+    overrides: [
+      hiveRepositoryProvider.overrideWithValue(hiveRepo),
+      onboardingCompletedProvider
+          .overrideWith((ref) => OnboardingNotifier(prefs)),
+    ],
+  );
+}
+
+Future<void> _initAuthAndOfferwalls(ProviderContainer container) async {
+  try {
+    final auth = container.read(authServiceProvider);
+    if (auth.currentUser == null) {
+      try {
+        await auth.signInWithDevice().timeout(
+          const Duration(seconds: 4),
+          onTimeout: () {
+            debugPrint(
+                '⚠️ Device sign-in timed out, proceeding in offline mode');
+            return null;
+          },
+        );
+      } catch (e) {
+        debugPrint('Failed to sign in with device on startup: $e');
+      }
+    }
+
+    final userId = auth.currentUser?.id ?? 'anonymous';
+    PubscaleService().initialize(userId);
+
+    PubscaleService().onReward = (amount, currency) {
+      container.read(coinProvider.notifier).refresh();
+    };
+    TapjoyService().onClosed = () {
+      container.read(coinProvider.notifier).refresh();
+    };
+  } catch (e) {
+    debugPrint('❌ Auth and Offerwalls initialization error: $e');
+  }
+}
+
+Future<ProviderContainer> _bootstrapServices() async {
+  try {
+    final isSupabaseReady = await _initSupabase();
+    final container = await _initStorageAndServices();
+
+    if (isSupabaseReady) {
+      unawaited(_initAuthAndOfferwalls(container));
+    }
+    return container;
+  } catch (e) {
+    debugPrint('❌ App bootstrap error: $e');
+    return ProviderContainer();
+  }
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Optimize in-memory image cache for fast navigation without re-decoding
@@ -38,7 +131,9 @@ void main() {
   SystemChrome.setSystemUIOverlayStyle(RbxRewardsApp.globalSystemOverlayStyle);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const RbxRewardsApp());
+  final container = await _bootstrapServices();
+
+  runApp(RbxRewardsApp(container: container));
 }
 
 class RbxRewardsApp extends StatefulWidget {
@@ -84,125 +179,12 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
     }
   }
 
-  Future<bool> _initSupabase() async {
-    const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-    const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-
-    if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-      debugPrint(
-          '⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not provided. Running in offline mode.');
-      return false;
-    }
-
-    try {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        anonKey: supabaseAnonKey,
-      );
-      debugPrint('✅ Supabase initialized: $supabaseUrl');
-      return true;
-    } catch (e) {
-      debugPrint('❌ Supabase initialization failed: $e');
-      return false;
-    }
-  }
-
-  Future<ProviderContainer> _initStorageAndServices() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hiveRepo = HiveRepository();
-    try {
-      await hiveRepo.init();
-    } catch (e) {
-      debugPrint('❌ Hive init failed: $e');
-    }
-
-    try {
-      LuckyBonusService().load();
-      TapjoyService().initialize();
-    } catch (e) {
-      debugPrint('❌ Third-party SDK init failed: $e');
-    }
-
-    return ProviderContainer(
-      overrides: [
-        hiveRepositoryProvider.overrideWithValue(hiveRepo),
-        onboardingCompletedProvider
-            .overrideWith((ref) => OnboardingNotifier(prefs)),
-      ],
-    );
-  }
-
-  Future<void> _initAuthAndOfferwalls(ProviderContainer container) async {
-    try {
-      final auth = container.read(authServiceProvider);
-      if (auth.currentUser == null) {
-        try {
-          await auth.signInWithDevice().timeout(
-            const Duration(seconds: 4),
-            onTimeout: () {
-              debugPrint(
-                  '⚠️ Device sign-in timed out, proceeding in offline mode');
-              return null;
-            },
-          );
-        } catch (e) {
-          debugPrint('Failed to sign in with device on startup: $e');
-        }
-      }
-
-      final userId = auth.currentUser?.id ?? 'anonymous';
-      PubscaleService().initialize(userId);
-
-      PubscaleService().onReward = (amount, currency) {
-        container.read(coinProvider.notifier).refresh();
-      };
-      TapjoyService().onClosed = () {
-        container.read(coinProvider.notifier).refresh();
-      };
-    } catch (e) {
-      debugPrint('❌ Auth and Offerwalls initialization error: $e');
-    }
-  }
-
-  Future<void> _precacheAssets() async {
-    if (!mounted) return;
-    try {
-      await ImagePrecacheHelper.precacheAll(context);
-    } catch (e) {
-      debugPrint('Precache error: $e');
-    }
-  }
-
   Future<void> _initializeApp() async {
-    final startTime = DateTime.now();
-    ProviderContainer? container;
-
-    try {
-      final isSupabaseReady = await _initSupabase();
-      container = await _initStorageAndServices();
-
-      if (isSupabaseReady) {
-        await _initAuthAndOfferwalls(container);
-      }
-
-      await _precacheAssets();
-    } catch (e) {
-      debugPrint('❌ Critical initialization error: $e');
-      container ??= ProviderContainer();
-    }
-
-    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    if (!isTest) {
-      final elapsed = DateTime.now().difference(startTime);
-      const minSplash = Duration(milliseconds: 800);
-      if (elapsed < minSplash) {
-        await Future.delayed(minSplash - elapsed);
-      }
-    }
+    final container = await _bootstrapServices();
 
     if (mounted) {
       setState(() {
-        _container = container ?? ProviderContainer();
+        _container = container;
         _isInitComplete = true;
       });
     }
@@ -210,7 +192,7 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    final Widget app = AnnotatedRegion<SystemUiOverlayStyle>(
       value: RbxRewardsApp.globalSystemOverlayStyle,
       child: MaterialApp(
         title: 'RBX Rewards',
@@ -236,7 +218,7 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
           ),
         ),
         builder: (context, child) {
-          return AnnotatedRegion<SystemUiOverlayStyle>(
+          final content = AnnotatedRegion<SystemUiOverlayStyle>(
             value: RbxRewardsApp.globalSystemOverlayStyle,
             child: Container(
               color: const Color(
@@ -249,10 +231,38 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
               ),
             ),
           );
+
+          if (_hasOuterScope(context)) {
+            return content;
+          }
+
+          if (_container != null) {
+            return UncontrolledProviderScope(
+              key: const ValueKey('app_builder_scope'),
+              container: _container!,
+              child: content,
+            );
+          }
+
+          return content;
         },
         home: _buildHome(context),
       ),
     );
+
+    if (_hasOuterScope(context)) {
+      return app;
+    }
+
+    if (_container != null) {
+      return UncontrolledProviderScope(
+        key: const ValueKey('app_scope'),
+        container: _container!,
+        child: app,
+      );
+    }
+
+    return app;
   }
 
   Widget _buildHome(BuildContext context) {
@@ -261,20 +271,15 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
     }
 
     if (!_isInitComplete || _container == null) {
-      return const LoadingScreen(key: ValueKey('loading'));
+      return const Scaffold(backgroundColor: Colors.white);
     }
 
-    return UncontrolledProviderScope(
-      key: const ValueKey('app_scope'),
-      container: _container!,
-      child: const AppNavigator(isSplashReady: true),
-    );
+    return const AppNavigator();
   }
 }
 
 class AppNavigator extends ConsumerStatefulWidget {
-  final bool isSplashReady;
-  const AppNavigator({super.key, this.isSplashReady = false});
+  const AppNavigator({super.key});
 
   @override
   ConsumerState<AppNavigator> createState() => _AppNavigatorState();
@@ -284,42 +289,18 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
     with WidgetsBindingObserver {
   int _currentTab = 0;
   bool _showSpin = false;
-  bool _hasInitialData = false;
-  bool _didPrecacheAssets = false;
-  late bool _isSplashReady = widget.isSplashReady;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isSplashReady && !_didPrecacheAssets) {
-      _didPrecacheAssets = true;
-      _prepareApp();
-    }
-  }
-
-  Future<void> _prepareApp() async {
-    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    final minSplashDelay =
-        isTest ? Duration.zero : const Duration(milliseconds: 800);
-
-    final splashTimer = Future.delayed(minSplashDelay);
-    final precacheFuture = ImagePrecacheHelper.precacheAll(context);
-
-    await Future.wait([splashTimer, precacheFuture]);
-
-    if (mounted) {
-      setState(() {
-        _isSplashReady = true;
-      });
-    }
-  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(adProvider.notifier).initialize();
+      final isTest =
+          !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        ref.read(adProvider.notifier).initialize();
+        ImagePrecacheHelper.precacheAll(context);
+      }
     });
   }
 
@@ -344,18 +325,10 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
 
   void _onNavTap(int index) {
     ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
-    if (index == 1 && _currentTab == 0) {
-      // From home, Spin & Win quick action -> go to Games tab
-      setState(() {
-        _currentTab = index;
-        _showSpin = false;
-      });
-    } else {
-      setState(() {
-        _currentTab = index;
-        _showSpin = false;
-      });
-    }
+    setState(() {
+      _currentTab = index;
+      _showSpin = false;
+    });
   }
 
   void _goToSpin() {
@@ -370,25 +343,14 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
 
   @override
   Widget build(BuildContext context) {
-    final profileAsync = ref.watch(userProfileStreamProvider);
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
 
-    if (profileAsync.hasValue || profileAsync.hasError) {
-      _hasInitialData = true;
-    }
-
-    // Determine the screen to display:
-    // On EVERY app launch/open, the first screen is LoadingScreen until the next screen is 100% prepared.
     Widget destination;
-    if (!_isSplashReady) {
-      destination = const LoadingScreen(key: ValueKey('loading'));
-    } else if (!onboardingCompleted) {
+    if (!onboardingCompleted) {
       destination = OnboardingScreen(
         key: const ValueKey('onboarding'),
         onGetStarted: _onGetStarted,
       );
-    } else if (!_hasInitialData) {
-      destination = const LoadingScreen(key: ValueKey('loading'));
     } else if (_showSpin) {
       destination = SpinScreen(
         key: const ValueKey('spin'),
@@ -428,11 +390,7 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
       );
     }
 
-    // Accurate transition timing:
-    // Splash / Launch reveal: 600ms (luxurious, cinematic reveal)
-    // In-app tab / spin / screen navigation: 320ms (snappy, responsive Revolut feel)
-    final isSplashTransition = !_isSplashReady ||
-        destination.key == const ValueKey('loading') ||
+    final isSplashTransition =
         destination.key == const ValueKey('onboarding');
     final transitionDuration = isSplashTransition
         ? const Duration(milliseconds: 600)

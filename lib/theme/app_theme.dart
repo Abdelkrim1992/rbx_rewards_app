@@ -57,6 +57,8 @@ class AppColors {
 class AppAssets {
   static const String onboardingHero =
       'assets/images/onboarding_screen_main_image.jpeg';
+  static const String onboardingGiftBox =
+      'assets/images/onboarding_gift_box.png';
 
   // App Icon & Logos
   static const String appIcon = 'assets/images/app_icon.png';
@@ -159,7 +161,7 @@ class AppAssets {
 
 class AppLayout {
   static const double screenPadding = 15.0;
-  static const double sectionSpacing = 24.0;
+  static const double sectionSpacing = 20.0;
   static const double elementSpacing = 12.0;
 }
 

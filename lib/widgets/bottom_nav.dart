@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 
 class RbxBottomNav extends StatelessWidget {
@@ -57,15 +56,12 @@ class RbxBottomNav extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SvgPicture.asset(
+                    Image.network(
                       items[i].icon,
                       width: 22,
                       height: 22,
-                      colorFilter: ColorFilter.mode(
-                        isActive ? AppColors.purple : AppColors.mutedText,
-                        BlendMode.srcIn,
-                      ),
-                      placeholderBuilder: (_) => Icon(
+                      color: isActive ? AppColors.purple : AppColors.mutedText,
+                      errorBuilder: (_, __, ___) => Icon(
                         _fallbackIcon(i),
                         size: 22,
                         color:

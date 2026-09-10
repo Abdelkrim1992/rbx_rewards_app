@@ -16,51 +16,19 @@ class RbxAppHeader extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.only(
-        left: 14,
+        left: 13,
         right: AppLayout.screenPadding,
-        top: 10,
-        bottom: 2,
+        top: 15,
+        bottom: 15,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              Image.asset(
-                AppAssets.rbxLogo,
-                width: 50,
-                height: 50,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 8),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'RBX REWARDS',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2.0,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'PLAY & EARN ROBUX',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 8.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.8,
-                      color: Color(0xFF7C8BA0),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+          Image.asset(
+            AppAssets.rbxLogo,
+            width: 128,
+            height: 50,
+            fit: BoxFit.contain,
           ),
           // Profile avatar
           GestureDetector(
@@ -71,7 +39,7 @@ class RbxAppHeader extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: AppColors.purple.withOpacity(0.2),
+                  color: AppColors.purple.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
                 boxShadow: const [

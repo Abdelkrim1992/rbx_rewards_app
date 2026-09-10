@@ -247,6 +247,8 @@ class DailyCapService {
       categoryRemaining = (categoryCap - _todayGameTapTapEarnings).clamp(0, categoryCap);
     } else if (source == 'flip_card') {
       categoryRemaining = (categoryCap - _todayGameFlipCardEarnings).clamp(0, categoryCap);
+    } else if (source == 'game' || source == 'welcome_bonus') {
+      return globalRemaining;
     } else {
       return 0;
     }
@@ -300,7 +302,7 @@ class DailyCapService {
         categoryAvailable = (categoryCap - _todayGameTapTapEarnings).clamp(0, categoryCap);
       } else if (source == 'flip_card') {
         categoryAvailable = (categoryCap - _todayGameFlipCardEarnings).clamp(0, categoryCap);
-      } else if (source == 'game') {
+      } else if (source == 'game' || source == 'welcome_bonus') {
         categoryAvailable = globalAvailable;
       } else {
         categoryAvailable = 0;

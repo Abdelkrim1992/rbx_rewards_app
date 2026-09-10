@@ -58,7 +58,7 @@ class ProfileScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(top: 12, bottom: 100),
+                padding: const EdgeInsets.only(top: 2, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

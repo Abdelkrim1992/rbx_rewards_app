@@ -146,7 +146,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 Expanded(
                   child: RefreshableScrollView(
-                    padding: const EdgeInsets.only(top: 12, bottom: 100),
+                    padding: const EdgeInsets.only(top: 2, bottom: 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -186,8 +186,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     // Welcome greeting
                     const Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
+                      padding: EdgeInsets.only(
+                        left: AppLayout.screenPadding,
+                        right: AppLayout.screenPadding,
+                        top: 5,
+                      ),
                       child: Row(
                         children: [
                           Text(
@@ -442,16 +445,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Daily Streak Bonus Card
-                    if (userProfile.consecutiveDays < 7) ...[
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: AppLayout.screenPadding),
-                        child: _DailyStreakCard(
-                          consecutiveDays: userProfile.consecutiveDays,
-                        ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _DailyStreakCard(
+                        consecutiveDays: userProfile.consecutiveDays,
+                        isDailyClaimed: isDailyClaimed,
+                        dailyCooldown: dailyCooldown,
+                        onClaim: isDailyBlocked ? null : _claimDaily,
                       ),
-                      const SizedBox(height: AppLayout.sectionSpacing),
-                    ],
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Quick Actions header
                     const Padding(
@@ -850,7 +854,7 @@ class _GameCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -874,7 +878,7 @@ class _GameCard extends StatelessWidget {
                       errorWidget: Icon(
                         Icons.sports_esports,
                         size: 44,
-                        color: AppColors.primary.withOpacity(0.5),
+                        color: AppColors.primary.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -1192,7 +1196,7 @@ class _MegaChestCardState extends ConsumerState<_MegaChestCard>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.purple.withOpacity(0.3),
+                          color: AppColors.purple.withValues(alpha: 0.3),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
@@ -1227,127 +1231,296 @@ class _MegaChestCardState extends ConsumerState<_MegaChestCard>
 
 class _DailyStreakCard extends StatelessWidget {
   final int consecutiveDays;
+  final bool isDailyClaimed;
+  final Duration dailyCooldown;
+  final VoidCallback? onClaim;
 
-  const _DailyStreakCard({required this.consecutiveDays});
+  const _DailyStreakCard({
+    required this.consecutiveDays,
+    this.isDailyClaimed = false,
+    this.dailyCooldown = Duration.zero,
+    this.onClaim,
+  });
 
   @override
   Widget build(BuildContext context) {
-    int activeDayCount = consecutiveDays % 7;
-    if (consecutiveDays > 0 && activeDayCount == 0) {
-      activeDayCount = 7;
+    final cycleStreak = consecutiveDays % 7;
+    final int claimedInCycle;
+    final int? activeDayToClaim;
+
+    if (isDailyClaimed) {
+      claimedInCycle =
+          (consecutiveDays > 0 && cycleStreak == 0) ? 7 : cycleStreak;
+      activeDayToClaim = null;
+    } else {
+      claimedInCycle = cycleStreak;
+      activeDayToClaim = cycleStreak + 1;
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF3F3F5)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF3F4F6), width: 1.2),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A000000),
             blurRadius: 10,
             spreadRadius: 0,
-            offset: Offset(0, 4),
+            offset: Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Flexible(
-                child: Text(
-                  'Daily Streak Bonus',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF131326),
-                    letterSpacing: -0.2,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$consecutiveDays Days in a Row!',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF868A9F),
-                ),
-              ),
-            ],
-          ),
+          const _DailyStreakHeader(),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
               final dayNum = index + 1;
-              final isClaimed = dayNum <= activeDayCount;
-              final isDay7 = dayNum == 7;
+              final isClaimed = dayNum <= claimedInCycle;
+              final isActive = dayNum == activeDayToClaim;
 
-              if (isDay7) {
-                return Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isClaimed ? const Color(0xFFFFB017) : Colors.white,
-                    border: Border.all(
-                      color: isClaimed ? const Color(0xFFFFB017) : const Color(0xFFE2E8F0),
-                      width: 2,
-                    ),
-                    boxShadow: isClaimed
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFFFFB017).withOpacity(0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            )
-                          ]
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '7',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: isClaimed ? Colors.white : const Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ),
-                );
-              }
-
-              return Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isClaimed ? const Color(0xFFFFF9E6) : Colors.white,
-                  border: Border.all(
-                    color: isClaimed ? const Color(0xFFFFCC44) : const Color(0xFFE2E8F0),
-                    width: 2,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    '$dayNum',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: isClaimed ? const Color(0xFF131326) : const Color(0xFF94A3B8),
-                    ),
-                  ),
-                ),
+              return _StreakDayItem(
+                dayNum: dayNum,
+                isClaimed: isClaimed,
+                isActive: isActive,
+                onTap: isActive ? onClaim : null,
               );
             }),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DailyStreakHeader extends StatelessWidget {
+  const _DailyStreakHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Daily Streak Bonus',
+          style: TextStyle(
+            fontSize: 15.5,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF131326),
+            letterSpacing: -0.3,
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Keep your streak for bigger rewards!',
+            textAlign: TextAlign.end,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF7C8BA0),
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StreakDayItem extends StatelessWidget {
+  final int dayNum;
+  final bool isClaimed;
+  final bool isActive;
+  final VoidCallback? onTap;
+
+  const _StreakDayItem({
+    required this.dayNum,
+    required this.isClaimed,
+    required this.isActive,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildCoinCircle(),
+          const SizedBox(height: 6),
+          _buildDayLabel(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoinCircle() {
+    if (isActive) {
+      return const _ActiveStreakCoin();
+    }
+    if (isClaimed) {
+      return const _ClaimedStreakCoin();
+    }
+    return const _LockedStreakCoin();
+  }
+
+  Widget _buildDayLabel() {
+    final Color textColor;
+    final FontWeight fontWeight;
+
+    if (isActive) {
+      textColor = const Color(0xFF6D28D9);
+      fontWeight = FontWeight.w700;
+    } else if (isClaimed) {
+      textColor = const Color(0xFF10B981);
+      fontWeight = FontWeight.w600;
+    } else {
+      textColor = const Color(0xFF8C95A6);
+      fontWeight = FontWeight.w500;
+    }
+
+    return Text(
+      'Day $dayNum',
+      style: TextStyle(
+        fontSize: 10.5,
+        fontWeight: fontWeight,
+        color: textColor,
+        letterSpacing: -0.2,
+      ),
+    );
+  }
+}
+
+class _ActiveStreakCoin extends StatelessWidget {
+  const _ActiveStreakCoin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF8B5CF6),
+            Color(0xFF6D28D9),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.45),
+            blurRadius: 8,
+            spreadRadius: 1,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Image.asset(
+          AppAssets.goldRbxCoin,
+          width: 25,
+          height: 25,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+}
+
+class _ClaimedStreakCoin extends StatelessWidget {
+  const _ClaimedStreakCoin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFFFFBEB),
+        border: Border.all(
+          color: const Color(0xFFFCD34D),
+          width: 1.5,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Image.asset(
+            AppAssets.goldRbxCoin,
+            width: 23,
+            height: 23,
+            fit: BoxFit.contain,
+          ),
+          Positioned(
+            right: 1,
+            bottom: 1,
+            child: Container(
+              width: 13,
+              height: 13,
+              decoration: const BoxDecoration(
+                color: Color(0xFF10B981),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check,
+                size: 9,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LockedStreakCoin extends StatelessWidget {
+  const _LockedStreakCoin();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFF4F5F8),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+          width: 1.2,
+        ),
+      ),
+      child: Center(
+        child: ColorFiltered(
+          colorFilter: const ColorFilter.matrix(<double>[
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0.2126, 0.7152, 0.0722, 0, 0,
+            0,      0,      0,      0.40, 0,
+          ]),
+          child: Image.asset(
+            AppAssets.goldRbxCoin,
+            width: 21,
+            height: 21,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

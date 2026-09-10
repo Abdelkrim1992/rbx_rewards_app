@@ -91,7 +91,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
           children: [
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(bottom: 20, top: 12),
+                padding: const EdgeInsets.only(bottom: 20, top: 2),
                 onRefresh: _handleRefresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

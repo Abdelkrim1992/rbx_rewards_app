@@ -1197,7 +1197,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                     ),
                     child: Center(
                       child: Text(
-                        'Claim & Go Home',
+                        'Claim Reward',
                         style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,

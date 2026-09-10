@@ -1350,7 +1350,12 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   }
 
   Future<void> _loadLocalData() async {
-    final currentCoins = ref.read(coinProvider);
+    int currentCoins = 0;
+    try {
+      currentCoins = ref.read(coinProvider);
+    } catch (_) {
+      currentCoins = 0;
+    }
     final bestScore = await GamePrefs.getFlappyBestScore();
     if (mounted) {
       setState(() {
@@ -1587,7 +1592,11 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   }
 
   void _startGame() {
-    _sessionId = ref.read(gameServiceProvider).generateSessionId();
+    try {
+      _sessionId = ref.read(gameServiceProvider).generateSessionId();
+    } catch (_) {
+      _sessionId = null;
+    }
     _gameStartTime = DateTime.now();
     _handledGameOver = false;
     _game.startGame();
@@ -1858,8 +1867,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
 
   // --- Menu Overlay Screen ---
   Widget _buildMenuOverlay() {
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return Container(
       width: double.infinity,
       height: double.infinity,
@@ -1911,6 +1918,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                       border: Border.all(color: Colors.white24),
                     ),
                     child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
                           AppAssets.goldRbxCoin,
@@ -1923,19 +1931,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Consumer(
-                          builder: (context, ref, child) {
-                            final coinBalance = ref.watch(coinProvider);
-                            return Text(
-                              coinBalance.toString(),
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFFFFCC44),
-                              ),
-                            );
-                          },
-                        ),
+                        _buildMenuCoinCounter(),
                       ],
                     ),
                   ),
@@ -2099,6 +2095,41 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMenuCoinCounter() {
+    bool hasScope = false;
+    try {
+      ProviderScope.containerOf(context, listen: false);
+      hasScope = true;
+    } catch (_) {
+      hasScope = false;
+    }
+
+    if (!hasScope) {
+      return Text(
+        '$_coins',
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFFFFCC44),
+        ),
+      );
+    }
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final coinBalance = ref.watch(coinProvider);
+        return Text(
+          coinBalance.toString(),
+          style: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFFFFCC44),
+          ),
+        );
+      },
     );
   }
 

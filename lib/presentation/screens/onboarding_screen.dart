@@ -1,11 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
+import '../providers/coin_provider.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onGetStarted;
 
   const OnboardingScreen({super.key, required this.onGetStarted});
+
+  @override
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  late final PageController _pageController;
+  int _currentPage = 0;
+  bool _isClaiming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _nextPage() {
+    HapticFeedback.lightImpact();
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  Future<void> _handleStartEarning() async {
+    if (_isClaiming) return;
+    setState(() => _isClaiming = true);
+    HapticFeedback.mediumImpact();
+
+    // 1. Immediately trigger onGetStarted so transition to HomeScreen is snappy
+    widget.onGetStarted();
+
+    // 2. Persist bonus claimed and credit +50 RBX Coins
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyClaimed = prefs.getBool('welcome_bonus_claimed') ?? false;
+      if (!alreadyClaimed) {
+        await prefs.setBool('welcome_bonus_claimed', true);
+        await ref.read(coinProvider.notifier).credit(50, 'welcome_bonus');
+      }
+    } catch (e) {
+      debugPrint('Error crediting welcome bonus: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,46 +68,79 @@ class OnboardingScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  // Hero illustration: aligned to bottomCenter so it connects directly to the headline without dead space
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxHeight < 680;
+
+                return Column(
+                  children: [
+                    // Top Logo Header (Consistent across all 3 steps)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: isCompact ? 8 : 12,
+                        bottom: isCompact ? 4 : 8,
+                      ),
                       child: Image.asset(
-                        AppAssets.onboardingHero,
+                        AppAssets.rbxLogo,
+                        height: isCompact ? 30 : 36,
                         fit: BoxFit.contain,
-                        alignment: Alignment.bottomCenter,
-                        cacheWidth: 900,
-                        errorBuilder: (_, __, ___) => Container(
-                          decoration: BoxDecoration(
-                            gradient: AppColors.dailyCardGradient,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.celebration,
-                              size: 80,
-                              color: AppColors.primary,
-                            ),
+                        cacheHeight: 120,
+                        errorBuilder: (_, __, ___) => const Text(
+                          'RBX Play & Earn',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF101828),
                           ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // Cohesive content block with tight, professional Revolut/Wise style spacing
-                  const SizedBox(height: 80),
-                  const _HeaderTexts(),
-                  const SizedBox(height: 30),
-                  const _FeatureCardsRow(),
-                  const SizedBox(height: 70),
-                  _GetStartedButton(onTap: onGetStarted),
-                  const SizedBox(height: 30),
-                ],
-              ),
+                    // 3-Step Interactive PageView
+                    Expanded(
+                      child: PageView(
+                        controller: _pageController,
+                        onPageChanged: (index) {
+                          setState(() => _currentPage = index);
+                        },
+                        children: [
+                          _StepOneContent(isCompact: isCompact),
+                          _StepTwoContent(isCompact: isCompact),
+                          _StepThreeContent(isCompact: isCompact),
+                        ],
+                      ),
+                    ),
+
+                    // Bottom Navigation Zone (Dots + Gradient CTA)
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        isCompact ? 6 : 10,
+                        20,
+                        isCompact ? 12 : 20,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _DotsIndicator(currentPage: _currentPage),
+                          SizedBox(height: isCompact ? 12 : 18),
+                          _PrimaryActionButton(
+                            label: _currentPage == 0
+                                ? 'Get Started'
+                                : _currentPage == 1
+                                    ? 'Continue'
+                                    : 'Start Earning',
+                            isLoading: _isClaiming && _currentPage == 2,
+                            onTap: _currentPage < 2
+                                ? _nextPage
+                                : _handleStartEarning,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -63,97 +149,130 @@ class OnboardingScreen extends StatelessWidget {
   }
 }
 
-class _HeaderTexts extends StatelessWidget {
-  const _HeaderTexts();
+// ---------------------------------------------------------------------------
+// Step 1: Earn RBX Rewards Daily (Hero Avatar + 3 Mini Feature Cards)
+// ---------------------------------------------------------------------------
+class _StepOneContent extends StatelessWidget {
+  final bool isCompact;
+
+  const _StepOneContent({required this.isCompact});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: RichText(
-            textAlign: TextAlign.center,
-            text: const TextSpan(
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF101828),
-                letterSpacing: -0.7,
-                height: 1.18,
-              ),
-              children: [
-                TextSpan(text: 'Earn '),
-                TextSpan(
-                  text: 'RBX Rewards ',
-                  style: TextStyle(color: Color(0xFF5637E6)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          // Hero 3D Roblox Avatar illustration
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(8, isCompact ? 4 : 8, 8, 0),
+              child: Image.asset(
+                AppAssets.onboardingHero,
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomCenter,
+                cacheWidth: 800,
+                errorBuilder: (_, __, ___) => Container(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.dailyCardGradient,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.celebration,
+                      size: 80,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
-                TextSpan(text: 'Daily'),
+              ),
+            ),
+          ),
+
+          SizedBox(height: isCompact ? 12 : 20),
+
+          // Title & Subtitle
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF101828),
+                  letterSpacing: -0.6,
+                  height: 1.18,
+                ),
+                children: [
+                  TextSpan(text: 'Earn '),
+                  TextSpan(
+                    text: 'RBX Rewards ',
+                    style: TextStyle(color: Color(0xFF5637E6)),
+                  ),
+                  TextSpan(text: 'Daily'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Play mini games, complete activities,\nand collect reward coins.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF667085),
+                height: 1.3,
+              ),
+            ),
+          ),
+
+          SizedBox(height: isCompact ? 14 : 22),
+
+          // 3 Feature Cards Row
+          SizedBox(
+            height: isCompact ? 84 : 94,
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _MiniFeatureCard(
+                    imagePath: 'assets/images/first_feature_card.jpeg',
+                    title: 'Play Games',
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: _MiniFeatureCard(
+                    imagePath: 'assets/images/second_feature_card.jpeg',
+                    title: 'Spin & Win',
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: _MiniFeatureCard(
+                    imagePath: 'assets/images/thirty_feature_card.jpeg',
+                    title: 'Unlock Rewards',
+                  ),
+                ),
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            'Play mini games, spin the wheel,\nand collect reward coins.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF667085),
-              height: 1.35,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FeatureCardsRow extends StatelessWidget {
-  const _FeatureCardsRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 96,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _FeatureCard(
-              imagePath: 'assets/images/first_feature_card.jpeg',
-              title: 'Play Games',
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: _FeatureCard(
-              imagePath: 'assets/images/second_feature_card.jpeg',
-              title: 'Spin & Win',
-            ),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: _FeatureCard(
-              imagePath: 'assets/images/thirty_feature_card.jpeg',
-              title: 'Unlock Rewards',
-            ),
-          ),
+          SizedBox(height: isCompact ? 6 : 10),
         ],
       ),
     );
   }
 }
 
-class _FeatureCard extends StatelessWidget {
+class _MiniFeatureCard extends StatelessWidget {
   final String imagePath;
   final String title;
 
-  const _FeatureCard({
+  const _MiniFeatureCard({
     required this.imagePath,
     required this.title,
   });
@@ -161,7 +280,7 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFFCFCFD),
         borderRadius: BorderRadius.circular(16),
@@ -176,44 +295,47 @@ class _FeatureCard extends StatelessWidget {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: const Color(0xFFF6F5FD),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(color: const Color(0x125637E6)),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: Image.asset(
                 imagePath,
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 fit: BoxFit.cover,
-                cacheWidth: 140,
-                cacheHeight: 140,
+                cacheWidth: 120,
+                cacheHeight: 120,
                 errorBuilder: (_, __, ___) => const Icon(
                   Icons.star,
                   color: AppColors.primary,
-                  size: 22,
+                  size: 20,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 7),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1D2939),
-              letterSpacing: -0.1,
+          const SizedBox(height: 5),
+          Flexible(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1D2939),
+                letterSpacing: -0.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -221,25 +343,459 @@ class _FeatureCard extends StatelessWidget {
   }
 }
 
-class _GetStartedButton extends StatefulWidget {
-  final VoidCallback onTap;
+// ---------------------------------------------------------------------------
+// Step 2: Play. Earn. Redeem. (3 Vertical Step Cards with Badges)
+// ---------------------------------------------------------------------------
+class _StepTwoContent extends StatelessWidget {
+  final bool isCompact;
 
-  const _GetStartedButton({required this.onTap});
+  const _StepTwoContent({required this.isCompact});
 
   @override
-  State<_GetStartedButton> createState() => _GetStartedButtonState();
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(height: isCompact ? 6 : 14),
+
+          // Title & Subtitle
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF101828),
+                  letterSpacing: -0.6,
+                  height: 1.18,
+                ),
+                children: [
+                  TextSpan(text: 'Play. '),
+                  TextSpan(
+                    text: 'Earn. ',
+                    style: TextStyle(color: Color(0xFF5637E6)),
+                  ),
+                  TextSpan(text: 'Redeem.'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Three simple steps to exciting rewards.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF667085),
+              ),
+            ),
+          ),
+
+          SizedBox(height: isCompact ? 16 : 28),
+
+          // 3 Step Cards Column (Flexible layout)
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _StepCard(
+                  stepNumber: '1',
+                  title: 'Play',
+                  description: 'Complete mini games\nand activities.',
+                  imagePath: 'assets/images/first_feature_card.jpeg',
+                  isCompact: isCompact,
+                ),
+                _StepCard(
+                  stepNumber: '2',
+                  title: 'Earn',
+                  description: 'Collect RBX Coins as\nyou complete activities.',
+                  imagePath: 'assets/images/robux_coins.png',
+                  isCompact: isCompact,
+                ),
+                _StepCard(
+                  stepNumber: '3',
+                  title: 'Redeem',
+                  description: 'Use your RBX Coins\ntoward available rewards.',
+                  imagePath: 'assets/images/daily_reward_gift.png',
+                  isCompact: isCompact,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isCompact ? 6 : 10),
+        ],
+      ),
+    );
+  }
 }
 
-class _GetStartedButtonState extends State<_GetStartedButton>
+class _StepCard extends StatelessWidget {
+  final String stepNumber;
+  final String title;
+  final String description;
+  final String imagePath;
+  final bool isCompact;
+
+  const _StepCard({
+    required this.stepNumber,
+    required this.title,
+    required this.description,
+    required this.imagePath,
+    required this.isCompact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 14 : 16,
+        vertical: isCompact ? 12 : 16,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFCFD),
+        borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
+        border: Border.all(color: const Color(0xFFECECF2)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Step number badge
+          Container(
+            width: isCompact ? 28 : 32,
+            height: isCompact ? 28 : 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEECFE),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Center(
+              child: Text(
+                stepNumber,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF5637E6),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Title & Description
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: isCompact ? 15 : 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF101828),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: isCompact ? 12 : 13,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF667085),
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 10),
+
+          // 3D Feature Graphic
+          SizedBox(
+            width: isCompact ? 46 : 54,
+            height: isCompact ? 46 : 54,
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
+              cacheWidth: 150,
+              errorBuilder: (_, __, ___) => const Icon(
+                Icons.stars_rounded,
+                color: AppColors.primary,
+                size: 32,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 3: Your first reward is waiting (Bursting Gift Box + +50 Coins Bonus)
+// ---------------------------------------------------------------------------
+class _StepThreeContent extends StatelessWidget {
+  final bool isCompact;
+
+  const _StepThreeContent({required this.isCompact});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          SizedBox(height: isCompact ? 6 : 14),
+
+          // Title & Subtitle
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF101828),
+                  letterSpacing: -0.6,
+                  height: 1.18,
+                ),
+                children: [
+                  TextSpan(text: 'Your first '),
+                  TextSpan(
+                    text: 'reward\n',
+                    style: TextStyle(color: Color(0xFF5637E6)),
+                  ),
+                  TextSpan(text: 'is waiting'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'Start earning RBX Coins by completing your first activity.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF667085),
+              ),
+            ),
+          ),
+
+          // Bursting Open Gift Box with Coins & Confetti
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: isCompact ? 6 : 14),
+              child: Image.asset(
+                AppAssets.onboardingGiftBox,
+                fit: BoxFit.contain,
+                alignment: Alignment.center,
+                cacheWidth: 800,
+                errorBuilder: (_, __, ___) => Image.asset(
+                  AppAssets.dailyRewardGift,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+
+          // Welcome Bonus Card (+50 RBX Coins & Milestone)
+          Container(
+            padding: EdgeInsets.all(isCompact ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
+              border: Border.all(color: const Color(0xFFECECF2)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x08000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Coins + +50 RBX Coins Row
+                Row(
+                  children: [
+                    Image.asset(
+                      AppAssets.goldRbxCoin,
+                      width: isCompact ? 48 : 56,
+                      height: isCompact ? 48 : 56,
+                      fit: BoxFit.contain,
+                      cacheWidth: 160,
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '+50',
+                          style: TextStyle(
+                            fontSize: isCompact ? 28 : 32,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF5637E6),
+                            letterSpacing: -0.8,
+                            height: 1.05,
+                          ),
+                        ),
+                        Text(
+                          'RBX Coins',
+                          style: TextStyle(
+                            fontSize: isCompact ? 14 : 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF101828),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: isCompact ? 10 : 12),
+
+                // Milestone Banner
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF6F5FD),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Color(0x185637E6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.flag_rounded,
+                          size: 14,
+                          color: Color(0xFF5637E6),
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your first milestone',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF5637E6),
+                              ),
+                            ),
+                            SizedBox(height: 1),
+                            Text(
+                              'Complete an activity to claim it.',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF667085),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: isCompact ? 6 : 10),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3-Dots Indicator
+// ---------------------------------------------------------------------------
+class _DotsIndicator extends StatelessWidget {
+  final int currentPage;
+
+  const _DotsIndicator({required this.currentPage});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (index) {
+        final isActive = index == currentPage;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: isActive ? 22 : 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color:
+                isActive ? const Color(0xFF5637E6) : const Color(0xFFE0DCFA),
+            borderRadius: BorderRadius.circular(3.5),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Primary Action Button (Gradient with forward arrow & haptics)
+// ---------------------------------------------------------------------------
+class _PrimaryActionButton extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+  final bool isLoading;
+
+  const _PrimaryActionButton({
+    required this.label,
+    required this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  State<_PrimaryActionButton> createState() => _PrimaryActionButtonState();
+}
+
+class _PrimaryActionButtonState extends State<_PrimaryActionButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 120),
     lowerBound: 0.0,
-    upperBound: 0.04,
+    upperBound: 0.03,
   );
 
   void _onTapDown(TapDownDetails details) {
+    if (widget.isLoading) return;
     HapticFeedback.lightImpact();
     _controller.forward();
   }
@@ -259,7 +815,7 @@ class _GetStartedButtonState extends State<_GetStartedButton>
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
-      onTap: widget.onTap,
+      onTap: widget.isLoading ? null : widget.onTap,
       child: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -276,24 +832,41 @@ class _GetStartedButtonState extends State<_GetStartedButton>
             borderRadius: BorderRadius.circular(18),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x595637E6),
-                blurRadius: 0,
-                // offset: Offset(0, 10),
+                color: Color(0x3D5637E6),
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
             ],
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Get Started',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  letterSpacing: 0.4,
+              if (widget.isLoading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              else ...[
+                Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ],
             ],
           ),
         ),

@@ -47,6 +47,7 @@ flutter:
     - assets/images/first_feature_card.jpeg
     - assets/images/second_feature_card.jpeg
     - assets/images/thirty_feature_card.jpeg
+    - assets/images/onboarding_gift_box.png
     - assets/images/mega_chest.png
     - assets/images/robux_coins.png
     - assets/images/tap_tap_mini_game.png

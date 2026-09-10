@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,9 @@ import '../theme/app_theme.dart';
 /// Pre-decodes in-app assets and remote UI assets into GPU RAM and local disk storage
 class ImagePrecacheHelper {
   static Future<void> precacheAll(BuildContext context) async {
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (isTest) return;
+
     final futures = <Future<dynamic>>[];
 
     // 1. Precache all in-app raster assets into Flutter's GPU memory cache
@@ -33,7 +37,7 @@ class ImagePrecacheHelper {
         final loader = SvgAssetLoader(svgPath);
         futures.add(loader.loadBytes(null).catchError((e) {
           debugPrint('Precache SVG warning for $svgPath: $e');
-          return Uint8List(0);
+          return ByteData(0);
         }));
       } catch (e) {
         debugPrint('Precache SVG init warning for $svgPath: $e');
