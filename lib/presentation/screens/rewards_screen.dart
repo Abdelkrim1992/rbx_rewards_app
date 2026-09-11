@@ -310,18 +310,12 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(
-            currentIndex: 2,
-            onTap: (index) {
-              ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
-              widget.onNavTap(index);
-            },
-          ),
-        ),
+      bottomNavigationBar: RbxBottomNav(
+        currentIndex: 2,
+        onTap: (index) {
+          ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
+          widget.onNavTap(index);
+        },
       ),
     );
   }

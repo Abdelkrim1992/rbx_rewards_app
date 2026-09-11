@@ -54,34 +54,132 @@ class AppColors {
   static const Color segment6 = Color(0xFF8847F5);
 }
 
+/// Centralized storage configuration for Supabase Storage CDN (Cloudflare edge)
+class AppStorage {
+  static const String supabaseProjectUrl =
+      'https://onzyllkmzpykfecexruc.supabase.co';
+
+  static const String bucketName = 'app-assets';
+
+  /// Cloudflare-backed Supabase CDN Base URL for app assets
+  /// Cloudflare-backed Supabase CDN Base URL for ultra-fast WebP images (30-80 KB, <25ms download)
+  static const String webpCdnBaseUrl =
+      '$supabaseProjectUrl/storage/v1/object/public/$bucketName/webp';
+
+  /// Cloudflare-backed Supabase CDN Base URL for raw images
+  static const String cdnBaseUrl =
+      '$supabaseProjectUrl/storage/v1/object/public/$bucketName/images';
+
+  /// Cloudflare / Supabase on-the-fly image transformation URL
+  static String renderUrl(String assetPathOrName, {int? width, int quality = 85}) {
+    final fileName = assetPathOrName.contains('/')
+        ? assetPathOrName.split('/').last
+        : assetPathOrName;
+    final base =
+        '$supabaseProjectUrl/storage/v1/render/image/public/$bucketName/images/$fileName';
+    if (width != null) {
+      return '$base?width=$width&quality=$quality&format=origin';
+    }
+    return base;
+  }
+
+  /// Maps an asset path (e.g. 'assets/images/tap_tap_mini_game.png')
+  /// to its ultra-fast Supabase WebP CDN URL.
+  static String toCdnUrl(String assetPathOrName, {bool preferWebp = true}) {
+    if (assetPathOrName.startsWith('http://') ||
+        assetPathOrName.startsWith('https://')) {
+      return assetPathOrName;
+    }
+    var fileName = assetPathOrName.contains('/')
+        ? assetPathOrName.split('/').last
+        : assetPathOrName;
+
+    if (preferWebp) {
+      final baseName = fileName.split('.').first;
+      return '$webpCdnBaseUrl/$baseName.webp';
+    }
+
+    // Match exact uppercase extension in Supabase Storage
+    if (fileName.toLowerCase() == 'flip_cards_mini_game.png') {
+      fileName = 'flip_cards_mini_game.PNG';
+    } else if (fileName.toLowerCase() == 'first_rbx_card.png') {
+      fileName = 'first_rbx_card.PNG';
+    } else if (fileName.toLowerCase() == 'second_rbx_card.png') {
+      fileName = 'second_rbx_card.PNG';
+    } else if (fileName.toLowerCase() == 'thirty_rbx_reward.png') {
+      fileName = 'thirty_rbx_reward.PNG';
+    }
+
+    return '$cdnBaseUrl/$fileName';
+  }
+}
+
 class AppAssets {
   static const String onboardingHero =
-      'assets/images/onboarding_screen_main_image.jpeg';
+      'assets/images/onboarding_screen_main_image.webp';
   static const String onboardingGiftBox =
-      'assets/images/onboarding_gift_box.png';
+      'assets/images/onboarding_gift_box.webp';
+  static const String onboardingGame =
+      'assets/images/game_image_onboarding.webp';
+  static const String onboardingCoin =
+      'assets/images/coin_image_onboarding.webp';
+  static const String onboardingReward =
+      'assets/images/reward_image_onboarding.webp';
+  static const String bootImage =
+      'assets/images/boot_image.webp';
+
+  // Feature cards
+  static const String firstFeatureCard =
+      'assets/images/first_feature_card.webp';
+  static const String secondFeatureCard =
+      'assets/images/second_feature_card.webp';
+  static const String thirtyFeatureCard =
+      'assets/images/thirty_feature_card.webp';
 
   // App Icon & Logos
-  static const String appIcon = 'assets/images/app_icon.png';
-  static const String rbxLogo = 'assets/images/logo_image.png';
-  static const String goldRbxCoin = 'assets/images/robux_coins.png';
+  static const String appIcon = 'assets/images/logo_image.webp';
+  static const String rbxLogo = 'assets/images/logo_image.webp';
+  static const String goldRbxCoin = 'assets/images/robux_coins.webp';
   static const String balanceWidgetImage =
-      'assets/images/balance_widget_image.png';
-  static const String dailyRewardImage = 'assets/images/daily_reward_image.png';
-  static const String dailyRewardGift = 'assets/images/daily_reward_gift.png';
-  static const String chestIcon = 'assets/images/open_chest_quick_actions.png';
-  static const String spinWheelIcon = 'assets/images/spin_quick_action.png';
-  static const String tapTapGame = 'assets/images/tap_tap_mini_game.png';
-  static const String quizMasterGame = 'assets/images/math_quiz_mini_game.png';
+      'assets/images/balance_widget_image.webp';
+  static const String dailyRewardImage = 'assets/images/daily_reward_image.webp';
+  static const String dailyRewardGift = 'assets/images/daily_reward_gift.webp';
+  static const String chestIcon = 'assets/images/open_chest_quick_actions.webp';
+  static const String spinWheelIcon = 'assets/images/spin_quick_action.webp';
+  static const String tapTapGame = 'assets/images/tap_tap_mini_game.webp';
+  static const String quizMasterGame = 'assets/images/math_quiz_mini_game.webp';
   static const String quizMasterQuickActions =
-      'assets/images/quiz_master_quick_actions.jpeg';
-  static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.png';
-  static const String goldCoin = 'assets/images/robux_coins.png';
-  static const String megaChest = 'assets/images/mega_chest.png';
+      'assets/images/quiz_master_quick_actions.webp';
+  static const String memoryMatchGame = 'assets/images/flip_cards_mini_game.webp';
+  static const String goldCoin = 'assets/images/robux_coins.webp';
+  static const String megaChest = 'assets/images/mega_chest.webp';
   
   // Redeem rewards cards
-  static const String roblox3UsdCard = 'assets/images/roblox_3usd_card.png';
-  static const String roblox5UsdCard = 'assets/images/roblox_5usd_card.png';
-  static const String roblox10UsdCard = 'assets/images/roblox_10usd_card.png';
+  static const String roblox3UsdCard = 'assets/images/roblox_3usd_card.webp';
+  static const String roblox5UsdCard = 'assets/images/roblox_5usd_card.webp';
+  static const String roblox10UsdCard = 'assets/images/roblox_10usd_card.webp';
+
+  // Supabase CDN URLs for remote loading with local storage caching
+  static String get onboardingHeroCdn => AppStorage.toCdnUrl(onboardingHero);
+  static String get onboardingGiftBoxCdn => AppStorage.toCdnUrl(onboardingGiftBox);
+  static String get onboardingGameCdn => AppStorage.toCdnUrl(onboardingGame);
+  static String get onboardingCoinCdn => AppStorage.toCdnUrl(onboardingCoin);
+  static String get onboardingRewardCdn => AppStorage.toCdnUrl(onboardingReward);
+  static String get balanceWidgetImageCdn => AppStorage.toCdnUrl(balanceWidgetImage);
+  static String get dailyRewardImageCdn => AppStorage.toCdnUrl(dailyRewardImage);
+  static String get dailyRewardGiftCdn => AppStorage.toCdnUrl(dailyRewardGift);
+  static String get chestIconCdn => AppStorage.toCdnUrl(chestIcon);
+  static String get spinWheelIconCdn => AppStorage.toCdnUrl(spinWheelIcon);
+  static String get tapTapGameCdn => AppStorage.toCdnUrl(tapTapGame);
+  static String get quizMasterGameCdn => AppStorage.toCdnUrl(quizMasterGame);
+  static String get quizMasterQuickActionsCdn => AppStorage.toCdnUrl(quizMasterQuickActions);
+  static String get memoryMatchGameCdn => AppStorage.toCdnUrl(memoryMatchGame);
+  static String get flappyJumpGameCdn => AppStorage.toCdnUrl(flappyJumpGame);
+  static String get megaChestCdn => AppStorage.toCdnUrl(megaChest);
+  static String get roblox3UsdCardCdn => AppStorage.toCdnUrl(roblox3UsdCard);
+  static String get roblox5UsdCardCdn => AppStorage.toCdnUrl(roblox5UsdCard);
+  static String get roblox10UsdCardCdn => AppStorage.toCdnUrl(roblox10UsdCard);
+  static String get gamepadStatCdn => AppStorage.toCdnUrl(gamepadStat);
 
   // Nav icons
   static const String navHome =
@@ -96,10 +194,10 @@ class AppAssets {
       'assets/icons/profile-nav.svg';
 
   // Profile screen
-  static const String profileAvatar = 'assets/images/profile_image.png';
+  static const String profileAvatar = 'assets/images/profile_image.webp';
 
-  static const String rbxCoinIcon = 'assets/images/robux_coins.png';
-  static const String gamepadStat = 'assets/images/games-played.png';
+  static const String rbxCoinIcon = 'assets/images/robux_coins.webp';
+  static const String gamepadStat = 'assets/images/games-played.webp';
   static const String levelBadge =
       'https://www.figma.com/api/mcp/asset/159497f0-c81d-4613-8ec9-67c29e197137';
   static const String helpIcon =
@@ -112,16 +210,20 @@ class AppAssets {
       'https://www.figma.com/api/mcp/asset/e6dafc79-8710-4cac-a1ec-555574455b53';
 
   // Games screen
-  static const String flappyJumpGame = 'assets/images/flappy_mini_game.png';
+  static const String flappyJumpGame = 'assets/images/flappy_mini_game.webp';
 
   /// Assets to precache in memory on app startup for instant rendering
   static const List<String> allPrecacheAssets = [
     appIcon,
     rbxLogo,
     onboardingHero,
-    'assets/images/first_feature_card.jpeg',
-    'assets/images/second_feature_card.jpeg',
-    'assets/images/thirty_feature_card.jpeg',
+    onboardingGiftBox,
+    onboardingGame,
+    onboardingCoin,
+    onboardingReward,
+    firstFeatureCard,
+    secondFeatureCard,
+    thirtyFeatureCard,
     goldRbxCoin,
     balanceWidgetImage,
     dailyRewardImage,
@@ -149,14 +251,8 @@ class AppAssets {
     navProfile,
   ];
 
-  /// Key remote UI icons to preload and cache persistently in disk storage
-  static const List<String> allPrecacheNetworkImages = [
-    levelBadge,
-    helpIcon,
-    privacyIcon,
-    termsIcon,
-    contactIcon,
-  ];
+  /// Dynamic remote CDN images to pre-warm into local persistent storage
+  static List<String> get allPrecacheNetworkImages => const [];
 }
 
 class AppLayout {

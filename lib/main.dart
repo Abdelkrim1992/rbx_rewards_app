@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/screens/loading_screen.dart';
 import 'presentation/providers/ad_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/screens/spin_screen.dart';
@@ -56,12 +57,15 @@ Future<ProviderContainer> _initStorageAndServices() async {
     debugPrint('❌ Hive init failed: $e');
   }
 
-  try {
-    LuckyBonusService().load();
-    TapjoyService().initialize();
-  } catch (e) {
-    debugPrint('❌ Third-party SDK init failed: $e');
-  }
+  // Defer heavy third-party SDKs so they do not freeze the UI thread during cold boot
+  unawaited(Future(() {
+    try {
+      LuckyBonusService().load();
+      TapjoyService().initialize();
+    } catch (e) {
+      debugPrint('❌ Third-party SDK init failed: $e');
+    }
+  }));
 
   return ProviderContainer(
     overrides: [
@@ -131,9 +135,8 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(RbxRewardsApp.globalSystemOverlayStyle);
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  final container = await _bootstrapServices();
-
-  runApp(RbxRewardsApp(container: container));
+  // Launch Flutter immediately so the cold boot screen displays without delay
+  runApp(const RbxRewardsApp());
 }
 
 class RbxRewardsApp extends StatefulWidget {
@@ -162,11 +165,10 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
   @override
   void initState() {
     super.initState();
-    if (widget.container != null) {
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (widget.container != null && isTest) {
       _container = widget.container;
       _isInitComplete = true;
-    } else {
-      _initializeApp();
     }
   }
 
@@ -176,17 +178,6 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
       return true;
     } catch (_) {
       return false;
-    }
-  }
-
-  Future<void> _initializeApp() async {
-    final container = await _bootstrapServices();
-
-    if (mounted) {
-      setState(() {
-        _container = container;
-        _isInitComplete = true;
-      });
     }
   }
 
@@ -246,7 +237,22 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
 
           return content;
         },
-        home: _buildHome(context),
+        home: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 450),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final curvedAnimation = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return FadeTransition(
+              opacity: curvedAnimation,
+              child: child,
+            );
+          },
+          child: _buildHome(context),
+        ),
       ),
     );
 
@@ -267,14 +273,32 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
 
   Widget _buildHome(BuildContext context) {
     if (_hasOuterScope(context)) {
-      return const AppNavigator();
+      return const AppNavigator(key: ValueKey('app_nav'));
     }
 
-    if (!_isInitComplete || _container == null) {
-      return const Scaffold(backgroundColor: Colors.white);
+    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    if (_isInitComplete && _container != null) {
+      return const AppNavigator(key: ValueKey('app_nav'));
     }
 
-    return const AppNavigator();
+    if (isTest && widget.container != null) {
+      return const AppNavigator(key: ValueKey('app_nav'));
+    }
+
+    return LoadingScreen(
+      key: const ValueKey('cold_boot_screen'),
+      onBootstrap: () => widget.container != null
+          ? Future.value(widget.container!)
+          : _bootstrapServices(),
+      onReady: (container) {
+        if (mounted) {
+          setState(() {
+            _container = container;
+            _isInitComplete = true;
+          });
+        }
+      },
+    );
   }
 }
 

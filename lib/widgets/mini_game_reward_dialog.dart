@@ -3,7 +3,7 @@ import '../theme/app_theme.dart';
 
 /// Two-tier reward dialog customized for mini games.
 /// Offers users a choice:
-/// - Quick Claim (lower reward + rewarded interstitial ad)
+/// - Quick Claim (standard reward, zero ads)
 /// - Premium Claim (higher reward + rewarded ad)
 ///
 /// Keeps the identical visual layout of [TwoTierRewardDialog] but allows
@@ -89,7 +89,7 @@ class _MiniGameRewardDialogState extends State<MiniGameRewardDialog> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: (widget.iconColor ?? AppColors.primary).withOpacity(0.2),
+              color: (widget.iconColor ?? AppColors.primary).withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -178,7 +178,7 @@ class _MiniGameRewardDialogState extends State<MiniGameRewardDialog> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: shadowColor.withOpacity(0.3),
+              color: shadowColor.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -202,7 +202,7 @@ class _MiniGameRewardDialogState extends State<MiniGameRewardDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(

@@ -30,7 +30,8 @@ Future<void> showGameRewardChoice({
 
   final gameKey = featureName.toLowerCase().replaceAll(' ', '_');
   await GamePrefs.incrementGamePlayCount(gameKey);
-  final playCount = await GamePrefs.getGamePlayCount(gameKey);
+
+  if (!context.mounted) return;
 
   await showDialog<void>(
     context: context,
@@ -48,27 +49,9 @@ Future<void> showGameRewardChoice({
       quickTextColor: quickTextColor,
       quickBorderColor: quickBorderColor,
       onQuickClaim: () async {
-        if (enableQuickAd && playCount % 3 == 0) {
-          await adNotifier.showRewardedInterstitial(
-            quickPlacement,
-            onReward: (_) async {
-              await onSuccess(baseReward);
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            onAdFailed: (error) async {
-              await onSuccess(baseReward);
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-          );
-        } else {
-          await onSuccess(baseReward);
-          if (context.mounted) {
-            Navigator.of(context).pop();
-          }
+        await onSuccess(baseReward);
+        if (context.mounted) {
+          Navigator.of(context).pop();
         }
       },
       onPremiumClaim: () async {

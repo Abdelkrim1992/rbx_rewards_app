@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_cached_image.dart';
 import '../providers/coin_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -167,12 +168,11 @@ class _StepOneContent extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.fromLTRB(8, isCompact ? 4 : 8, 8, 0),
-              child: Image.asset(
-                AppAssets.onboardingHero,
+              child: AppCachedImage(
+                imageUrl: AppAssets.onboardingHero,
+                fallbackAsset: AppAssets.onboardingHero,
                 fit: BoxFit.contain,
-                alignment: Alignment.bottomCenter,
-                cacheWidth: 800,
-                errorBuilder: (_, __, ___) => Container(
+                errorWidget: Container(
                   decoration: BoxDecoration(
                     gradient: AppColors.dailyCardGradient,
                     borderRadius: BorderRadius.circular(24),
@@ -240,21 +240,21 @@ class _StepOneContent extends StatelessWidget {
               children: [
                 Expanded(
                   child: _MiniFeatureCard(
-                    imagePath: 'assets/images/first_feature_card.jpeg',
+                    imagePath: AppAssets.firstFeatureCard,
                     title: 'Play Games',
                   ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
                   child: _MiniFeatureCard(
-                    imagePath: 'assets/images/second_feature_card.jpeg',
+                    imagePath: AppAssets.secondFeatureCard,
                     title: 'Spin & Win',
                   ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
                   child: _MiniFeatureCard(
-                    imagePath: 'assets/images/thirty_feature_card.jpeg',
+                    imagePath: AppAssets.thirtyFeatureCard,
                     title: 'Unlock Rewards',
                   ),
                 ),
@@ -398,38 +398,46 @@ class _StepTwoContent extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isCompact ? 16 : 28),
+          SizedBox(height: isCompact ? 14 : 26),
 
-          // 3 Step Cards Column (Flexible layout)
+          // 3 Step Cards Column (Flexible layout with smooth distribution)
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StepCard(
-                  stepNumber: '1',
-                  title: 'Play',
-                  description: 'Complete mini games\nand activities.',
-                  imagePath: 'assets/images/first_feature_card.jpeg',
-                  isCompact: isCompact,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _StepCard(
+                      stepNumber: '1',
+                      title: 'Play',
+                      description: 'Complete mini games\nand activities.',
+                      imagePath: AppAssets.onboardingGame,
+                      isCompact: isCompact,
+                    ),
+                    SizedBox(height: isCompact ? 10 : 16),
+                    _StepCard(
+                      stepNumber: '2',
+                      title: 'Earn',
+                      description: 'Collect RBX Coins as\nyou complete activities.',
+                      imagePath: AppAssets.onboardingCoin,
+                      isCompact: isCompact,
+                    ),
+                    SizedBox(height: isCompact ? 10 : 16),
+                    _StepCard(
+                      stepNumber: '3',
+                      title: 'Redeem',
+                      description: 'Use your RBX Coins\ntoward available rewards.',
+                      imagePath: AppAssets.onboardingReward,
+                      isCompact: isCompact,
+                    ),
+                  ],
                 ),
-                _StepCard(
-                  stepNumber: '2',
-                  title: 'Earn',
-                  description: 'Collect RBX Coins as\nyou complete activities.',
-                  imagePath: 'assets/images/robux_coins.png',
-                  isCompact: isCompact,
-                ),
-                _StepCard(
-                  stepNumber: '3',
-                  title: 'Redeem',
-                  description: 'Use your RBX Coins\ntoward available rewards.',
-                  imagePath: 'assets/images/daily_reward_gift.png',
-                  isCompact: isCompact,
-                ),
-              ],
+              ),
             ),
           ),
-          SizedBox(height: isCompact ? 6 : 10),
+          SizedBox(height: isCompact ? 4 : 8),
         ],
       ),
     );
@@ -453,45 +461,48 @@ class _StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageSize = isCompact ? 58.0 : 76.0;
+
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 14 : 16,
-        vertical: isCompact ? 12 : 16,
+        horizontal: isCompact ? 14 : 18,
+        vertical: isCompact ? 10 : 16,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFD),
-        borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
-        border: Border.all(color: const Color(0xFFECECF2)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isCompact ? 18 : 22),
+        border: Border.all(color: const Color(0xFFECECF2), width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Step number badge
           Container(
-            width: isCompact ? 28 : 32,
-            height: isCompact ? 28 : 32,
+            width: isCompact ? 32 : 38,
+            height: isCompact ? 32 : 38,
             decoration: BoxDecoration(
               color: const Color(0xFFEEECFE),
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: Text(
                 stepNumber,
-                style: const TextStyle(
-                  fontSize: 14,
+                style: TextStyle(
+                  fontSize: isCompact ? 15 : 17,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF5637E6),
+                  color: const Color(0xFF5637E6),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: isCompact ? 12 : 16),
 
           // Title & Description
           Expanded(
@@ -502,8 +513,8 @@ class _StepCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: isCompact ? 15 : 16,
-                    fontWeight: FontWeight.w700,
+                    fontSize: isCompact ? 16 : 18,
+                    fontWeight: FontWeight.w800,
                     color: const Color(0xFF101828),
                     letterSpacing: -0.2,
                   ),
@@ -512,30 +523,32 @@ class _StepCard extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: isCompact ? 12 : 13,
+                    fontSize: isCompact ? 12 : 13.5,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF667085),
-                    height: 1.25,
+                    height: 1.3,
                   ),
                 ),
               ],
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
 
           // 3D Feature Graphic
           SizedBox(
-            width: isCompact ? 46 : 54,
-            height: isCompact ? 46 : 54,
-            child: Image.asset(
-              imagePath,
+            width: imageSize,
+            height: imageSize,
+            child: AppCachedImage(
+              imageUrl: imagePath,
+              fallbackAsset: imagePath,
               fit: BoxFit.contain,
-              cacheWidth: 150,
-              errorBuilder: (_, __, ___) => const Icon(
+              width: imageSize,
+              height: imageSize,
+              errorWidget: const Icon(
                 Icons.stars_rounded,
                 color: AppColors.primary,
-                size: 32,
+                size: 36,
               ),
             ),
           ),
@@ -603,12 +616,11 @@ class _StepThreeContent extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.symmetric(vertical: isCompact ? 6 : 14),
-              child: Image.asset(
-                AppAssets.onboardingGiftBox,
+              child: AppCachedImage(
+                imageUrl: AppAssets.onboardingGiftBox,
+                fallbackAsset: AppAssets.onboardingGiftBox,
                 fit: BoxFit.contain,
-                alignment: Alignment.center,
-                cacheWidth: 800,
-                errorBuilder: (_, __, ___) => Image.asset(
+                errorWidget: Image.asset(
                   AppAssets.dailyRewardGift,
                   fit: BoxFit.contain,
                 ),
@@ -637,12 +649,12 @@ class _StepThreeContent extends StatelessWidget {
                 // Coins + +50 RBX Coins Row
                 Row(
                   children: [
-                    Image.asset(
-                      AppAssets.goldRbxCoin,
+                    AppCachedImage(
+                      imageUrl: AppAssets.goldRbxCoin,
+                      fallbackAsset: AppAssets.goldRbxCoin,
                       width: isCompact ? 48 : 56,
                       height: isCompact ? 48 : 56,
                       fit: BoxFit.contain,
-                      cacheWidth: 160,
                     ),
                     const SizedBox(width: 14),
                     Column(
@@ -688,18 +700,18 @@ class _StepThreeContent extends StatelessWidget {
                       Container(
                         width: 24,
                         height: 24,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Color(0x185637E6),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.flag_rounded,
                           size: 14,
                           color: Color(0xFF5637E6),
                         ),
                       ),
-                      SizedBox(width: 10),
-                      Expanded(
+                      const SizedBox(width: 10),
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

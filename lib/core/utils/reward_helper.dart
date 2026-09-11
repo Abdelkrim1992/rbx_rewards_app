@@ -33,31 +33,15 @@ Future<void> showRewardChoice({
       quickLabel: 'Claim $baseReward RBX',
       premiumReward: baseReward * 2,
       onQuickClaim: () async {
-        await adNotifier.showRewardedInterstitial(
-          quickPlacement,
-          onReward: (_) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-              );
-            }
-          },
-          onAdFailed: (error) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-              );
-            }
-          },
-        );
+        await onSuccess(baseReward);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
+          );
+        }
       },
       onPremiumClaim: () async {
         await adNotifier.showOptionalAd(

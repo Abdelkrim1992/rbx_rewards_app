@@ -325,13 +325,7 @@ class GamesScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 1, onTap: onNavTap),
-        ),
-      ),
+      bottomNavigationBar: RbxBottomNav(currentIndex: 1, onTap: onNavTap),
     );
   }
 }

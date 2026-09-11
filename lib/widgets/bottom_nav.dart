@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_theme.dart';
 
 class RbxBottomNav extends StatelessWidget {
@@ -14,98 +15,140 @@ class RbxBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      const _NavItem(icon: AppAssets.navHome, label: 'Home'),
-      const _NavItem(icon: AppAssets.navGames, label: 'Games'),
-      const _NavItem(icon: AppAssets.navRewards, label: 'Rewards'),
-      const _NavItem(icon: AppAssets.navProfile, label: 'Profile'),
+      const _NavItem(
+        icon: AppAssets.navHome,
+        label: 'Home',
+        fallbackIcon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
+      ),
+      const _NavItem(
+        icon: AppAssets.navGames,
+        label: 'Games',
+        fallbackIcon: Icons.sports_esports_outlined,
+        activeIcon: Icons.sports_esports_rounded,
+      ),
+      const _NavItem(
+        icon: AppAssets.navRewards,
+        label: 'Rewards',
+        fallbackIcon: Icons.card_giftcard_outlined,
+        activeIcon: Icons.card_giftcard_rounded,
+      ),
+      const _NavItem(
+        icon: AppAssets.navProfile,
+        label: 'Profile',
+        fallbackIcon: Icons.person_outline,
+        activeIcon: Icons.person_rounded,
+      ),
     ];
 
     return Container(
-      height: 60,
-      padding: const EdgeInsets.only(
-        left: 5,
-        right: 5,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.navBorder),
-        boxShadow: const [
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.navBorder,
+            width: 1.0,
+          ),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 22.5,
-            // offset: Offset(0, 12),
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, -2),
           ),
         ],
       ),
-      child: Row(
-        children: List.generate(items.length, (i) {
-          final isActive = i == currentIndex;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onTap(i),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                margin: const EdgeInsets.only(top: 5, bottom: 5),
-                decoration: isActive
-                    ? BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(20),
-                      )
-                    : null,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.network(
-                      items[i].icon,
-                      width: 22,
-                      height: 22,
-                      color: isActive ? AppColors.purple : AppColors.mutedText,
-                      errorBuilder: (_, __, ___) => Icon(
-                        _fallbackIcon(i),
-                        size: 22,
-                        color:
-                            isActive ? AppColors.purple : AppColors.mutedText,
-                      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              final item = items[i];
+              final isActive = i == currentIndex;
+
+              return Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onTap(i),
+                    splashColor: AppColors.primarySoft.withValues(alpha: 0.4),
+                    highlightColor: Colors.transparent,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // WhatsApp-style active capsule indicator pill
+                        Container(
+                          width: 58,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? AppColors.primarySoft
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          alignment: Alignment.center,
+                          child: _buildIcon(item, isActive),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11.5,
+                            fontWeight: isActive
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isActive
+                                ? AppColors.darkText
+                                : AppColors.mutedText,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      items[i].label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color:
-                            isActive ? AppColors.purple : AppColors.mutedText,
-                        letterSpacing: 0.275,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          );
-        }),
+              );
+            }),
+          ),
+        ),
       ),
     );
   }
 
-  IconData _fallbackIcon(int index) {
-    switch (index) {
-      case 0:
-        return Icons.home_outlined;
-      case 1:
-        return Icons.sports_esports_outlined;
-      case 2:
-        return Icons.card_giftcard_outlined;
-      case 3:
-        return Icons.person_outline;
-      default:
-        return Icons.circle;
-    }
+  Widget _buildIcon(_NavItem item, bool isActive) {
+    final color = isActive ? AppColors.purple : AppColors.mutedText;
+
+    // if (item.icon.endsWith('.svg')) {
+    //   return SvgPicture.asset(
+    //     item.icon,
+    //     width: 22,
+    //     height: 22,
+    //     colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+    //   );
+    // }
+
+    return Icon(
+      isActive ? item.activeIcon : item.fallbackIcon,
+      size: 22,
+      color: color,
+    );
   }
 }
 
 class _NavItem {
   final String icon;
   final String label;
-  const _NavItem({required this.icon, required this.label});
+  final IconData fallbackIcon;
+  final IconData activeIcon;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.fallbackIcon,
+    required this.activeIcon,
+  });
 }

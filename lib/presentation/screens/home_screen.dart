@@ -657,13 +657,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
     ],
     ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 0, onTap: widget.onNavTap),
-        ),
-      ),
+      bottomNavigationBar: RbxBottomNav(currentIndex: 0, onTap: widget.onNavTap),
     );
   }
 }

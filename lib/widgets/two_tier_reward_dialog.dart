@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// Two-tier reward dialog that offers users a choice:
-/// - Quick Claim (lower reward + rewarded interstitial ad)
-/// - Premium Claim (higher reward + rewarded ad)
+/// - Quick Claim (standard reward, zero ads)
+/// - Premium Claim (higher reward + rewarded video ad)
 ///
 /// Design emphasizes the premium option to maximize user selection (70-80% target).
 class TwoTierRewardDialog extends StatefulWidget {

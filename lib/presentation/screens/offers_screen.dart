@@ -221,13 +221,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
-        ),
-      ),
+      bottomNavigationBar: RbxBottomNav(currentIndex: 2, onTap: widget.onNavTap),
     );
   }
 }
