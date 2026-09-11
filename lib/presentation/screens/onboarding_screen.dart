@@ -89,118 +89,92 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenHeight < 680;
+    final logoHeight = screenHeight * 0.045;
+    final topPadding = screenHeight * 0.018;
+    final bottomPadding = screenHeight * 0.028;
+    final dotsButtonGap = screenHeight * 0.018;
+    final hPad = screenWidth * 0.055;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxHeight < 680;
-
-                return Column(
-                  children: [
-                    // Top Logo & Sign In Header
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        20,
-                        isCompact ? 8 : 12,
-                        20,
-                        isCompact ? 4 : 8,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Image.asset(
-                            AppAssets.rbxLogo,
-                            height: isCompact ? 30 : 36,
-                            fit: BoxFit.contain,
-                            cacheHeight: 120,
-                            errorBuilder: (_, __, ___) => const Text(
-                              'RBX Play & Earn',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF101828),
-                              ),
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _handleSignInWithGoogle,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              backgroundColor: const Color(0xFFF6F5FD),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.login_rounded,
-                              size: 14,
-                              color: Color(0xFF5637E6),
-                            ),
-                            label: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF5637E6),
-                              ),
-                            ),
-                          ),
-                        ],
+            child: Column(
+              children: [
+                // Centered Logo Header (no Sign In button)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    hPad,
+                    topPadding,
+                    hPad,
+                    topPadding * 0.5,
+                  ),
+                  child: Center(
+                    child: Image.asset(
+                      AppAssets.rbxLogo,
+                      height: logoHeight.clamp(28.0, 44.0),
+                      fit: BoxFit.contain,
+                      cacheHeight: 140,
+                      errorBuilder: (_, __, ___) => const Text(
+                        'RBX Play & Earn',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF101828),
+                        ),
                       ),
                     ),
+                  ),
+                ),
 
-                    // 3-Step Interactive PageView
-                    Expanded(
-                      child: PageView(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() => _currentPage = index);
-                        },
-                        children: [
-                          _StepOneContent(isCompact: isCompact),
-                          _StepTwoContent(isCompact: isCompact),
-                          _StepThreeContent(isCompact: isCompact),
-                        ],
-                      ),
-                    ),
+                // 3-Step Interactive PageView
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _currentPage = index);
+                    },
+                    children: [
+                      _StepOneContent(isCompact: isCompact),
+                      _StepTwoContent(isCompact: isCompact),
+                      _StepThreeContent(isCompact: isCompact),
+                    ],
+                  ),
+                ),
 
-                    // Bottom Navigation Zone (Dots + Gradient CTA)
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        20,
-                        isCompact ? 6 : 10,
-                        20,
-                        isCompact ? 12 : 20,
+                // Bottom Navigation Zone (Dots + Gradient CTA)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    hPad,
+                    dotsButtonGap * 0.6,
+                    hPad,
+                    bottomPadding,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _DotsIndicator(currentPage: _currentPage),
+                      SizedBox(height: dotsButtonGap),
+                      _PrimaryActionButton(
+                        label: _currentPage == 0
+                            ? 'Get Started'
+                            : _currentPage == 1
+                                ? 'Continue'
+                                : 'Start Earning',
+                        isLoading: _isClaiming && _currentPage == 2,
+                        onTap: _currentPage < 2
+                            ? _nextPage
+                            : _handleStartEarning,
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _DotsIndicator(currentPage: _currentPage),
-                          SizedBox(height: isCompact ? 12 : 18),
-                          _PrimaryActionButton(
-                            label: _currentPage == 0
-                                ? 'Get Started'
-                                : _currentPage == 1
-                                    ? 'Continue'
-                                    : 'Start Earning',
-                            isLoading: _isClaiming && _currentPage == 2,
-                            onTap: _currentPage < 2
-                                ? _nextPage
-                                : _handleStartEarning,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -219,12 +193,19 @@ class _StepOneContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final heroFlex = isCompact ? 5 : 6;
+    final cardHeight = (screenHeight * 0.115).clamp(80.0, 110.0);
+    final vGapSm = screenHeight * 0.014;
+    final vGapMd = screenHeight * 0.022;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
           // Hero 3D Roblox Avatar illustration
           Expanded(
+            flex: heroFlex,
             child: Padding(
               padding: EdgeInsets.fromLTRB(8, isCompact ? 4 : 8, 8, 0),
               child: AppCachedImage(
@@ -248,7 +229,7 @@ class _StepOneContent extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isCompact ? 12 : 20),
+          SizedBox(height: vGapSm),
 
           // Title & Subtitle
           FittedBox(
@@ -274,7 +255,7 @@ class _StepOneContent extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           const FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
@@ -289,11 +270,11 @@ class _StepOneContent extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isCompact ? 14 : 22),
+          SizedBox(height: vGapMd),
 
           // 3 Feature Cards Row
           SizedBox(
-            height: isCompact ? 84 : 94,
+            height: cardHeight,
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -320,7 +301,7 @@ class _StepOneContent extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: isCompact ? 6 : 10),
+          SizedBox(height: vGapSm),
         ],
       ),
     );
@@ -412,12 +393,16 @@ class _StepTwoContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final vGapTop = screenHeight * 0.012;
+    final vGapCards = (screenHeight * 0.016).clamp(8.0, 18.0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(height: isCompact ? 6 : 14),
+          SizedBox(height: vGapTop),
 
           // Title & Subtitle
           FittedBox(
@@ -443,7 +428,7 @@ class _StepTwoContent extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           const FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
@@ -457,46 +442,40 @@ class _StepTwoContent extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: isCompact ? 14 : 26),
+          SizedBox(height: vGapCards),
 
-          // 3 Step Cards Column (Flexible layout with smooth distribution)
+          // 3 Step Cards — fill remaining space evenly
           Expanded(
-            child: Center(
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _StepCard(
-                      stepNumber: '1',
-                      title: 'Play',
-                      description: 'Complete mini games\nand activities.',
-                      imagePath: AppAssets.onboardingGame,
-                      isCompact: isCompact,
-                    ),
-                    SizedBox(height: isCompact ? 10 : 16),
-                    _StepCard(
-                      stepNumber: '2',
-                      title: 'Earn',
-                      description: 'Collect RBX Coins as\nyou complete activities.',
-                      imagePath: AppAssets.onboardingCoin,
-                      isCompact: isCompact,
-                    ),
-                    SizedBox(height: isCompact ? 10 : 16),
-                    _StepCard(
-                      stepNumber: '3',
-                      title: 'Redeem',
-                      description: 'Use your RBX Coins\ntoward available rewards.',
-                      imagePath: AppAssets.onboardingReward,
-                      isCompact: isCompact,
-                    ),
-                  ],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _StepCard(
+                  stepNumber: '1',
+                  title: 'Play',
+                  description: 'Complete mini games\nand activities.',
+                  imagePath: AppAssets.onboardingGame,
+                  isCompact: isCompact,
                 ),
-              ),
+                SizedBox(height: vGapCards),
+                _StepCard(
+                  stepNumber: '2',
+                  title: 'Earn',
+                  description: 'Collect RBX Coins as\nyou complete activities.',
+                  imagePath: AppAssets.onboardingCoin,
+                  isCompact: isCompact,
+                ),
+                SizedBox(height: vGapCards),
+                _StepCard(
+                  stepNumber: '3',
+                  title: 'Redeem',
+                  description: 'Use your RBX Coins\ntoward available rewards.',
+                  imagePath: AppAssets.onboardingReward,
+                  isCompact: isCompact,
+                ),
+              ],
             ),
           ),
-          SizedBox(height: isCompact ? 4 : 8),
+          SizedBox(height: vGapTop),
         ],
       ),
     );
@@ -627,11 +606,17 @@ class _StepThreeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final vGapTop = screenHeight * 0.012;
+    final vGapMd = screenHeight * 0.018;
+    final coinSize = (screenHeight * 0.07).clamp(44.0, 62.0);
+    final cardPad = (screenHeight * 0.02).clamp(10.0, 18.0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          SizedBox(height: isCompact ? 6 : 14),
+          SizedBox(height: vGapTop),
 
           // Title & Subtitle
           FittedBox(
@@ -657,7 +642,7 @@ class _StepThreeContent extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           const FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
@@ -674,7 +659,7 @@ class _StepThreeContent extends StatelessWidget {
           // Bursting Open Gift Box with Coins & Confetti
           Expanded(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: isCompact ? 6 : 14),
+              padding: EdgeInsets.symmetric(vertical: vGapMd),
               child: AppCachedImage(
                 imageUrl: AppAssets.onboardingGiftBox,
                 fallbackAsset: AppAssets.onboardingGiftBox,
@@ -689,7 +674,7 @@ class _StepThreeContent extends StatelessWidget {
 
           // Welcome Bonus Card (+50 RBX Coins & Milestone)
           Container(
-            padding: EdgeInsets.all(isCompact ? 12 : 16),
+            padding: EdgeInsets.all(cardPad),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
@@ -711,8 +696,8 @@ class _StepThreeContent extends StatelessWidget {
                     AppCachedImage(
                       imageUrl: AppAssets.goldRbxCoin,
                       fallbackAsset: AppAssets.goldRbxCoin,
-                      width: isCompact ? 48 : 56,
-                      height: isCompact ? 48 : 56,
+                      width: coinSize,
+                      height: coinSize,
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(width: 14),
@@ -742,7 +727,7 @@ class _StepThreeContent extends StatelessWidget {
                   ],
                 ),
 
-                SizedBox(height: isCompact ? 10 : 12),
+                SizedBox(height: isCompact ? 8 : 12),
 
                 // Milestone Banner
                 Container(
@@ -800,7 +785,7 @@ class _StepThreeContent extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: isCompact ? 6 : 10),
+          SizedBox(height: vGapTop),
         ],
       ),
     );

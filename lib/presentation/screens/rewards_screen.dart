@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/screen_title.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../providers/coin_provider.dart';
@@ -163,35 +164,19 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                         widget.onNavTap(index);
                       },
                     ),
+                    // Screen title
+                    const RbxScreenTitle(
+                      title: 'Redeem Rewards',
+                      subtitle: 'Exchange your RBX coins for real gift cards',
+                    ),
                     // Balance widget
                     Padding(
                       padding: const EdgeInsets.only(
                         left: AppLayout.screenPadding,
                         right: AppLayout.screenPadding,
-                        top: 5,
                       ),
                       child: _BalanceWidget(
                           balance: ref.watch(coinProvider)),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
-
-                    // Redeem Rewards header
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Redeem Rewards',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryText,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
                     // Reward list

@@ -12,6 +12,7 @@ import 'flappy_jump_game_screen.dart';
 import 'math_quiz_screen.dart';
 import 'flip_card_game_screen.dart';
 import 'scratch_card_screen.dart';
+import '../../widgets/screen_title.dart';
 
 class GamesScreen extends ConsumerWidget {
   final Function(int) onNavTap;
@@ -81,85 +82,19 @@ class GamesScreen extends ConsumerWidget {
                   children: [
                     RbxAppHeader(onNavTap: onNavTap),
                     // Section heading with Leaderboard button
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: AppLayout.screenPadding,
-                        right: AppLayout.screenPadding,
-                        top: 5,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Play & Earn',
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF131326),
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Complete mini games to collect RBX coins',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF868A9F),
-                                  ),
-                                ),
-                              ],
+                    RbxScreenTitle(
+                      title: 'Play & Earn',
+                      subtitle: 'Complete mini games to collect RBX coins',
+                      actionText: '🏆 Leaderboard',
+                      onActionTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => LeaderboardScreen(
+                              onBack: () => Navigator.of(context).pop(),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => LeaderboardScreen(
-                                    onBack: () => Navigator.of(context).pop(),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.emoji_events,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'Leaderboard',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 

@@ -6,12 +6,14 @@ class RefreshableScrollView extends ConsumerWidget {
   final EdgeInsetsGeometry? padding;
   final Widget child;
   final Future<void> Function()? onRefresh;
+  final ScrollController? controller;
 
   const RefreshableScrollView({
     super.key,
     this.padding,
     required this.child,
     this.onRefresh,
+    this.controller,
   });
 
   @override
@@ -22,6 +24,7 @@ class RefreshableScrollView extends ConsumerWidget {
       },
       child: SingleChildScrollView(
         key: key,
+        controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: padding,
         child: child,

@@ -7,6 +7,7 @@ import '../providers/providers.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/screen_title.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../core/constants/policy_constants.dart';
@@ -64,6 +65,11 @@ class ProfileScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const RbxAppHeader(),
+                    // Screen title
+                    const RbxScreenTitle(
+                      title: 'My Profile',
+                      subtitle: 'Track your progress and manage your account',
+                    ),
                     // Profile card
                     Padding(
                       padding: const EdgeInsets.only(

@@ -9,6 +9,7 @@ import '../providers/mega_chest_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/screen_title.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/congratulations_dialog.dart';
@@ -185,29 +186,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                     // Welcome greeting
-                    const Padding(
-                      padding: EdgeInsets.only(
-                        left: AppLayout.screenPadding,
-                        right: AppLayout.screenPadding,
-                        top: 5,
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Welcome back',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF131326),
-                              letterSpacing: -0.55,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Text('👋', style: TextStyle(fontSize: 22)),
-                        ],
-                      ),
+                    const RbxScreenTitle(
+                      title: 'Welcome back 👋',
+                      subtitle: 'Earn coins & redeem for Roblox rewards',
                     ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Balance Card
                     Padding(
@@ -462,7 +444,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       padding: EdgeInsets.symmetric(
                           horizontal: AppLayout.screenPadding),
                       child: _SectionHeader(
-                        title: 'Quick Actions',
+                        title: 'Earn Today',
                       ),
                     ),
                     const SizedBox(height: AppLayout.elementSpacing),

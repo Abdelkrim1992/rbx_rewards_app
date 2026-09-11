@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
+import '../../widgets/screen_title.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../business/tapjoy_service.dart';
@@ -99,34 +100,11 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                     RbxAppHeader(onNavTap: widget.onNavTap),
 
                     // Section heading
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Premium Offerwalls',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF131326),
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            'Earn RBX Coins by playing games, trying apps, and answering surveys.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF868A9F),
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const RbxScreenTitle(
+                      title: 'Premium Offerwalls',
+                      subtitle: 'Earn RBX Coins by playing games, trying apps, and answering surveys.',
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
 
                     // Tapjoy Card
                     Padding(
