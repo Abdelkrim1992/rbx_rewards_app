@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/providers/ad_provider.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/mini_game_reward_dialog.dart';
+import '../../widgets/two_tier_reward_dialog.dart';
 import '../../widgets/game_prefs.dart';
 
 /// Helper function to show game-specific two-tier reward choice dialog and handle ad display.
-///
-/// Refactored to use [MiniGameRewardDialog] and support customized styling.
 Future<void> showGameRewardChoice({
   required BuildContext context,
   required String featureName,
@@ -36,7 +34,7 @@ Future<void> showGameRewardChoice({
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (context) => MiniGameRewardDialog(
+    builder: (context) => TwoTierRewardDialog(
       title: featureName,
       description: description ?? 'Choose your reward',
       quickReward: baseReward,
@@ -49,24 +47,71 @@ Future<void> showGameRewardChoice({
       quickTextColor: quickTextColor,
       quickBorderColor: quickBorderColor,
       onQuickClaim: () async {
-        await onSuccess(baseReward);
-        if (context.mounted) {
-          Navigator.of(context).pop();
+        final quickClaimCount = await GamePrefs.incrementQuickClaimCount(gameKey);
+        if (enableQuickAd && (quickClaimCount % 3 == 0)) {
+          bool hasHandled = false;
+          await adNotifier.showRewardedInterstitial(
+            quickPlacement,
+            onReward: (_) async {
+              hasHandled = true;
+              await onSuccess(baseReward);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            onAdDismissed: () async {
+              if (!hasHandled) {
+                hasHandled = true;
+                await onSuccess(baseReward);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              }
+            },
+            onAdFailed: (error) async {
+              if (!hasHandled) {
+                hasHandled = true;
+                await onSuccess(baseReward);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              }
+            },
+          );
+        } else {
+          await onSuccess(baseReward);
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
         }
       },
       onPremiumClaim: () async {
+        bool hasHandled = false;
         await adNotifier.showOptionalAd(
           premiumPlacement,
           onReward: (_) async {
+            hasHandled = true;
             await onSuccess(baseReward * 2);
             if (context.mounted) {
               Navigator.of(context).pop();
             }
           },
+          onAdDismissed: () async {
+            if (!hasHandled) {
+              hasHandled = true;
+              await onSuccess(baseReward);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            }
+          },
           onAdFailed: (error) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
+            if (!hasHandled) {
+              hasHandled = true;
+              await onSuccess(baseReward);
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
             }
           },
         );

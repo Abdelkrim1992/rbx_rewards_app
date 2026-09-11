@@ -102,6 +102,22 @@ class GamePrefs {
     await prefs.setInt('$_keyGamePlayCountPrefix$gameName', current + 1);
   }
 
+  // --- Quick Claim Click Count for Ad Throttling (every 3 clicks) ---
+  static const String _keyQuickClaimCountPrefix = 'quick_claim_count_';
+
+  static Future<int> getQuickClaimCount(String gameName) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_keyQuickClaimCountPrefix$gameName') ?? 0;
+  }
+
+  static Future<int> incrementQuickClaimCount(String gameName) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = await getQuickClaimCount(gameName);
+    final next = current + 1;
+    await prefs.setInt('$_keyQuickClaimCountPrefix$gameName', next);
+    return next;
+  }
+
   // --- Daily Extra Spins Limit (Ad-funded spins) ---
   static const String _keyExtraSpinsDate = 'extra_spins_date';
   static const String _keyExtraSpinsRemaining = 'extra_spins_remaining';

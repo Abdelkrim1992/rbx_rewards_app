@@ -10,7 +10,7 @@ import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
-import '../../core/utils/game_reward_helper.dart';
+import '../../widgets/game_prefs.dart';
 import '../../widgets/congratulations_dialog.dart';
 
 class MathQuestion {
@@ -49,8 +49,8 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   String? _sessionId;
   DateTime? _gameStartTime;
   bool _isQuitting = false;
-  bool _watchedRewardedAd = false;
   bool _hasClaimed = false;
+  bool _isProcessingAd = false;
   static final int _claimCount = 0;
 
   // Active question details
@@ -141,8 +141,8 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       _timerProgress = 1.0;
       _selectedAnswer = null;
       _isCorrectAnswer = null;
-      _watchedRewardedAd = false;
       _hasClaimed = false;
+      _isProcessingAd = false;
     });
 
     _sessionId = ref.read(gameServiceProvider).generateSessionId();
@@ -274,151 +274,132 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   }
 
   void _claimQuizCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed) {
-      Navigator.of(context).pop();
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+      if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
 
-    final detailsDescription = 'Correct Answers: $_correctCount/$_totalQuestions\n\nSupercharge your math quiz rewards!';
+    setState(() {
+      _isProcessingAd = true;
+    });
 
-    await showGameRewardChoice(
-      context: context,
-      featureName: 'Math Quiz',
-      description: detailsDescription,
-      baseReward: _originalCoinsEarned,
-      quickPlacement: AdPlacement.miniGameCompletion,
-      premiumPlacement: AdPlacement.doubleReward,
-      icon: Icons.calculate,
-      iconBgColor: AppColors.primarySoft,
-      iconColor: AppColors.primary,
-      premiumGradient: AppColors.primaryGradient,
-      quickTextColor: AppColors.primary,
-      quickBorderColor: const Color(0xFFE5E7EB),
-      onSuccess: (coins) {
-        Future.delayed(Duration.zero, () async {
+    await GamePrefs.incrementGamePlayCount('math_quiz');
+
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        final duration = _gameStartTime != null
+            ? DateTime.now().difference(_gameStartTime!).inSeconds
+            : 1;
+
+        try {
+          final result = await ref.read(gameServiceProvider).submitGameResult(
+            gameName: 'math_quiz',
+            score: _originalCoinsEarned,
+            durationSeconds: duration.clamp(1, 3600),
+            sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+            originalScore: _originalCoinsEarned,
+            multiplier: 1,
+          );
           if (!mounted) return;
-          setState(() {
-            _watchedRewardedAd = (coins == _originalCoinsEarned * 2);
-            _coinsEarned = coins;
-          });
+          if (result.success || result.queued) {
+            final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
 
-          final duration = _gameStartTime != null
-              ? DateTime.now().difference(_gameStartTime!).inSeconds
-              : 1;
-
-          try {
-            final result = await ref.read(gameServiceProvider).submitGameResult(
-              gameName: 'math_quiz',
-              score: coins,
-              durationSeconds: duration.clamp(1, 3600),
-              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-              originalScore: _originalCoinsEarned,
-              multiplier: _watchedRewardedAd ? 2 : 1,
-            );
-            if (result.success || result.queued) {
-              final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-              ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
-              
+            if (mounted) {
+              setState(() {
+                _hasClaimed = true;
+                _coinsEarned = earned;
+              });
               await showDialog(
                 context: context,
                 barrierDismissible: false,
                 builder: (context) => CongratulationsDialog(earnedCoins: earned),
               );
-
-              if (mounted) {
-                setState(() {
-                  _hasClaimed = true;
-                  _coinsEarned = earned;
-                });
-              }
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-              );
             }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to save game reward')),
-              );
-            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
+            );
           }
-        });
-        return Future.value();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to save game reward')),
+            );
+          }
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
+          );
+        }
       },
     );
   }
 
   void _playAgain() async {
-    if (_originalCoinsEarned > 0 && !_hasClaimed) {
-      await showGameRewardChoice(
-        context: context,
-        featureName: 'Math Quiz',
-        description: 'Supercharge your math quiz rewards!',
-        baseReward: _originalCoinsEarned,
-        quickPlacement: AdPlacement.miniGameCompletion,
-        premiumPlacement: AdPlacement.doubleReward,
-        icon: Icons.calculate,
-        iconBgColor: AppColors.primarySoft,
-        iconColor: AppColors.primary,
-        premiumGradient: AppColors.primaryGradient,
-        quickTextColor: AppColors.primary,
-        quickBorderColor: const Color(0xFFE5E7EB),
-        onSuccess: (coins) {
-          Future.delayed(Duration.zero, () async {
-            if (!mounted) return;
-            setState(() {
-              _watchedRewardedAd = (coins == _originalCoinsEarned * 2);
-              _coinsEarned = coins;
-            });
+    if (_isProcessingAd) return;
+    setState(() {
+      _isProcessingAd = true;
+    });
 
-            final duration = _gameStartTime != null
-                ? DateTime.now().difference(_gameStartTime!).inSeconds
-                : 1;
-
-            try {
-              final result = await ref.read(gameServiceProvider).submitGameResult(
-                gameName: 'math_quiz',
-                score: coins,
-                durationSeconds: duration.clamp(1, 3600),
-                sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-                originalScore: _originalCoinsEarned,
-                multiplier: _watchedRewardedAd ? 2 : 1,
-              );
-              if (result.success || result.queued) {
-                final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-                ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-                ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
-                
-                await showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => CongratulationsDialog(earnedCoins: earned),
-                );
-
-                if (mounted) {
-                  _startQuizRound();
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to save game reward')),
-                );
-              }
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        if (!_hasClaimed && _originalCoinsEarned > 0) {
+          final duration = _gameStartTime != null
+              ? DateTime.now().difference(_gameStartTime!).inSeconds
+              : 1;
+          try {
+            final result = await ref.read(gameServiceProvider).submitGameResult(
+              gameName: 'math_quiz',
+              score: _originalCoinsEarned,
+              durationSeconds: duration.clamp(1, 3600),
+              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+              originalScore: _originalCoinsEarned,
+              multiplier: 1,
+            );
+            if (result.success || result.queued) {
+              final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
             }
+          } catch (_) {}
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
           });
-          return Future.value();
-        },
-      );
-    } else {
-      _startQuizRound();
-    }
+          _startQuizRound();
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          _startQuizRound();
+        }
+      },
+    );
   }
 
   String _formatTimerText() {
@@ -897,10 +878,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                 _buildRewardRow('Correct Answers', '$_correctCount/$_totalQuestions'),
                 const SizedBox(height: 8),
                 _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
-                if (_coinsEarned > _originalCoinsEarned) ...[
-                  const SizedBox(height: 8),
-                  _buildRewardRow('Ad Multiplier', '2x'),
-                ],
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Divider(color: Color(0xFFE2E2F5)),
@@ -947,7 +924,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
             children: [
               // Play Again
               GestureDetector(
-                onTap: _playAgain,
+                onTap: _isProcessingAd ? null : _playAgain,
                 child: Container(
                   width: double.infinity,
                   height: 60,
@@ -967,14 +944,23 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                     ],
                   ),
                   child: Center(
-                    child: Text(
-                      'Play Again',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isProcessingAd && _hasClaimed
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : Text(
+                            'Play Again',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -983,7 +969,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
                 // Claim Reward
                 GestureDetector(
-                  onTap: _claimQuizCoins,
+                  onTap: _isProcessingAd ? null : _claimQuizCoins,
                   child: Container(
                     width: double.infinity,
                     height: 60,
@@ -992,14 +978,23 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Center(
-                      child: Text(
-                        'Claim Reward',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF562EE6),
-                        ),
-                      ),
+                      child: _isProcessingAd
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF562EE6),
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              'Claim Reward',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF562EE6),
+                              ),
+                            ),
                     ),
                   ),
                 ),

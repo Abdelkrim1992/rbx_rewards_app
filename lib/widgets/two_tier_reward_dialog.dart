@@ -16,6 +16,16 @@ class TwoTierRewardDialog extends StatefulWidget {
   final String quickLabel;
   final String premiumLabel;
 
+  // Customization parameters
+  final IconData? icon;
+  final Widget? customIcon;
+  final Color? iconBgColor;
+  final Color? iconColor;
+  final Gradient? premiumGradient;
+  final Color? quickTextColor;
+  final Color? quickBorderColor;
+  final Color? quickBgColor;
+
   const TwoTierRewardDialog({
     super.key,
     required this.title,
@@ -26,6 +36,14 @@ class TwoTierRewardDialog extends StatefulWidget {
     required this.onPremiumClaim,
     this.quickLabel = 'Quick Claim',
     this.premiumLabel = 'Watch a video for more reward',
+    this.icon,
+    this.customIcon,
+    this.iconBgColor,
+    this.iconColor,
+    this.premiumGradient,
+    this.quickTextColor,
+    this.quickBorderColor,
+    this.quickBgColor,
   });
 
   @override
@@ -79,19 +97,22 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Icon
-            Container(
-              width: 80,
-              height: 80,
-              decoration: const BoxDecoration(
-                color: AppColors.primarySoft,
-                shape: BoxShape.circle,
+            if (widget.customIcon != null)
+              widget.customIcon!
+            else
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: widget.iconBgColor ?? AppColors.primarySoft,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  widget.icon ?? Icons.card_giftcard,
+                  size: 40,
+                  color: widget.iconColor ?? AppColors.primary,
+                ),
               ),
-              child: const Icon(
-                Icons.card_giftcard,
-                size: 40,
-                color: AppColors.primary,
-              ),
-            ),
             const SizedBox(height: 20),
 
             // Title
@@ -121,7 +142,9 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
 
             if (_isLoading) ...[
               const SizedBox(height: 20),
-              const CircularProgressIndicator(color: AppColors.primary),
+              CircularProgressIndicator(
+                color: widget.iconColor ?? AppColors.primary,
+              ),
               const SizedBox(height: 40),
             ] else ...[
               // Premium Option (emphasized with visual hierarchy)
@@ -138,17 +161,22 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
   }
 
   Widget _buildPremiumOption(BuildContext context) {
+    final gradient = widget.premiumGradient ?? AppColors.primaryGradient;
+    final shadowColor = (gradient is LinearGradient && gradient.colors.isNotEmpty)
+        ? gradient.colors.first
+        : (widget.iconColor ?? AppColors.primary);
+
     return GestureDetector(
       onTap: () => _handleClaim(true),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
-          gradient: AppColors.primaryGradient,
+          gradient: gradient,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
+              color: shadowColor.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -208,15 +236,19 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
   }
 
   Widget _buildQuickOption(BuildContext context) {
+    final textColor = widget.quickTextColor ?? AppColors.primary;
+    final borderColor = widget.quickBorderColor ?? const Color(0xFFE5E7EB);
+    final bgColor = widget.quickBgColor ?? const Color(0xFFF8F9FA);
+
     return GestureDetector(
       onTap: () => _handleClaim(false),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
+          color: bgColor,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
+          border: Border.all(color: borderColor, width: 1.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -226,9 +258,9 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
               AppAssets.goldRbxCoin,
               width: 24,
               height: 24,
-              errorBuilder: (_, __, ___) => const Icon(
+              errorBuilder: (_, __, ___) => Icon(
                 Icons.monetization_on,
-                color: AppColors.primary,
+                color: textColor,
                 size: 24,
               ),
             ),
@@ -236,27 +268,15 @@ class _TwoTierRewardDialogState extends State<TwoTierRewardDialog> {
             Flexible(
               child: Text(
                 '+${widget.quickReward} RBX',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                  color: textColor,
                   letterSpacing: -0.3,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // const SizedBox(width: 8),
-            // Flexible(
-            //   child: Text(
-            //     '• $quickLabel',
-            //     style: const TextStyle(
-            //       fontSize: 14,
-            //       fontWeight: FontWeight.w600,
-            //       color: Color(0xFF6B7280),
-            //     ),
-            //     overflow: TextOverflow.ellipsis,
-            //   ),
-            // ),
           ],
         ),
       ),

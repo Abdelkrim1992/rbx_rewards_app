@@ -57,16 +57,6 @@ Future<ProviderContainer> _initStorageAndServices() async {
     debugPrint('❌ Hive init failed: $e');
   }
 
-  // Defer heavy third-party SDKs so they do not freeze the UI thread during cold boot
-  unawaited(Future(() {
-    try {
-      LuckyBonusService().load();
-      TapjoyService().initialize();
-    } catch (e) {
-      debugPrint('❌ Third-party SDK init failed: $e');
-    }
-  }));
-
   return ProviderContainer(
     overrides: [
       hiveRepositoryProvider.overrideWithValue(hiveRepo),
@@ -76,13 +66,13 @@ Future<ProviderContainer> _initStorageAndServices() async {
   );
 }
 
-Future<void> _initAuthAndOfferwalls(ProviderContainer container) async {
+Future<void> _initDeviceAuth(ProviderContainer container) async {
   try {
     final auth = container.read(authServiceProvider);
     if (auth.currentUser == null) {
       try {
         await auth.signInWithDevice().timeout(
-          const Duration(seconds: 4),
+          const Duration(seconds: 3),
           onTimeout: () {
             debugPrint(
                 '⚠️ Device sign-in timed out, proceeding in offline mode');
@@ -93,18 +83,8 @@ Future<void> _initAuthAndOfferwalls(ProviderContainer container) async {
         debugPrint('Failed to sign in with device on startup: $e');
       }
     }
-
-    final userId = auth.currentUser?.id ?? 'anonymous';
-    PubscaleService().initialize(userId);
-
-    PubscaleService().onReward = (amount, currency) {
-      container.read(coinProvider.notifier).refresh();
-    };
-    TapjoyService().onClosed = () {
-      container.read(coinProvider.notifier).refresh();
-    };
   } catch (e) {
-    debugPrint('❌ Auth and Offerwalls initialization error: $e');
+    debugPrint('❌ Auth initialization error: $e');
   }
 }
 
@@ -114,7 +94,7 @@ Future<ProviderContainer> _bootstrapServices() async {
     final container = await _initStorageAndServices();
 
     if (isSupabaseReady) {
-      unawaited(_initAuthAndOfferwalls(container));
+      unawaited(_initDeviceAuth(container));
     }
     return container;
   } catch (e) {
@@ -159,15 +139,15 @@ class RbxRewardsApp extends StatefulWidget {
 }
 
 class _RbxRewardsAppState extends State<RbxRewardsApp> {
-  ProviderContainer? _container;
+  late ProviderContainer _container;
   bool _isInitComplete = false;
 
   @override
   void initState() {
     super.initState();
+    _container = widget.container ?? ProviderContainer();
     final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
     if (widget.container != null && isTest) {
-      _container = widget.container;
       _isInitComplete = true;
     }
   }
@@ -209,7 +189,7 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
           ),
         ),
         builder: (context, child) {
-          final content = AnnotatedRegion<SystemUiOverlayStyle>(
+          return AnnotatedRegion<SystemUiOverlayStyle>(
             value: RbxRewardsApp.globalSystemOverlayStyle,
             child: Container(
               color: const Color(
@@ -222,23 +202,9 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
               ),
             ),
           );
-
-          if (_hasOuterScope(context)) {
-            return content;
-          }
-
-          if (_container != null) {
-            return UncontrolledProviderScope(
-              key: const ValueKey('app_builder_scope'),
-              container: _container!,
-              child: content,
-            );
-          }
-
-          return content;
         },
         home: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 450),
+          duration: const Duration(milliseconds: 500),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) {
@@ -260,15 +226,11 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
       return app;
     }
 
-    if (_container != null) {
-      return UncontrolledProviderScope(
-        key: const ValueKey('app_scope'),
-        container: _container!,
-        child: app,
-      );
-    }
-
-    return app;
+    return UncontrolledProviderScope(
+      key: const ValueKey('app_scope'),
+      container: _container,
+      child: app,
+    );
   }
 
   Widget _buildHome(BuildContext context) {
@@ -277,7 +239,7 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
     }
 
     final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    if (_isInitComplete && _container != null) {
+    if (_isInitComplete) {
       return const AppNavigator(key: ValueKey('app_nav'));
     }
 
@@ -322,8 +284,33 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
       final isTest =
           !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
       if (!isTest) {
+        _initDeferredServices();
+      }
+    });
+  }
+
+  void _initDeferredServices() {
+    // Defer monetization SDKs until after boot screen and target screen are mounted
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      try {
         ref.read(adProvider.notifier).initialize();
-        ImagePrecacheHelper.precacheAll(context);
+        LuckyBonusService().load();
+        LuckyBonusService().startTracking();
+
+        final auth = ref.read(authServiceProvider);
+        final userId = auth.currentUser?.id ?? 'anonymous';
+        PubscaleService().initialize(userId);
+        PubscaleService().onReward = (amount, currency) {
+          ref.read(coinProvider.notifier).refresh();
+        };
+
+        TapjoyService().initialize();
+        TapjoyService().onClosed = () {
+          ref.read(coinProvider.notifier).refresh();
+        };
+      } catch (e) {
+        debugPrint('Deferred monetization services error: $e');
       }
     });
   }

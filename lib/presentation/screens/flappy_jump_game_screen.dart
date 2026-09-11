@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
-import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
@@ -1219,8 +1218,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   int _originalCoinsEarned = 0;
   late AnimationController _claimAnimController;
   final List<_GameClaimCoin> _flyingCoins = [];
-  final math.Random _random = math.Random();
-  static int _claimCount = 0;
 
   void _checkAndUpdateHighScore() {
     if (_game.score > _highScore) {
@@ -1372,92 +1369,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     super.dispose();
   }
 
-  void _triggerClaimCoins() async {
-    if (_hasClaimedReward ||
-        _showCoinClaimAnimation ||
-        _game.coinsEarned <= 0) {
-      return;
-    }
-
-    _showCoinClaimAnimation = true;
-
-    if (!_adWatched) {
-      _claimCount++;
-      if (_claimCount % 3 == 0) {
-        await ref.read(adProvider.notifier).showInterstitialAfterClaim(AdPlacement.miniGameCompletion);
-      }
-    }
-
-    final currentCoins = ref.read(coinProvider);
-    final duration = _gameStartTime != null
-        ? DateTime.now().difference(_gameStartTime!).inSeconds
-        : 1;
-
-    final finalScore = _originalCoinsEarned > 0
-        ? _originalCoinsEarned * (_adWatched ? 2 : 1)
-        : _game.coinsEarned;
-
-    try {
-      final result = await ref.read(gameServiceProvider).submitGameResult(
-        gameName: 'flappy_jump',
-        score: finalScore,
-        durationSeconds: duration.clamp(1, 3600),
-        sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-        originalScore:
-            _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned,
-        multiplier: _adWatched ? 2 : 1,
-      );
-      if (!mounted) return;
-      if (result.success || result.queued) {
-        final earned = result.coinsEarned > 0 ? result.coinsEarned : finalScore;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-        ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
-      } else {
-        setState(() {
-          _showCoinClaimAnimation = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.error ?? 'Failed to save game reward',
-            ),
-          ),
-        );
-        return;
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _showCoinClaimAnimation = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save game reward')),
-      );
-      debugPrint('Failed to submit game result: $e');
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    _prepareFlyingCoins();
-
-    final newTotal = currentCoins + _game.coinsEarned;
-
-    setState(() {
-      _coins = newTotal;
-      _displayedCoins = currentCoins;
-      _hasClaimedReward = true;
-    });
-
-    if (!_game.isMuted) {
-      HapticFeedback.mediumImpact();
-    }
-
-    _claimAnimController.forward(from: 0);
-  }
-
   void _claimCoins() async {
     if (_hasClaimedReward || _showCoinClaimAnimation || _game.coinsEarned <= 0) return;
 
@@ -1481,7 +1392,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       ),
       quickTextColor: const Color(0xFFFF52A2),
       quickBorderColor: const Color(0xFFFFD4E5),
-      enableQuickAd: false,
+      enableQuickAd: true,
       onSuccess: (coins) async {
         if (!mounted) return;
         setState(() {
@@ -1562,35 +1473,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     }
   }
 
-  void _prepareFlyingCoins() {
-    final size = MediaQuery.of(context).size;
-    final start = Offset(size.width / 2, size.height / 2 + 150);
-    final end = Offset(size.width / 2 + 110, size.height / 2 - 8);
-    final coinCount = _game.coinsEarned.clamp(6, 16).toInt();
-
-    _flyingCoins.clear();
-    for (int i = 0; i < coinCount; i++) {
-      final spreadX = (_random.nextDouble() - 0.5) * 120;
-      final spreadY = (_random.nextDouble() - 0.5) * 40;
-      final control = Offset(
-        size.width / 2 + spreadX,
-        size.height / 2 - 150 + spreadY,
-      );
-      _flyingCoins.add(_GameClaimCoin(
-        start: Offset(
-          start.dx + (_random.nextDouble() - 0.5) * 80,
-          start.dy + (_random.nextDouble() - 0.5) * 24,
-        ),
-        end: Offset(
-          end.dx + (_random.nextDouble() - 0.5) * 24,
-          end.dy + (_random.nextDouble() - 0.5) * 18,
-        ),
-        control: control,
-        delay: i * 0.025,
-      ));
-    }
-  }
-
   void _startGame() {
     try {
       _sessionId = ref.read(gameServiceProvider).generateSessionId();
@@ -1623,7 +1505,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
         ),
         quickTextColor: const Color(0xFFFF52A2),
         quickBorderColor: const Color(0xFFFFD4E5),
-        enableQuickAd: false,
+        enableQuickAd: true,
         onSuccess: (coins) async {
           if (!mounted) return;
           

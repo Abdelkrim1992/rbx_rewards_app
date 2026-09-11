@@ -7,7 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/congratulations_dialog.dart';
-import '../../core/utils/game_reward_helper.dart';
+import '../providers/ad_provider.dart';
+import '../../widgets/game_prefs.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/providers.dart';
@@ -60,6 +61,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
   bool _hasClaimed = false;
+  bool _isProcessingAd = false;
 
   late QuizQuestion _currentQuestion;
   int? _selectedAnswer;
@@ -166,6 +168,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       _isCorrectAnswer = null;
       _currentQuestion = _sessionQuestions[0];
       _hasClaimed = false;
+      _isProcessingAd = false;
     });
 
     _startSessionTimer();
@@ -244,78 +247,104 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     _matchPopController.forward();
   }
 
-  Future<void> _processQuizClaim(int baseReward, {required VoidCallback onComplete}) async {
-    if (baseReward <= 0) {
-      onComplete();
+  void _claimQuizCoins() async {
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+      if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
 
-    await showGameRewardChoice(
-      context: context,
-      featureName: 'Quizzes',
-      description: 'Great job! Choose your quiz reward:',
-      baseReward: baseReward,
-      quickPlacement: AdPlacement.miniGameCompletion,
-      premiumPlacement: AdPlacement.doubleReward,
-      icon: Icons.quiz,
-      iconBgColor: AppColors.primarySoft,
-      iconColor: AppColors.primary,
-      premiumGradient: AppColors.primaryGradient,
-      quickTextColor: AppColors.primary,
-      quickBorderColor: const Color(0xFFE5E7EB),
-      onSuccess: (coins) {
-        Future.delayed(Duration.zero, () async {
-          if (!mounted) return;
-          await ref.read(coinProvider.notifier).credit(coins, 'quiz');
-          if (context.mounted) {
-            await showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => CongratulationsDialog(earnedCoins: coins),
-            );
-          }
+    setState(() {
+      _isProcessingAd = true;
+    });
+
+    await GamePrefs.incrementGamePlayCount('quizzes');
+
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        try {
+          await ref.read(coinProvider.notifier).credit(_originalCoinsEarned, 'quiz');
           if (mounted) {
             setState(() {
               _hasClaimed = true;
-              _coinsEarned = coins;
+              _coinsEarned = _originalCoinsEarned;
             });
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => CongratulationsDialog(earnedCoins: _originalCoinsEarned),
+            );
           }
-          onComplete();
-        });
-        return Future.value();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to save quiz reward')),
+            );
+          }
+        }
       },
-      onCancel: () {
-        onComplete();
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
+          );
+        }
       },
     );
   }
 
-  void _claimQuizCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed) {
-      Navigator.of(context).pop();
-      return;
-    }
-    await _processQuizClaim(_originalCoinsEarned, onComplete: () {});
-  }
-
   void _playAgain() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed) {
-      if (_activeCategory != null) {
-        _startQuizRound(_activeCategory!);
-      } else {
-        _backToMenu();
-      }
-      return;
-    }
-    await _processQuizClaim(_originalCoinsEarned, onComplete: () {
-      if (mounted) {
-        if (_activeCategory != null) {
-          _startQuizRound(_activeCategory!);
-        } else {
-          _backToMenu();
-        }
-      }
+    if (_isProcessingAd) return;
+    setState(() {
+      _isProcessingAd = true;
     });
+
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        if (!_hasClaimed && _originalCoinsEarned > 0) {
+          try {
+            await ref.read(coinProvider.notifier).credit(_originalCoinsEarned, 'quiz');
+          } catch (_) {}
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          if (_activeCategory != null) {
+            _startQuizRound(_activeCategory!);
+          } else {
+            _backToMenu();
+          }
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          if (_activeCategory != null) {
+            _startQuizRound(_activeCategory!);
+          } else {
+            _backToMenu();
+          }
+        }
+      },
+    );
   }
 
   void _backToMenu() {
@@ -980,10 +1009,6 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                           _buildRewardRow('Correct Answers', '$_correctCount/${_sessionQuestions.length}'),
                           const SizedBox(height: 8),
                           _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
-                          if (_coinsEarned > _originalCoinsEarned) ...[
-                            const SizedBox(height: 8),
-                            _buildRewardRow('Ad Multiplier', '2x'),
-                          ],
                           Padding(
                             padding: EdgeInsets.symmetric(vertical: useSmallStyle ? 8 : 10),
                             child: const Divider(color: Color(0xFFE2E2F5)),
@@ -1031,7 +1056,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                       children: [
                         // Play Again
                         GestureDetector(
-                          onTap: _playAgain,
+                          onTap: _isProcessingAd ? null : _playAgain,
                           child: Container(
                             width: double.infinity,
                             height: useSmallStyle ? 50 : 60,
@@ -1051,14 +1076,23 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                               ],
                             ),
                             child: Center(
-                              child: Text(
-                                'Play Again',
-                                style: GoogleFonts.outfit(
-                                  fontSize: useSmallStyle ? 16 : 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              child: _isProcessingAd && _hasClaimed
+                                  ? const SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Play Again',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: useSmallStyle ? 16 : 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
@@ -1067,7 +1101,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
                           // Claim Reward
                           GestureDetector(
-                            onTap: _claimQuizCoins,
+                            onTap: _isProcessingAd ? null : _claimQuizCoins,
                             child: Container(
                               width: double.infinity,
                               height: useSmallStyle ? 50 : 60,
@@ -1076,14 +1110,23 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                                 borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
                               ),
                               child: Center(
-                                child: Text(
-                                  'Claim Reward',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: useSmallStyle ? 16 : 18,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF562EE6),
-                                  ),
-                                ),
+                                child: _isProcessingAd
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF562EE6),
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Claim Reward',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 16 : 18,
+                                          fontWeight: FontWeight.w900,
+                                          color: const Color(0xFF562EE6),
+                                        ),
+                                      ),
                               ),
                             ),
                           ),

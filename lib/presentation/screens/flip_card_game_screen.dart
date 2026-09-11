@@ -8,7 +8,7 @@ import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../core/utils/game_reward_helper.dart';
+import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/congratulations_dialog.dart';
@@ -31,8 +31,8 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   int _moves = 0;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
-  bool _adWatched = false;
   bool _hasClaimed = false;
+  bool _isProcessingAd = false;
   int _userCoins = 0;
   int _comboStreak = 0;
   int _maxCombo = 0;
@@ -124,8 +124,8 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       _moves = 0;
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
-      _adWatched = false;
       _hasClaimed = false;
+      _isProcessingAd = false;
       _comboStreak = 0;
       _maxCombo = 0;
       _secondsLeft = 90;
@@ -257,162 +257,132 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   }
 
   void _claimCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed) {
-      Navigator.of(context).pop();
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+      if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
 
-    final detailsDescription = 'Matches: $_matchesFound/$_totalPairs  •  Moves: $_moves\nMax Combo: ${_maxCombo}x\n\nSupercharge your flip cards rewards!';
+    setState(() {
+      _isProcessingAd = true;
+    });
 
-    await showGameRewardChoice(
-      context: context,
-      featureName: 'Flip Cards',
-      description: detailsDescription,
-      baseReward: _originalCoinsEarned,
-      quickPlacement: AdPlacement.miniGameCompletion,
-      premiumPlacement: AdPlacement.doubleReward,
-      icon: Icons.style,
-      iconBgColor: const Color(0xFFF1F1FB),
-      iconColor: const Color(0xFF6338F9),
-      premiumGradient: const LinearGradient(
-        colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      quickTextColor: const Color(0xFF6338F9),
-      quickBorderColor: const Color(0xFFE2E2F5),
-      onSuccess: (coins) {
-        Future.delayed(Duration.zero, () async {
+    await GamePrefs.incrementGamePlayCount('flip_card');
+
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        final duration = _gameStartTime != null
+            ? DateTime.now().difference(_gameStartTime!).inSeconds
+            : 1;
+
+        try {
+          final result = await ref.read(gameServiceProvider).submitGameResult(
+            gameName: 'flip_card',
+            score: _originalCoinsEarned,
+            durationSeconds: duration.clamp(1, 3600),
+            sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+            originalScore: _originalCoinsEarned,
+            multiplier: 1,
+          );
           if (!mounted) return;
-          setState(() {
-            _adWatched = (coins == _originalCoinsEarned * 2);
-            _coinsEarned = coins;
-          });
+          if (result.success || result.queued) {
+            final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
 
-          // Now submit result to the server and reset to menu
-          final duration = _gameStartTime != null
-              ? DateTime.now().difference(_gameStartTime!).inSeconds
-              : 1;
-
-          try {
-            final result = await ref.read(gameServiceProvider).submitGameResult(
-              gameName: 'flip_card',
-              score: coins,
-              durationSeconds: duration.clamp(1, 3600),
-              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-              originalScore: _originalCoinsEarned,
-              multiplier: _adWatched ? 2 : 1,
-            );
-            if (!mounted) return;
-            if (result.success || result.queued) {
-              final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-              ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
-              
+            if (mounted) {
+              setState(() {
+                _hasClaimed = true;
+                _coinsEarned = earned;
+              });
               await showDialog(
                 context: context,
                 barrierDismissible: false,
                 builder: (context) => CongratulationsDialog(earnedCoins: earned),
               );
-
-              if (mounted) {
-                setState(() {
-                  _hasClaimed = true;
-                  _coinsEarned = earned;
-                });
-              }
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-              );
             }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to save game reward')),
-              );
-            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
+            );
           }
-        });
-        return Future.value();
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to save game reward')),
+            );
+          }
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
+          );
+        }
       },
     );
   }
 
   void _playAgain() async {
-    if (_originalCoinsEarned > 0 && !_hasClaimed) {
-      await showGameRewardChoice(
-        context: context,
-        featureName: 'Flip Cards',
-        description: 'Supercharge your flip cards rewards!',
-        baseReward: _originalCoinsEarned,
-        quickPlacement: AdPlacement.miniGameCompletion,
-        premiumPlacement: AdPlacement.doubleReward,
-        icon: Icons.style,
-        iconBgColor: const Color(0xFFF1F1FB),
-        iconColor: const Color(0xFF6338F9),
-        premiumGradient: const LinearGradient(
-          colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        quickTextColor: const Color(0xFF6338F9),
-        quickBorderColor: const Color(0xFFE2E2F5),
-        onSuccess: (coins) {
-          Future.delayed(Duration.zero, () async {
-            if (!mounted) return;
-            setState(() {
-              _adWatched = (coins == _originalCoinsEarned * 2);
-              _coinsEarned = coins;
-            });
+    if (_isProcessingAd) return;
+    setState(() {
+      _isProcessingAd = true;
+    });
 
-            final duration = _gameStartTime != null
-                ? DateTime.now().difference(_gameStartTime!).inSeconds
-                : 1;
-
-            try {
-              final result = await ref.read(gameServiceProvider).submitGameResult(
-                gameName: 'flip_card',
-                score: coins,
-                durationSeconds: duration.clamp(1, 3600),
-                sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-                originalScore: _originalCoinsEarned,
-                multiplier: _adWatched ? 2 : 1,
-              );
-              if (!mounted) return;
-              if (result.success || result.queued) {
-                final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-                ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-                ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
-                
-                await showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => CongratulationsDialog(earnedCoins: earned),
-                );
-
-                if (mounted) {
-                  _startGame();
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to save game reward')),
-                );
-              }
+    final adNotifier = ref.read(adProvider.notifier);
+    await adNotifier.showOptionalAd(
+      AdPlacement.miniGameCompletion,
+      onReward: (_) async {
+        if (!_hasClaimed && _originalCoinsEarned > 0) {
+          final duration = _gameStartTime != null
+              ? DateTime.now().difference(_gameStartTime!).inSeconds
+              : 1;
+          try {
+            final result = await ref.read(gameServiceProvider).submitGameResult(
+              gameName: 'flip_card',
+              score: _originalCoinsEarned,
+              durationSeconds: duration.clamp(1, 3600),
+              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+              originalScore: _originalCoinsEarned,
+              multiplier: 1,
+            );
+            if (result.success || result.queued) {
+              final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
             }
+          } catch (_) {}
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
           });
-          return Future.value();
-        },
-      );
-    } else {
-      _startGame();
-    }
+          _startGame();
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          setState(() {
+            _isProcessingAd = false;
+          });
+          _startGame();
+        }
+      },
+    );
   }
 
   String _formatTimerText() {
@@ -1151,7 +1121,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
             children: [
               // Play Again
               GestureDetector(
-                onTap: _playAgain,
+                onTap: _isProcessingAd ? null : _playAgain,
                 child: Container(
                   width: double.infinity,
                   height: 60,
@@ -1171,23 +1141,32 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                     ],
                   ),
                   child: Center(
-                    child: Text(
-                      'Play Again',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isProcessingAd && _hasClaimed
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
+                        : Text(
+                            'Play Again',
+                            style: GoogleFonts.outfit(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
               if (!_hasClaimed) ...[
                 const SizedBox(height: 14),
 
-                // Go to Home
+                // Claim Reward
                 GestureDetector(
-                  onTap: _claimCoins,
+                  onTap: _isProcessingAd ? null : _claimCoins,
                   child: Container(
                     width: double.infinity,
                     height: 60,
@@ -1196,14 +1175,23 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Center(
-                      child: Text(
-                        'Claim Reward',
-                        style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF6338F9),
-                        ),
-                      ),
+                      child: _isProcessingAd
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF6338F9),
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              'Claim Reward',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF6338F9),
+                              ),
+                            ),
                     ),
                   ),
                 ),

@@ -52,36 +52,30 @@ class _LoadingScreenState extends State<LoadingScreen> {
       return;
     }
 
-    final stopwatch = Stopwatch()..start();
-
     try {
-      // 1. Kick off service bootstrap (Supabase, Hive, SharedPreferences, Auth)
+      // 1. Kick off service bootstrap (Supabase, Hive, SharedPreferences)
       final bootstrapFuture = widget.onBootstrap!();
 
       // 2. Concurrently precache all raster images, navigation SVGs, and network assets
       final precacheFuture = ImagePrecacheHelper.precacheAll(context);
 
-      // 3. Await both tasks
+      // 3. Guarantee minimum visible display duration (2200ms) so user sees the logo + spinner
+      final minDurationFuture = Future.delayed(const Duration(milliseconds: 2200));
+
       final results = await Future.wait([
         bootstrapFuture,
         precacheFuture,
+        minDurationFuture,
       ]).timeout(
-        const Duration(seconds: 6),
+        const Duration(seconds: 8),
         onTimeout: () async {
           debugPrint('⚠️ Cold boot sequence timeout reached, continuing...');
           final container = await bootstrapFuture.catchError((_) => ProviderContainer());
-          return [container, null];
+          return [container, null, null];
         },
       );
 
       final container = results[0] as ProviderContainer;
-
-      // 4. Ensure a minimum smooth display duration (1600ms) so user sees boot screen and loader
-      final elapsedMs = stopwatch.elapsedMilliseconds;
-      const minDisplayMs = 1600;
-      if (elapsedMs < minDisplayMs) {
-        await Future.delayed(Duration(milliseconds: minDisplayMs - elapsedMs));
-      }
 
       if (mounted) {
         widget.onReady?.call(container);
@@ -108,6 +102,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
               Image.asset(
                 AppAssets.rbxLogo,
                 width: 220,
+                height: 75,
                 fit: BoxFit.contain,
                 gaplessPlayback: true,
                 filterQuality: FilterQuality.high,
