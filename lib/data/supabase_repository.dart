@@ -133,6 +133,67 @@ class SupabaseRepository {
     });
   }
 
+  Future<Map<String, dynamic>> claimWelcomeBonus() async {
+    final uid = currentUserId;
+    if (uid == null) {
+      return {'success': false, 'error': 'Unauthorized'};
+    }
+    return _call(() async {
+      try {
+        final resp = await _client.rpc('claim_welcome_bonus');
+        if (resp is Map) {
+          return Map<String, dynamic>.from(resp);
+        }
+        return {'success': true, 'claimed': true, 'amount': 50};
+      } catch (e) {
+        debugPrint('claim_welcome_bonus RPC error, attempting fallback: $e');
+        final userRow = await _client
+            .from('users')
+            .select('welcome_bonus_claimed, balance')
+            .eq('id', uid)
+            .maybeSingle();
+        final alreadyClaimed = userRow != null &&
+            (userRow['welcome_bonus_claimed'] as bool? ?? false);
+        if (alreadyClaimed) {
+          return {
+            'success': false,
+            'error': 'Welcome bonus already claimed',
+            'balance': userRow['balance'] ?? 0
+          };
+        }
+        final currentBal = (userRow?['balance'] as int?) ?? 0;
+        final newBal = currentBal + 50;
+        await _client.from('users').update({
+          'balance': newBal,
+          'welcome_bonus_claimed': true,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }).eq('id', uid);
+        return {
+          'success': true,
+          'claimed': true,
+          'balance': newBal,
+          'amount': 50
+        };
+      }
+    });
+  }
+
+  Future<bool> hasClaimedWelcomeBonus() async {
+    final uid = currentUserId;
+    if (uid == null) return false;
+    try {
+      final data = await _client
+          .from('users')
+          .select('welcome_bonus_claimed')
+          .eq('id', uid)
+          .maybeSingle();
+      return (data?['welcome_bonus_claimed'] as bool?) ?? false;
+    } catch (e) {
+      debugPrint('hasClaimedWelcomeBonus error: $e');
+      return false;
+    }
+  }
+
   bool _isJwtFutureError(Object e) {
     final msg = e.toString().toLowerCase();
     if (e is PostgrestException) {

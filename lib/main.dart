@@ -21,7 +21,6 @@ import 'business/lucky_bonus_service.dart';
 import 'business/tapjoy_service.dart';
 import 'business/pubscale_service.dart';
 import 'theme/app_theme.dart';
-import 'utils/image_precache_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -83,6 +82,30 @@ Future<void> _initDeviceAuth(ProviderContainer container) async {
         debugPrint('Failed to sign in with device on startup: $e');
       }
     }
+
+    // Auto-detect returning user on cold boot to skip onboarding
+    if (auth.currentUser != null) {
+      try {
+        final userData = await container
+            .read(supabaseRepositoryProvider)
+            .getUserData()
+            .timeout(const Duration(seconds: 2));
+
+        final bool hasClaimedBonus =
+            userData['welcome_bonus_claimed'] as bool? ?? false;
+        final int balance = userData['balance'] as int? ?? 0;
+        final int gamesPlayed = userData['games_played'] as int? ?? 0;
+
+        if (hasClaimedBonus || balance > 0 || gamesPlayed > 0) {
+          debugPrint('👋 Returning user detected. Auto-skipping onboarding carousel.');
+          await container
+              .read(onboardingCompletedProvider.notifier)
+              .setCompleted(true);
+        }
+      } catch (e) {
+        debugPrint('Returning user check skipped: $e');
+      }
+    }
   } catch (e) {
     debugPrint('❌ Auth initialization error: $e');
   }
@@ -94,7 +117,7 @@ Future<ProviderContainer> _bootstrapServices() async {
     final container = await _initStorageAndServices();
 
     if (isSupabaseReady) {
-      unawaited(_initDeviceAuth(container));
+      await _initDeviceAuth(container);
     }
     return container;
   } catch (e) {

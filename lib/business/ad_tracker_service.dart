@@ -6,8 +6,9 @@ import '../models/ad_models.dart';
 
 /// Tracks daily/lifetime ad counts, enforces limits, and syncs to backend.
 class AdTrackerService {
-  static const int _maxDailyForcedAds = 15;
-  static const int _maxDailyOptionalAds = 10;
+  static const int maxDailyTotalAds = 20;
+  static const int maxDailyOptionalAds = 20;
+  static const int maxDailyForcedAds = 10;
   static const int _syncThreshold = 10;
 
   static const _secureStorage = FlutterSecureStorage();
@@ -90,26 +91,30 @@ class AdTrackerService {
   bool canShowForcedAd() {
     _checkMidnightReset();
     if (_limitFlagOverride) return true;
-    return _trackingData.dailyForcedAds < _maxDailyForcedAds;
+    if (dailyAdsWatched >= maxDailyTotalAds) return false;
+    return _trackingData.dailyForcedAds < maxDailyForcedAds;
   }
 
   /// Whether an optional ad can be shown today.
   bool canShowOptionalAd() {
     _checkMidnightReset();
     if (_limitFlagOverride) return true;
-    return _trackingData.dailyOptionalAds < _maxDailyOptionalAds;
+    if (dailyAdsWatched >= maxDailyTotalAds) return false;
+    return _trackingData.dailyOptionalAds < maxDailyOptionalAds;
   }
 
   int getRemainingForcedAds() {
     _checkMidnightReset();
-    return (_maxDailyForcedAds - _trackingData.dailyForcedAds)
-        .clamp(0, _maxDailyForcedAds);
+    final remainingTotal = (maxDailyTotalAds - dailyAdsWatched).clamp(0, maxDailyTotalAds);
+    final remainingForced = (maxDailyForcedAds - _trackingData.dailyForcedAds).clamp(0, maxDailyForcedAds);
+    return remainingTotal < remainingForced ? remainingTotal : remainingForced;
   }
 
   int getRemainingOptionalAds() {
     _checkMidnightReset();
-    return (_maxDailyOptionalAds - _trackingData.dailyOptionalAds)
-        .clamp(0, _maxDailyOptionalAds);
+    final remainingTotal = (maxDailyTotalAds - dailyAdsWatched).clamp(0, maxDailyTotalAds);
+    final remainingOptional = (maxDailyOptionalAds - _trackingData.dailyOptionalAds).clamp(0, maxDailyOptionalAds);
+    return remainingTotal < remainingOptional ? remainingTotal : remainingOptional;
   }
 
   int get dailyAdsWatched =>

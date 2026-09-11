@@ -43,6 +43,7 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final auth = ref.watch(authServiceProvider);
     final userProfile = ref.watch(userProfileProvider);
     final level = (userProfile.totalEarned / 5000).floor() + 1;
     final xpCurrent = _xpForCurrentLevel(userProfile.totalEarned);
@@ -416,8 +417,39 @@ class ProfileScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    // Cloud Save / Account Security Card
                     const SizedBox(height: AppLayout.sectionSpacing),
-
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding),
+                      child: _CloudSaveCard(
+                        isDeviceAccount: auth.isDeviceAccount,
+                        userEmail: auth.currentUser?.email,
+                        onLinkGoogle: () async {
+                          try {
+                            await auth.signInWithGoogle();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Google Sign-In initiated...'),
+                                  backgroundColor: Color(0xFF5C3EF0),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Google linking error: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: AppLayout.sectionSpacing),
 
                     // Settings & Support
                     const Padding(
@@ -481,6 +513,164 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
       bottomNavigationBar: RbxBottomNav(currentIndex: 3, onTap: onNavTap),
+    );
+  }
+}
+
+class _CloudSaveCard extends StatelessWidget {
+  final bool isDeviceAccount;
+  final String? userEmail;
+  final VoidCallback onLinkGoogle;
+
+  const _CloudSaveCard({
+    required this.isDeviceAccount,
+    required this.userEmail,
+    required this.onLinkGoogle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isDeviceAccount) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDCFCE7),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.verified_user_rounded,
+                color: Color(0xFF16A34A),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cloud Backup Active',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF15803D),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    userEmail ?? 'Linked to Google Account',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF166534),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCFCFD),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFE0DCFA)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A5C3EF0),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F1FE),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.cloud_sync_rounded,
+                  color: Color(0xFF5C3EF0),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Protect Your Robux',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF101828),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Link Google to restore coins if you uninstall or switch phones.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF667085),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: onLinkGoogle,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5C3EF0),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.login_rounded, size: 16),
+              label: const Text(
+                'Link Google Account',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

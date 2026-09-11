@@ -8,6 +8,7 @@ enum AdPlacement {
   spinExtra,
   miniGameCompletion,
   scratchCard,
+  scratchExtra,
   doubleReward,
   luckyBonus,
 }
@@ -115,6 +116,8 @@ extension AdPlacementName on AdPlacement {
         return 'miniGameCompletion';
       case AdPlacement.scratchCard:
         return 'scratchCard';
+      case AdPlacement.scratchExtra:
+        return 'scratchExtra';
       case AdPlacement.doubleReward:
         return 'doubleReward';
       case AdPlacement.luckyBonus:

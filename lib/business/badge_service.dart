@@ -52,7 +52,7 @@ class BadgeService {
     if (dailyAdCount >= 15 && !_earnedBadgeIds.contains(Badges.adMaster.id)) {
       newlyEarned.add(Badges.adMaster);
     }
-    if (dailyAdCount >= 25 && !_earnedBadgeIds.contains(Badges.adChampion.id)) {
+    if (dailyAdCount >= 20 && !_earnedBadgeIds.contains(Badges.adChampion.id)) {
       newlyEarned.add(Badges.adChampion);
     }
     if (_consecutiveDays >= 7 &&
@@ -99,7 +99,7 @@ class BadgeService {
       return {'name': Badges.adMaster.name, 'current': 5, 'target': 15};
     }
     if (!_earnedBadgeIds.contains(Badges.adChampion.id)) {
-      return {'name': Badges.adChampion.name, 'current': 15, 'target': 25};
+      return {'name': Badges.adChampion.name, 'current': 15, 'target': 20};
     }
     if (!_earnedBadgeIds.contains(Badges.weekStreak.id)) {
       return {

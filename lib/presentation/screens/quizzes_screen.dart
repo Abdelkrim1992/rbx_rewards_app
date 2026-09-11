@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/congratulations_dialog.dart';
 import '../providers/ad_provider.dart';
+import '../../core/utils/game_reward_helper.dart';
 import '../../widgets/game_prefs.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
@@ -54,18 +55,19 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     with TickerProviderStateMixin {
   String _gameState = 'MENU';
 
-  int _score = 0;
   int _correctCount = 0;
   int _questionIndex = 1;
   final int _totalQuestions = 10;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
   bool _hasClaimed = false;
-  bool _isProcessingAd = false;
+  bool _isProcessingPlayAgain = false;
+  bool _isProcessingClaim = false;
+
+  bool get _isProcessingAd => _isProcessingPlayAgain || _isProcessingClaim;
 
   late QuizQuestion _currentQuestion;
   int? _selectedAnswer;
-  bool? _isCorrectAnswer;
 
   int _secondsLeft = 90;
   Timer? _quizTimer;
@@ -93,6 +95,9 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     _matchPopScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _matchPopController, curve: Curves.elasticOut),
     );
+    Future.microtask(() {
+      ref.read(adServiceProvider).preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
+    });
   }
 
   // Categories
@@ -159,16 +164,15 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       _gameState = 'PLAYING';
       _correctCount = 0;
       _questionIndex = 1;
-      _score = 0;
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
       _secondsLeft = 90;
       _timerProgress = 1.0;
       _selectedAnswer = null;
-      _isCorrectAnswer = null;
       _currentQuestion = _sessionQuestions[0];
       _hasClaimed = false;
-      _isProcessingAd = false;
+      _isProcessingPlayAgain = false;
+      _isProcessingClaim = false;
     });
 
     _startSessionTimer();
@@ -210,12 +214,10 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
     setState(() {
       _selectedAnswer = optIdx;
-      _isCorrectAnswer = isCorrect;
     });
 
     if (isCorrect) {
       _correctCount++;
-      _score += 10;
     }
 
     HapticFeedback.lightImpact();
@@ -227,7 +229,6 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
           _questionIndex++;
           _currentQuestion = _sessionQuestions[_questionIndex - 1];
           _selectedAnswer = null;
-          _isCorrectAnswer = null;
         });
       } else {
         _triggerQuizComplete();
@@ -245,6 +246,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     });
     _matchPopController.reset();
     _matchPopController.forward();
+    ref.read(adServiceProvider).preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
   }
 
   void _claimQuizCoins() async {
@@ -254,13 +256,13 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
     }
 
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingClaim = true;
     });
 
     await GamePrefs.incrementGamePlayCount('quizzes');
 
     final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
+    await adNotifier.showRewardedInterstitial(
       AdPlacement.miniGameCompletion,
       onReward: (_) async {
         try {
@@ -287,14 +289,14 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       onAdDismissed: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
         }
       },
       onAdFailed: (error) async {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
@@ -307,35 +309,24 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   void _playAgain() async {
     if (_isProcessingAd) return;
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingPlayAgain = true;
     });
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
-        if (!_hasClaimed && _originalCoinsEarned > 0) {
-          try {
-            await ref.read(coinProvider.notifier).credit(_originalCoinsEarned, 'quiz');
-          } catch (_) {}
-        }
-      },
-      onAdDismissed: () {
+    if (!_hasClaimed && _originalCoinsEarned > 0) {
+      try {
+        await ref.read(coinProvider.notifier).credit(_originalCoinsEarned, 'quiz');
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
+    await showPlayAgainVideoAd(
+      context: context,
+      ref: ref,
+      onComplete: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
-          });
-          if (_activeCategory != null) {
-            _startQuizRound(_activeCategory!);
-          } else {
-            _backToMenu();
-          }
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingAd = false;
+            _isProcessingPlayAgain = false;
           });
           if (_activeCategory != null) {
             _startQuizRound(_activeCategory!);
@@ -1076,7 +1067,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                               ],
                             ),
                             child: Center(
-                              child: _isProcessingAd && _hasClaimed
+                              child: _isProcessingPlayAgain
                                   ? const SizedBox(
                                       width: 24,
                                       height: 24,
@@ -1110,7 +1101,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                                 borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
                               ),
                               child: Center(
-                                child: _isProcessingAd
+                                child: _isProcessingClaim
                                     ? const SizedBox(
                                         width: 24,
                                         height: 24,

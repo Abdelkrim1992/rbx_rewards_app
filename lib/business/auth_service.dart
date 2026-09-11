@@ -108,6 +108,62 @@ class AuthService {
     return digest.toString();
   }
 
+  /// Returns true if the current user is logged in via temporary deterministic device auth
+  bool get isDeviceAccount {
+    final email = _client.auth.currentUser?.email;
+    return email != null && email.endsWith('@rbxrewards.local');
+  }
+
+  /// Initiates Google OAuth Sign-In via Supabase
+  Future<bool> signInWithGoogle() async {
+    try {
+      final result = await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'io.supabase.rbxrewards://login-callback/',
+      );
+      return result;
+    } catch (e) {
+      debugPrint('Google Sign-In error: $e');
+      rethrow;
+    }
+  }
+
+  /// Links a Google ID to the current device user in Supabase
+  Future<bool> linkGoogleAccount({
+    required String googleId,
+    required String email,
+  }) async {
+    final user = currentUser;
+    if (user == null) return false;
+    try {
+      await _client.from('users').update({
+        'google_id': googleId,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', user.id);
+      return true;
+    } catch (e) {
+      debugPrint('linkGoogleAccount error: $e');
+      return false;
+    }
+  }
+
+  /// Retrieves linked account details from Supabase
+  Future<Map<String, dynamic>?> getLinkedAccountInfo() async {
+    final user = currentUser;
+    if (user == null) return null;
+    try {
+      final data = await _client
+          .from('users')
+          .select('google_id, display_name, balance')
+          .eq('id', user.id)
+          .maybeSingle();
+      return data;
+    } catch (e) {
+      debugPrint('getLinkedAccountInfo error: $e');
+      return null;
+    }
+  }
+
   Future<void> signOut() async {
     await _client.auth.signOut();
   }

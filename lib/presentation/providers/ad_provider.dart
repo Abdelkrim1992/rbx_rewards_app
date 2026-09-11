@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../models/ad_models.dart';
 import '../../models/badge_model.dart';
+import '../../business/ad_tracker_service.dart';
 import 'providers.dart';
 
 class AdStateModel {
@@ -80,6 +81,8 @@ class AdNotifier extends Notifier<AdStateModel> {
     await adService.preloadInterstitial(AdPlacement.spinForced);
     await adService.preloadInterstitial(AdPlacement.spinExtra);
     await adService.preloadInterstitial(AdPlacement.scratchCard);
+    await adService.preloadInterstitial(AdPlacement.scratchExtra);
+    await adService.preloadInterstitial(AdPlacement.miniGameCompletion);
 
     // Preload rewarded interstitials
     await adService.preloadRewardedInterstitial(AdPlacement.dailyReward);
@@ -123,6 +126,12 @@ class AdNotifier extends Notifier<AdStateModel> {
       return ad;
     }
 
+    final preloaded = adService.getPreloadedAd();
+    if (preloaded != null) {
+      adService.preloadAds(1);
+      return preloaded;
+    }
+
     final ad = await adService.loadRewardedAd(placement);
     adService.preloadForPlacement(placement);
     return ad;
@@ -136,7 +145,10 @@ class AdNotifier extends Notifier<AdStateModel> {
   }) async {
     final tracker = ref.read(adTrackerServiceProvider);
     if (!tracker.canShowForcedAd()) {
-      onAdFailed?.call('Daily forced ad limit reached');
+      final msg = tracker.dailyAdsWatched >= AdTrackerService.maxDailyTotalAds
+          ? 'Daily ad limit reached (20/20)'
+          : 'Daily forced ad limit reached';
+      onAdFailed?.call(msg);
       return null;
     }
 
@@ -187,7 +199,10 @@ class AdNotifier extends Notifier<AdStateModel> {
   }) async {
     final tracker = ref.read(adTrackerServiceProvider);
     if (!tracker.canShowOptionalAd()) {
-      await onAdFailed?.call('Daily optional ad limit reached');
+      final msg = tracker.dailyAdsWatched >= AdTrackerService.maxDailyTotalAds
+          ? 'Daily ad limit reached (20/20)'
+          : 'Daily optional ad limit reached';
+      await onAdFailed?.call(msg);
       return null;
     }
 

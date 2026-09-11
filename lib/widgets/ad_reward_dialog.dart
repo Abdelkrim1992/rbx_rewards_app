@@ -9,8 +9,17 @@ import 'interactive_button.dart';
 /// Shows a 5-second countdown with progress bar, then calls [onRewardGranted].
 class AdRewardDialog extends StatefulWidget {
   final VoidCallback onRewardGranted;
+  final String? title;
+  final String? subtitle;
+  final String? buttonText;
 
-  const AdRewardDialog({super.key, required this.onRewardGranted});
+  const AdRewardDialog({
+    super.key,
+    required this.onRewardGranted,
+    this.title,
+    this.subtitle,
+    this.buttonText,
+  });
 
   @override
   State<AdRewardDialog> createState() => _AdRewardDialogState();
@@ -87,7 +96,7 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    'REWARDED AD',
+                    widget.title ?? 'REWARDED AD',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
@@ -151,8 +160,8 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
                       const SizedBox(height: 12),
                       Text(
                         _adFinished
-                            ? 'Ad Completed! 2x Coins Unlocked'
-                            : 'Watching premium content...',
+                            ? (widget.subtitle ?? 'Ad Completed! 2x Coins Unlocked')
+                            : 'Watching premium video ad...',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -189,7 +198,9 @@ class _AdRewardDialogState extends State<AdRewardDialog> {
 
             // Claim action button
             InteractiveButton(
-              text: _adFinished ? 'CLAIM 2x REWARD' : 'WATCHING AD...',
+              text: _adFinished
+                  ? (widget.buttonText ?? 'CLAIM 2x REWARD')
+                  : 'WATCHING AD...',
               onTap: _adFinished ? _claim : null,
               gradient: _adFinished ? AppColors.primaryGradient : null,
               backgroundColor: _adFinished ? null : const Color(0xFFE2E2F5),

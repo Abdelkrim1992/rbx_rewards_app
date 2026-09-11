@@ -36,7 +36,7 @@ class Badges {
   static const adChampion = Badge(
     id: 'ad_champion',
     name: 'Ad Champion',
-    description: 'Watched 25 ads in one day',
+    description: 'Watched 20 ads in one day',
     iconEmoji: '🥇',
     rewardAmount: 500,
   );

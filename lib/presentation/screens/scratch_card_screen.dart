@@ -1,13 +1,18 @@
+import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:scratcher/scratcher.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
+import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/interactive_button.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
+import '../../widgets/ad_reward_dialog.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
 
@@ -28,23 +33,54 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   static int _scratchCount = 0; // Track scratches for ad display
   
   int _scratchesRemaining = GamePrefs.maxScratchesPerDay;
+  int _extraScratchesRemaining = GamePrefs.maxExtraScratchesPerDay;
   bool _isLoadingLimit = true;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
     _loadScratchLimit();
     _generateReward();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadScratchLimit() async {
     final remaining = await GamePrefs.getScratchesRemaining();
+    final extraRemaining = await GamePrefs.getExtraScratchesRemaining();
     if (mounted) {
       setState(() {
         _scratchesRemaining = remaining;
+        _extraScratchesRemaining = extraRemaining;
         _isLoadingLimit = false;
       });
     }
+  }
+
+  Duration _getEffectiveCooldown(bool isScratchBlocked) {
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    final remaining = nextMidnight.difference(now);
+    return remaining > Duration.zero ? remaining : Duration.zero;
+  }
+
+  String _formatDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds;
+    final h = totalSeconds ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    final s = totalSeconds % 60;
+    if (h > 0) {
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _generateReward() {
@@ -125,6 +161,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+        if (_isProcessing) return;
         if (!_isScratched && _scratcherKey.currentState?.progress != 0.0) {
           final shouldLeave = await showQuitConfirmationDialog(
             context,
@@ -223,21 +260,86 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
                   child: Column(
                     children: [
-                      // Scratches Left Indicator
-                      if (!_isLoadingLimit)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: Text(
-                            isScratchBlocked
-                                ? 'Daily limit or feature cap reached today.'
-                                : 'Scratches remaining today: $_scratchesRemaining/${GamePrefs.maxScratchesPerDay}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.secondaryText,
+                      // Scratches Left Indicator / Countdown Banner
+                      if (!_isLoadingLimit) ...[
+                        if (isScratchBlocked || (_scratchesRemaining <= 0 && _extraScratchesRemaining <= 0)) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF0F5),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFFFD4E5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    size: 18,
+                                    color: Color(0xFFFF52A2),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isScratchBlocked
+                                        ? 'Daily Scratch Cap Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}'
+                                        : 'Limit Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFFF52A2),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
+                        ] else if (_scratchesRemaining <= 0) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF0F5),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFFFD4E5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.play_circle_outline,
+                                    size: 18,
+                                    color: Color(0xFFFF52A2),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '0 Scratches Left • Watch ad below for extra scratch',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFFF52A2),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12.0),
+                            child: Text(
+                              'Free Scratches: $_scratchesRemaining',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF131326),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
 
                       // Scratch Card Container
                       Container(
@@ -326,30 +428,113 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
 
                       const SizedBox(height: 24),
 
-                      // Button showing current status
+                      // Watch Ad button for extra scratch
                       InteractiveButton(
                         height: 52,
-                        gradient: AppColors.primaryGradient,
-                        textColor: Colors.white,
-                        onTap: null, // Card resets automatically now
+                        gradient: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                            ? null
+                            : AppColors.primaryGradient,
+                        backgroundColor: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                            ? const Color(0xFFF1F2F8)
+                            : null,
+                        textColor: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                            ? const Color(0xFF868A9F)
+                            : Colors.white,
+                        onTap: (_isProcessing || _extraScratchesRemaining <= 0 || isScratchBlocked)
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isProcessing = true;
+                                });
+                                // Show rewarded ad
+                                await ref.read(adProvider.notifier).showOptionalAd(
+                                  AdPlacement.scratchExtra,
+                                  onReward: (amount) async {
+                                    if (!mounted) return;
+                                    await GamePrefs.decrementExtraScratchesRemaining();
+                                    final updated = await GamePrefs.getExtraScratchesRemaining();
+                                    await GamePrefs.incrementScratchesRemaining();
+                                    final scratchesUpdated = await GamePrefs.getScratchesRemaining();
+                                    if (mounted) {
+                                      setState(() {
+                                        _extraScratchesRemaining = updated;
+                                        _scratchesRemaining = scratchesUpdated;
+                                      });
+                                    }
+                                  },
+                                  onAdDismissed: () {
+                                    if (mounted) {
+                                      setState(() {
+                                        _isProcessing = false;
+                                      });
+                                    }
+                                  },
+                                  onAdFailed: (error) async {
+                                    if (mounted) {
+                                      final isDevMode = ref.read(adServiceProvider).developerModeEnabled;
+                                      if (isDevMode || kDebugMode) {
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: false,
+                                          builder: (context) => AdRewardDialog(
+                                            onRewardGranted: () async {
+                                              await GamePrefs.decrementExtraScratchesRemaining();
+                                              final updated = await GamePrefs.getExtraScratchesRemaining();
+                                              await GamePrefs.incrementScratchesRemaining();
+                                              final scratchesUpdated = await GamePrefs.getScratchesRemaining();
+                                              if (mounted) {
+                                                setState(() {
+                                                  _extraScratchesRemaining = updated;
+                                                  _scratchesRemaining = scratchesUpdated;
+                                                });
+                                              }
+                                            },
+                                          ),
+                                        ).then((_) {
+                                          if (mounted) {
+                                            setState(() {
+                                              _isProcessing = false;
+                                            });
+                                          }
+                                        });
+                                      } else {
+                                        setState(() {
+                                          _isProcessing = false;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text(error)),
+                                        );
+                                      }
+                                    }
+                                  },
+                                );
+                              },
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              (_scratchesRemaining <= 0 || isScratchBlocked) ? Icons.timer : Icons.touch_app, 
-                              color: Colors.white, 
-                              size: 22
+                              _extraScratchesRemaining <= 0
+                                  ? Icons.check_circle_outline
+                                  : (isScratchBlocked ? Icons.lock : Icons.play_circle_fill),
+                              color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                                  ? const Color(0xFF868A9F)
+                                  : Colors.white,
+                              size: 22,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              (_scratchesRemaining <= 0 || isScratchBlocked) 
-                                  ? 'Limit Reached for Today' 
-                                  : 'Scratch the card above!',
-                              style: const TextStyle(
-                                fontSize: 15,
+                              _extraScratchesRemaining <= 0
+                                  ? 'Extra Scratches Limit Reached (0/${GamePrefs.maxExtraScratchesPerDay})'
+                                  : isScratchBlocked
+                                      ? 'Daily Scratch Cap Reached'
+                                      : 'Watch Ad for Extra Scratch ($_extraScratchesRemaining/${GamePrefs.maxExtraScratchesPerDay} left)',
+                              style: TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
+                                color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                                    ? const Color(0xFF868A9F)
+                                    : Colors.white,
+                                letterSpacing: 0.3,
                               ),
                             ),
                           ],

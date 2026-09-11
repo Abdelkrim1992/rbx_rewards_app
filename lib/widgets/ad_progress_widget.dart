@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../business/ad_tracker_service.dart';
 import '../presentation/providers/ad_provider.dart';
 import '../presentation/providers/providers.dart';
 import '../theme/app_theme.dart';
@@ -12,7 +13,7 @@ class AdProgressWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final adNotifier = ref.watch(adProvider.notifier);
     final watched = adNotifier.dailyAdsWatched;
-    const total = 25;
+    const total = AdTrackerService.maxDailyTotalAds;
     final progress = (watched / total).clamp(0.0, 1.0);
     final isComplete = watched >= total;
 
@@ -79,7 +80,6 @@ class AdProgressWidget extends ConsumerWidget {
                 _MilestoneBadge(at: 10, watched: watched),
                 _MilestoneBadge(at: 15, watched: watched),
                 _MilestoneBadge(at: 20, watched: watched),
-                _MilestoneBadge(at: 25, watched: watched),
               ],
             ),
           ],
@@ -105,18 +105,18 @@ class AdProgressWidget extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _DetailRow(
-              label: 'Forced ads',
-              value: '${tracker.trackingData.dailyForcedAds}/15',
+              label: 'Optional ads',
+              value: '${tracker.trackingData.dailyOptionalAds}/${AdTrackerService.maxDailyOptionalAds}',
             ),
             const SizedBox(height: 8),
             _DetailRow(
-              label: 'Optional ads',
-              value: '${tracker.trackingData.dailyOptionalAds}/10',
+              label: 'Forced ads',
+              value: '${tracker.trackingData.dailyForcedAds}/${AdTrackerService.maxDailyForcedAds}',
             ),
             const SizedBox(height: 8),
             _DetailRow(
               label: 'Total today',
-              value: '${adNotifier.dailyAdsWatched}/25',
+              value: '${adNotifier.dailyAdsWatched}/${AdTrackerService.maxDailyTotalAds}',
             ),
           ],
         ),

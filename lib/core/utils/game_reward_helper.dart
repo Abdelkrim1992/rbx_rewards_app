@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../presentation/providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/two_tier_reward_dialog.dart';
+import '../../widgets/ad_reward_dialog.dart';
 import '../../widgets/game_prefs.dart';
 
 /// Helper function to show game-specific two-tier reward choice dialog and handle ad display.
@@ -117,5 +119,69 @@ Future<void> showGameRewardChoice({
         );
       },
     ),
+  );
+}
+
+/// Helper to play a rewarded video ad for "Play Again" across all mini-games,
+/// with automatic web / test fallback to [AdRewardDialog] so a video ad is ALWAYS shown.
+Future<void> showPlayAgainVideoAd({
+  required BuildContext context,
+  required WidgetRef ref,
+  required VoidCallback onComplete,
+}) async {
+  final adNotifier = ref.read(adProvider.notifier);
+
+  // If on web, Google Mobile Ads is not supported so show AdRewardDialog directly
+  if (kIsWeb) {
+    if (!context.mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AdRewardDialog(
+        title: 'REWARDED VIDEO AD',
+        subtitle: 'Ad Completed! Ready to play!',
+        buttonText: 'PLAY AGAIN',
+        onRewardGranted: () {
+          adNotifier.recordOptionalAdWatched();
+        },
+      ),
+    );
+    onComplete();
+    return;
+  }
+
+  bool completed = false;
+
+  void handleFinish() {
+    if (!completed) {
+      completed = true;
+      onComplete();
+    }
+  }
+
+  await adNotifier.showRewardedInterstitial(
+    AdPlacement.miniGameCompletion,
+    onReward: (_) async {},
+    onAdDismissed: () {
+      handleFinish();
+    },
+    onAdFailed: (error) async {
+      debugPrint('Native ad unavailable ($error), displaying video ad dialog');
+      if (context.mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AdRewardDialog(
+            title: 'REWARDED VIDEO AD',
+            subtitle: 'Ad Completed! Ready to play!',
+            buttonText: 'PLAY AGAIN',
+            onRewardGranted: () {
+              adNotifier.recordOptionalAdWatched();
+            },
+          ),
+        );
+      }
+      handleFinish();
+    },
   );
 }

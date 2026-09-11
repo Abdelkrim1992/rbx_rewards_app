@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
 import '../providers/coin_provider.dart';
+import '../providers/providers.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onGetStarted;
@@ -48,16 +49,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // 1. Immediately trigger onGetStarted so transition to HomeScreen is snappy
     widget.onGetStarted();
 
-    // 2. Persist bonus claimed and credit +50 RBX Coins
+    // 2. Persist bonus claimed both locally and on Supabase atomically
     try {
       final prefs = await SharedPreferences.getInstance();
-      final alreadyClaimed = prefs.getBool('welcome_bonus_claimed') ?? false;
-      if (!alreadyClaimed) {
+      final alreadyClaimedLocal =
+          prefs.getBool('welcome_bonus_claimed') ?? false;
+
+      // Atomically claim bonus via Supabase
+      final claimResult =
+          await ref.read(supabaseRepositoryProvider).claimWelcomeBonus();
+      final bool wasClaimed = claimResult['claimed'] as bool? ?? false;
+
+      if (!alreadyClaimedLocal && wasClaimed) {
         await prefs.setBool('welcome_bonus_claimed', true);
         await ref.read(coinProvider.notifier).credit(50, 'welcome_bonus');
       }
     } catch (e) {
       debugPrint('Error crediting welcome bonus: $e');
+    }
+  }
+
+  Future<void> _handleSignInWithGoogle() async {
+    try {
+      final auth = ref.read(authServiceProvider);
+      final isInitiated = await auth.signInWithGoogle();
+      if (isInitiated && mounted) {
+        widget.onGetStarted();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign-in error: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -75,25 +101,58 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
                 return Column(
                   children: [
-                    // Top Logo Header (Consistent across all 3 steps)
+                    // Top Logo & Sign In Header
                     Padding(
-                      padding: EdgeInsets.only(
-                        top: isCompact ? 8 : 12,
-                        bottom: isCompact ? 4 : 8,
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        isCompact ? 8 : 12,
+                        20,
+                        isCompact ? 4 : 8,
                       ),
-                      child: Image.asset(
-                        AppAssets.rbxLogo,
-                        height: isCompact ? 30 : 36,
-                        fit: BoxFit.contain,
-                        cacheHeight: 120,
-                        errorBuilder: (_, __, ___) => const Text(
-                          'RBX Play & Earn',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF101828),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Image.asset(
+                            AppAssets.rbxLogo,
+                            height: isCompact ? 30 : 36,
+                            fit: BoxFit.contain,
+                            cacheHeight: 120,
+                            errorBuilder: (_, __, ___) => const Text(
+                              'RBX Play & Earn',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF101828),
+                              ),
+                            ),
                           ),
-                        ),
+                          TextButton.icon(
+                            onPressed: _handleSignInWithGoogle,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              backgroundColor: const Color(0xFFF6F5FD),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                            ),
+                            icon: const Icon(
+                              Icons.login_rounded,
+                              size: 14,
+                              color: Color(0xFF5637E6),
+                            ),
+                            label: const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF5637E6),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 

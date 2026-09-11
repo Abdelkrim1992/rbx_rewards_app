@@ -60,10 +60,11 @@ class GamePrefs {
     }
   }
 
-  // --- Daily Scratch Card Limit ---
-  static const String _keyScratchDate = 'scratch_date';
-  static const String _keyScratchesRemaining = 'scratches_remaining';
-  static const int maxScratchesPerDay = 10;
+  // --- Daily Scratch Card Limit (3 free scratches per day) ---
+  static const String _keyScratchDate = 'scratch_free_date';
+  static const String _keyScratchesRemaining = 'scratch_free_remaining';
+  static const int maxScratchesPerDay = 3;
+  static const int maxFreeScratchesPerDay = 3;
 
   static Future<int> getScratchesRemaining() async {
     final prefs = await SharedPreferences.getInstance();
@@ -85,6 +86,40 @@ class GamePrefs {
     final remaining = await getScratchesRemaining();
     if (remaining > 0) {
       await prefs.setInt(_keyScratchesRemaining, remaining - 1);
+    }
+  }
+
+  static Future<void> incrementScratchesRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remaining = await getScratchesRemaining();
+    await prefs.setInt(_keyScratchesRemaining, remaining + 1);
+  }
+
+  // --- Daily Extra Scratches Limit (Ad-funded scratches) ---
+  static const String _keyExtraScratchesDate = 'extra_scratches_date';
+  static const String _keyExtraScratchesRemaining = 'extra_scratches_remaining';
+  static const int maxExtraScratchesPerDay = 8;
+
+  static Future<int> getExtraScratchesRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastDateStr = prefs.getString(_keyExtraScratchesDate);
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10); // YYYY-MM-DD
+
+    if (lastDateStr != todayStr) {
+      // New day, reset the count
+      await prefs.setString(_keyExtraScratchesDate, todayStr);
+      await prefs.setInt(_keyExtraScratchesRemaining, maxExtraScratchesPerDay);
+      return maxExtraScratchesPerDay;
+    }
+
+    return prefs.getInt(_keyExtraScratchesRemaining) ?? maxExtraScratchesPerDay;
+  }
+
+  static Future<void> decrementExtraScratchesRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final remaining = await getExtraScratchesRemaining();
+    if (remaining > 0) {
+      await prefs.setInt(_keyExtraScratchesRemaining, remaining - 1);
     }
   }
 

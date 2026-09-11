@@ -12,6 +12,7 @@ import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/congratulations_dialog.dart';
+import '../../core/utils/game_reward_helper.dart';
 
 class FlipCardGameScreen extends ConsumerStatefulWidget {
   const FlipCardGameScreen({super.key});
@@ -32,13 +33,14 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
   bool _hasClaimed = false;
-  bool _isProcessingAd = false;
-  int _userCoins = 0;
+  bool _isProcessingPlayAgain = false;
+  bool _isProcessingClaim = false;
+
+  bool get _isProcessingAd => _isProcessingPlayAgain || _isProcessingClaim;
   int _comboStreak = 0;
   int _maxCombo = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
-  static final int _claimCount = 0;
 
   // Timer
   int _secondsLeft = 90;
@@ -76,7 +78,6 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   @override
   void initState() {
     super.initState();
-    _loadHighScoreAndCoins();
 
     _floatController = AnimationController(
       vsync: this,
@@ -90,6 +91,9 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     _matchPopScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _matchPopController, curve: Curves.elasticOut),
     );
+    Future.microtask(() {
+      ref.read(adServiceProvider).preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
+    });
   }
 
   @override
@@ -101,12 +105,6 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     super.dispose();
   }
 
-  Future<void> _loadHighScoreAndCoins() async {
-    final currentCoins = ref.read(coinProvider);
-    setState(() {
-      _userCoins = currentCoins;
-    });
-  }
 
   // --- Game Flow ---
   void _startGame() {
@@ -125,7 +123,8 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
       _hasClaimed = false;
-      _isProcessingAd = false;
+      _isProcessingPlayAgain = false;
+      _isProcessingClaim = false;
       _comboStreak = 0;
       _maxCombo = 0;
       _secondsLeft = 90;
@@ -248,12 +247,11 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       _gameState = 'GAMEOVER';
     });
 
-    _loadHighScoreAndCoins();
-
     if (!mounted) return;
 
     _matchPopController.reset();
     _matchPopController.forward();
+    ref.read(adServiceProvider).preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
   }
 
   void _claimCoins() async {
@@ -263,13 +261,13 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     }
 
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingClaim = true;
     });
 
     await GamePrefs.incrementGamePlayCount('flip_card');
 
     final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
+    await adNotifier.showRewardedInterstitial(
       AdPlacement.miniGameCompletion,
       onReward: (_) async {
         final duration = _gameStartTime != null
@@ -318,14 +316,14 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       onAdDismissed: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
         }
       },
       onAdFailed: (error) async {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
@@ -335,49 +333,52 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     );
   }
 
+  Future<void> _autoCreditCoinsOnPlayAgain() async {
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+    try {
+      final result = await ref.read(gameServiceProvider).submitGameResult(
+        gameName: 'flip_card',
+        score: _originalCoinsEarned,
+        durationSeconds: duration.clamp(1, 3600),
+        sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+        originalScore: _originalCoinsEarned,
+        multiplier: 1,
+      );
+      if (result.success || result.queued) {
+        final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
+        if (mounted) {
+          setState(() {
+            _hasClaimed = true;
+            _coinsEarned = earned;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   void _playAgain() async {
     if (_isProcessingAd) return;
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingPlayAgain = true;
     });
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
-        if (!_hasClaimed && _originalCoinsEarned > 0) {
-          final duration = _gameStartTime != null
-              ? DateTime.now().difference(_gameStartTime!).inSeconds
-              : 1;
-          try {
-            final result = await ref.read(gameServiceProvider).submitGameResult(
-              gameName: 'flip_card',
-              score: _originalCoinsEarned,
-              durationSeconds: duration.clamp(1, 3600),
-              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-              originalScore: _originalCoinsEarned,
-              multiplier: 1,
-            );
-            if (result.success || result.queued) {
-              final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-              ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
-            }
-          } catch (_) {}
-        }
-      },
-      onAdDismissed: () {
+    if (!_hasClaimed && _originalCoinsEarned > 0) {
+      await _autoCreditCoinsOnPlayAgain();
+    }
+
+    if (!mounted) return;
+
+    await showPlayAgainVideoAd(
+      context: context,
+      ref: ref,
+      onComplete: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
-          });
-          _startGame();
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingAd = false;
+            _isProcessingPlayAgain = false;
           });
           _startGame();
         }
@@ -1141,7 +1142,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                     ],
                   ),
                   child: Center(
-                    child: _isProcessingAd && _hasClaimed
+                    child: _isProcessingPlayAgain
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -1175,7 +1176,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Center(
-                      child: _isProcessingAd
+                      child: _isProcessingClaim
                           ? const SizedBox(
                               width: 24,
                               height: 24,

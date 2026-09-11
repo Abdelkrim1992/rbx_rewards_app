@@ -40,6 +40,7 @@ class AdService {
     AdPlacement.spinExtra: [_premiumAdUnitIdAndroid],
     AdPlacement.miniGameCompletion: [_premiumAdUnitIdAndroid],
     AdPlacement.scratchCard: [_premiumAdUnitIdAndroid],
+    AdPlacement.scratchExtra: [_premiumAdUnitIdAndroid],
     AdPlacement.doubleReward: [_premiumAdUnitIdAndroid],
     AdPlacement.luckyBonus: [_premiumAdUnitIdAndroid],
   };
@@ -53,6 +54,7 @@ class AdService {
     AdPlacement.spinExtra: [_premiumAdUnitIdIOS],
     AdPlacement.miniGameCompletion: [_premiumAdUnitIdIOS],
     AdPlacement.scratchCard: [_premiumAdUnitIdIOS],
+    AdPlacement.scratchExtra: [_premiumAdUnitIdIOS],
     AdPlacement.doubleReward: [_premiumAdUnitIdIOS],
     AdPlacement.luckyBonus: [_premiumAdUnitIdIOS],
   };
@@ -334,6 +336,11 @@ class AdService {
     }
 
     RewardedAd? ad = _preloadedInterstitials[placement];
+    ad ??= getPreloadedAd();
+    if (ad == null) {
+      ad = _preloadedRewardedInterstitials[placement];
+      _preloadedRewardedInterstitials[placement] = null;
+    }
     if (ad == null) {
       debugPrint('AdService: no interstitial (rewarded ad) preloaded for ${placement.name}, loading on demand...');
       ad = await loadInterstitialAd(placement);
@@ -363,6 +370,7 @@ class AdService {
     );
   }
 
+  // ignore: unused_element
   String _getInterstitialAdUnitId(AdPlacement placement) {
     if (kDebugMode || _developerModeEnabled) {
       return Platform.isIOS ? _testInterstitialIdIOS : _testInterstitialIdAndroid;
@@ -385,6 +393,7 @@ class AdService {
     AdPlacement.spinExtra: ['ca-app-pub-3940256099942544/1033173712'],
     AdPlacement.miniGameCompletion: ['ca-app-pub-3940256099942544/1033173712'],
     AdPlacement.scratchCard: ['ca-app-pub-3940256099942544/1033173712'],
+    AdPlacement.scratchExtra: ['ca-app-pub-3940256099942544/1033173712'],
     AdPlacement.doubleReward: ['ca-app-pub-3940256099942544/1033173712'],
     AdPlacement.luckyBonus: ['ca-app-pub-3940256099942544/1033173712'],
   };
@@ -399,6 +408,7 @@ class AdService {
     AdPlacement.spinExtra: ['ca-app-pub-3940256099942544/4411468910'],
     AdPlacement.miniGameCompletion: ['ca-app-pub-3940256099942544/4411468910'],
     AdPlacement.scratchCard: ['ca-app-pub-3940256099942544/4411468910'],
+    AdPlacement.scratchExtra: ['ca-app-pub-3940256099942544/4411468910'],
     AdPlacement.doubleReward: ['ca-app-pub-3940256099942544/4411468910'],
     AdPlacement.luckyBonus: ['ca-app-pub-3940256099942544/4411468910'],
   };
@@ -438,6 +448,11 @@ class AdService {
     }
 
     RewardedAd? ad = _preloadedRewardedInterstitials[placement];
+    ad ??= getPreloadedAd();
+    if (ad == null) {
+      ad = _preloadedInterstitials[placement];
+      _preloadedInterstitials[placement] = null;
+    }
     if (ad == null) {
       debugPrint('AdService: no rewarded interstitial (rewarded ad) preloaded for ${placement.name}, loading on demand...');
       ad = await loadRewardedInterstitialAd(placement);
@@ -465,6 +480,7 @@ class AdService {
     );
   }
 
+  // ignore: unused_element
   String _getRewardedInterstitialAdUnitId(AdPlacement placement) {
     if (kDebugMode || _developerModeEnabled) {
       return Platform.isIOS ? _testRewardedInterstitialIdIOS : _testRewardedInterstitialIdAndroid;
@@ -487,6 +503,7 @@ class AdService {
     AdPlacement.spinExtra: [_quickAdUnitIdAndroid],
     AdPlacement.miniGameCompletion: [_quickAdUnitIdAndroid],
     AdPlacement.scratchCard: [_quickAdUnitIdAndroid],
+    AdPlacement.scratchExtra: [_quickAdUnitIdAndroid],
     AdPlacement.doubleReward: [_quickAdUnitIdAndroid],
     AdPlacement.luckyBonus: [_quickAdUnitIdAndroid],
   };
@@ -500,6 +517,7 @@ class AdService {
     AdPlacement.spinExtra: [_quickAdUnitIdIOS],
     AdPlacement.miniGameCompletion: [_quickAdUnitIdIOS],
     AdPlacement.scratchCard: [_quickAdUnitIdIOS],
+    AdPlacement.scratchExtra: [_quickAdUnitIdIOS],
     AdPlacement.doubleReward: [_quickAdUnitIdIOS],
     AdPlacement.luckyBonus: [_quickAdUnitIdIOS],
   };

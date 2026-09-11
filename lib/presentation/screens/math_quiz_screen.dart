@@ -12,6 +12,7 @@ import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/congratulations_dialog.dart';
+import '../../core/utils/game_reward_helper.dart';
 
 class MathQuestion {
   final String text;
@@ -38,25 +39,23 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   String _gameState = 'MENU';
 
   // Game Metrics
-  int _score = 0;
   int _correctCount = 0;
   int _questionIndex = 1;
   final int _totalQuestions = 10;
   int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
-  final int _highScore = 0;
-  int _userCoins = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
   bool _isQuitting = false;
   bool _hasClaimed = false;
-  bool _isProcessingAd = false;
-  static final int _claimCount = 0;
+  bool _isProcessingPlayAgain = false;
+  bool _isProcessingClaim = false;
+
+  bool get _isProcessingAd => _isProcessingPlayAgain || _isProcessingClaim;
 
   // Active question details
   late MathQuestion _currentQuestion;
   int? _selectedAnswer;
-  bool? _isCorrectAnswer;
 
   // Session Timer (60 seconds total countdown)
   int _secondsLeft = 60;
@@ -74,7 +73,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   @override
   void initState() {
     super.initState();
-    _loadHighScoreAndCoins();
 
     // Loop floating animation for floating background elements
     _floatController = AnimationController(
@@ -89,6 +87,14 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     _matchPopScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _matchPopController, curve: Curves.elasticOut),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final adService = ref.read(adServiceProvider);
+        adService.preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
+        adService.preloadInterstitial(AdPlacement.miniGameCompletion);
+      }
+    });
   }
 
   @override
@@ -97,13 +103,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     _floatController.dispose();
     _matchPopController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadHighScoreAndCoins() async {
-    final currentCoins = ref.read(coinProvider);
-    setState(() {
-      _userCoins = currentCoins;
-    });
   }
 
   // --- Audio Feedback Synthetics ---
@@ -134,15 +133,14 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       _gameState = 'PLAYING';
       _correctCount = 0;
       _questionIndex = 1;
-      _score = 0;
       _coinsEarned = 0;
       _originalCoinsEarned = 0;
       _secondsLeft = 60;
       _timerProgress = 1.0;
       _selectedAnswer = null;
-      _isCorrectAnswer = null;
       _hasClaimed = false;
-      _isProcessingAd = false;
+      _isProcessingPlayAgain = false;
+      _isProcessingClaim = false;
     });
 
     _sessionId = ref.read(gameServiceProvider).generateSessionId();
@@ -199,7 +197,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         options: sortedOptions,
       );
       _selectedAnswer = null;
-      _isCorrectAnswer = null;
     });
   }
 
@@ -231,12 +228,10 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
     setState(() {
       _selectedAnswer = optIdx;
-      _isCorrectAnswer = isCorrect;
     });
 
     if (isCorrect) {
       _correctCount++;
-      _score += 10;
     }
 
     HapticFeedback.lightImpact();
@@ -267,10 +262,58 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       _gameState = 'GAMEOVER';
     });
 
-    _loadHighScoreAndCoins();
+    ref.read(adServiceProvider).preloadRewardedInterstitial(AdPlacement.miniGameCompletion);
 
     _matchPopController.reset();
     _matchPopController.forward();
+  }
+
+  Future<bool> _submitAndRecordReward() async {
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+
+    try {
+      final result = await ref.read(gameServiceProvider).submitGameResult(
+        gameName: 'math_quiz',
+        score: _originalCoinsEarned,
+        durationSeconds: duration.clamp(1, 3600),
+        sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+        originalScore: _originalCoinsEarned,
+        multiplier: 1,
+      );
+      if (!mounted) return false;
+      if (result.success || result.queued) {
+        final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
+
+        if (mounted) {
+          setState(() {
+            _hasClaimed = true;
+            _coinsEarned = earned;
+          });
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => CongratulationsDialog(earnedCoins: earned),
+          );
+        }
+        return true;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
+        );
+        return false;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save game reward')),
+        );
+      }
+      return false;
+    }
   }
 
   void _claimQuizCoins() async {
@@ -280,69 +323,28 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     }
 
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingClaim = true;
     });
 
     await GamePrefs.incrementGamePlayCount('math_quiz');
 
     final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
+    await adNotifier.showRewardedInterstitial(
       AdPlacement.miniGameCompletion,
       onReward: (_) async {
-        final duration = _gameStartTime != null
-            ? DateTime.now().difference(_gameStartTime!).inSeconds
-            : 1;
-
-        try {
-          final result = await ref.read(gameServiceProvider).submitGameResult(
-            gameName: 'math_quiz',
-            score: _originalCoinsEarned,
-            durationSeconds: duration.clamp(1, 3600),
-            sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-            originalScore: _originalCoinsEarned,
-            multiplier: 1,
-          );
-          if (!mounted) return;
-          if (result.success || result.queued) {
-            final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-            ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
-
-            if (mounted) {
-              setState(() {
-                _hasClaimed = true;
-                _coinsEarned = earned;
-              });
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: earned),
-              );
-            }
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to save game reward')),
-            );
-          }
-        }
+        await _submitAndRecordReward();
       },
       onAdDismissed: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
         }
       },
       onAdFailed: (error) async {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
+            _isProcessingClaim = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
@@ -352,49 +354,52 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     );
   }
 
+  Future<void> _autoCreditCoinsOnPlayAgain() async {
+    final duration = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inSeconds
+        : 1;
+    try {
+      final result = await ref.read(gameServiceProvider).submitGameResult(
+        gameName: 'math_quiz',
+        score: _originalCoinsEarned,
+        durationSeconds: duration.clamp(1, 3600),
+        sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+        originalScore: _originalCoinsEarned,
+        multiplier: 1,
+      );
+      if (result.success || result.queued) {
+        final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
+        if (mounted) {
+          setState(() {
+            _hasClaimed = true;
+            _coinsEarned = earned;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
   void _playAgain() async {
     if (_isProcessingAd) return;
     setState(() {
-      _isProcessingAd = true;
+      _isProcessingPlayAgain = true;
     });
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showOptionalAd(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
-        if (!_hasClaimed && _originalCoinsEarned > 0) {
-          final duration = _gameStartTime != null
-              ? DateTime.now().difference(_gameStartTime!).inSeconds
-              : 1;
-          try {
-            final result = await ref.read(gameServiceProvider).submitGameResult(
-              gameName: 'math_quiz',
-              score: _originalCoinsEarned,
-              durationSeconds: duration.clamp(1, 3600),
-              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-              originalScore: _originalCoinsEarned,
-              multiplier: 1,
-            );
-            if (result.success || result.queued) {
-              final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-              ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
-            }
-          } catch (_) {}
-        }
-      },
-      onAdDismissed: () {
+    if (!_hasClaimed && _originalCoinsEarned > 0) {
+      await _autoCreditCoinsOnPlayAgain();
+    }
+
+    if (!mounted) return;
+
+    await showPlayAgainVideoAd(
+      context: context,
+      ref: ref,
+      onComplete: () {
         if (mounted) {
           setState(() {
-            _isProcessingAd = false;
-          });
-          _startQuizRound();
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingAd = false;
+            _isProcessingPlayAgain = false;
           });
           _startQuizRound();
         }
@@ -489,7 +494,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                       message:
                           'Are you sure you want to exit the Math Quiz? You will lose unclaimed progress.',
                     );
-                    if (shouldLeave && context.mounted) {
+                    if (shouldLeave && mounted) {
                       setState(() => _isQuitting = true);
                       Navigator.of(context).pop();
                     }
@@ -944,7 +949,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                     ],
                   ),
                   child: Center(
-                    child: _isProcessingAd && _hasClaimed
+                    child: _isProcessingPlayAgain
                         ? const SizedBox(
                             width: 24,
                             height: 24,
@@ -978,7 +983,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Center(
-                      child: _isProcessingAd
+                      child: _isProcessingClaim
                           ? const SizedBox(
                               width: 24,
                               height: 24,
