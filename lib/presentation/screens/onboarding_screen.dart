@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
+import '../../widgets/welcome_bonus_overlay.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 
@@ -46,16 +47,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _isClaiming = true);
     HapticFeedback.mediumImpact();
 
-    // 1. Immediately trigger onGetStarted so transition to HomeScreen is snappy
+    // Show the animated bonus overlay; actual navigation + coin credit
+    // happen only when the user taps "Claim My 50 Coins!".
+    if (!mounted) return;
+    WelcomeBonusOverlay.show(
+      context,
+      onClaimed: () => _claimBonusAndNavigate(),
+    );
+
+    // Reset so button is tappable again if user somehow dismisses
+    if (mounted) setState(() => _isClaiming = false);
+  }
+
+  /// Credits the welcome bonus and navigates to home.
+  Future<void> _claimBonusAndNavigate() async {
+    // Navigate immediately for a snappy transition
     widget.onGetStarted();
 
-    // 2. Persist bonus claimed both locally and on Supabase atomically
+    // Persist + credit in the background
     try {
       final prefs = await SharedPreferences.getInstance();
       final alreadyClaimedLocal =
           prefs.getBool('welcome_bonus_claimed') ?? false;
 
-      // Atomically claim bonus via Supabase
       final claimResult =
           await ref.read(supabaseRepositoryProvider).claimWelcomeBonus();
       final bool wasClaimed = claimResult['claimed'] as bool? ?? false;
