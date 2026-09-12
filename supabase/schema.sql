@@ -1604,9 +1604,13 @@ END;
 $$;
 
 -- 2. Redefine claim_daily_reward to call credit_user_coins (ensures transaction logging & cap checks)
+DROP FUNCTION IF EXISTS public.claim_daily_reward(UUID);
+DROP FUNCTION IF EXISTS public.claim_daily_reward(UUID, INTEGER);
+
 CREATE OR REPLACE FUNCTION public.claim_daily_reward(
   p_user_id UUID,
-  p_amount INTEGER DEFAULT 15
+  p_amount INTEGER DEFAULT 15,
+  p_save_streak BOOLEAN DEFAULT FALSE
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -1624,8 +1628,8 @@ DECLARE
   v_tx_id TEXT;
   v_result JSONB;
 BEGIN
-  -- Clamp reward between 1 and 30 (max premium double of 15 base)
-  v_daily_reward := LEAST(30, GREATEST(1, p_amount));
+  -- Clamp reward between 1 and 200 (supports 15-100 base, and up to 200 with ad multiplier)
+  v_daily_reward := LEAST(200, GREATEST(1, p_amount));
 
   SELECT * INTO v_user FROM public.users WHERE id = p_user_id;
 
@@ -1647,9 +1651,12 @@ BEGIN
     END IF;
   END IF;
 
-  -- Calculate consecutive days
-  v_consecutive_days := v_user.consecutive_days;
-  IF v_user.last_active_date IS NOT NULL THEN
+  -- Calculate consecutive days with streak saver support
+  v_consecutive_days := COALESCE(v_user.consecutive_days, 0);
+  IF p_save_streak THEN
+    -- Streak saved by user watching rewarded ad or activating streak saver
+    v_consecutive_days := v_consecutive_days + 1;
+  ELSIF v_user.last_active_date IS NOT NULL THEN
     v_diff_days := floor(extract(epoch from (v_now - v_user.last_active_date)) / 86400)::integer;
     IF v_diff_days = 1 THEN
       v_consecutive_days := v_consecutive_days + 1;

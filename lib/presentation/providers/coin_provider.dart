@@ -52,6 +52,8 @@ class CoinNotifier extends Notifier<int> {
       if (data.isEmpty) return;
       final balance = data['balance'] as int? ?? data['coins'] as int? ?? 0;
       if (balance >= 0) {
+        // Prevent stale backend cache with 0 coins from wiping out an active positive balance
+        if (state > 0 && balance == 0) return;
         state = balance;
         // Persist to local cache so next startup shows correct value instantly
         ref.read(secureRepositoryProvider).saveBalance(balance);
@@ -126,6 +128,7 @@ class CoinNotifier extends Notifier<int> {
   /// provides the authoritative balance. Always overwrites local state.
   void updateBalance(int balance) {
     if (!_mounted) return;
+    if (state > 0 && balance == 0) return;
     state = balance;
     _saveLocally(balance);
   }

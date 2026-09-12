@@ -198,6 +198,31 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
           fontFamily: 'Inter',
           useMaterial3: true,
           scaffoldBackgroundColor: Colors.white,
+          cardTheme: CardThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+            ),
+            color: Colors.white,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: AppColors.primary.withValues(alpha: 0.35),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              textStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
           appBarTheme: const AppBarTheme(
             systemOverlayStyle: RbxRewardsApp.globalSystemOverlayStyle,
           ),

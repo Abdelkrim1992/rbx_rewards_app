@@ -7,6 +7,10 @@ class UserProfile {
   final int offersCompleted;
   final String displayName;
   final String? profilePhotoUrl;
+  final DateTime? dailyRewardClaimedAt;
+
+  final int totalSpent;
+  final DateTime? createdAt;
 
   UserProfile({
     required this.id,
@@ -17,6 +21,9 @@ class UserProfile {
     required this.offersCompleted,
     required this.displayName,
     this.profilePhotoUrl,
+    this.dailyRewardClaimedAt,
+    this.totalSpent = 0,
+    this.createdAt,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -29,6 +36,13 @@ class UserProfile {
       offersCompleted: json['offers_completed'] as int? ?? 0,
       displayName: json['display_name'] as String? ?? 'Player',
       profilePhotoUrl: json['profile_photo_url'] as String?,
+      dailyRewardClaimedAt: json['daily_reward_claimed_at'] != null
+          ? DateTime.tryParse(json['daily_reward_claimed_at'] as String)
+          : null,
+      totalSpent: json['total_spent'] as int? ?? 0,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
     );
   }
 
@@ -41,6 +55,9 @@ class UserProfile {
     int? offersCompleted,
     String? displayName,
     String? profilePhotoUrl,
+    DateTime? dailyRewardClaimedAt,
+    int? totalSpent,
+    DateTime? createdAt,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -51,6 +68,9 @@ class UserProfile {
       offersCompleted: offersCompleted ?? this.offersCompleted,
       displayName: displayName ?? this.displayName,
       profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+      dailyRewardClaimedAt: dailyRewardClaimedAt ?? this.dailyRewardClaimedAt,
+      totalSpent: totalSpent ?? this.totalSpent,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

@@ -1207,7 +1207,7 @@ class _QuizCategoryItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),

@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../presentation/providers/ad_provider.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/two_tier_reward_dialog.dart';
-import '../../widgets/congratulations_dialog.dart';
+import '../../widgets/reward_claim_dialog.dart';
 
-/// Helper function to show two-tier reward choice dialog and handle ad display.
+/// Helper function to show modern reward claim dialog with 2X video ad multiplier.
 /// 
-/// This implements the "Normal + Double" strategy:
-/// - Normal: baseReward + Rewarded Interstitial (shorter ad)
-/// - Double: baseReward * 2 + Rewarded Ad (longer ad)
-
+/// Replaces the legacy two-step dialog with an industry-standard unified celebration:
+/// - Animated odometer count-up
+/// - Dynamic goal-gradient progress tracking
+/// - One-tap regular claim or 2X Double-Up via rewarded video
 Future<void> showRewardChoice({
   required BuildContext context,
   required String featureName,
@@ -19,57 +16,20 @@ Future<void> showRewardChoice({
   required AdPlacement premiumPlacement,
   required Future<void> Function(int coins) onSuccess,
   Function()? onCancel,
+  String? heroAsset,
 }) async {
-  final container = ProviderScope.containerOf(context);
-  final adNotifier = container.read(adProvider.notifier);
-
   await showDialog<void>(
     context: context,
     barrierDismissible: false,
-    builder: (context) => TwoTierRewardDialog(
+    builder: (context) => RewardClaimDialog(
       title: featureName,
-      description: 'Choose your reward',
-      quickReward: baseReward,
-      quickLabel: 'Claim $baseReward RBX',
-      premiumReward: baseReward * 2,
-      onQuickClaim: () async {
-        await onSuccess(baseReward);
-        if (context.mounted) {
-          Navigator.of(context).pop();
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-          );
-        }
+      baseReward: baseReward,
+      adPlacement: premiumPlacement,
+      heroAsset: heroAsset,
+      onClaimCompleted: (coins) async {
+        await onSuccess(coins);
       },
-      onPremiumClaim: () async {
-        await adNotifier.showOptionalAd(
-          premiumPlacement,
-          onReward: (_) async {
-            await onSuccess(baseReward * 2);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward * 2),
-              );
-            }
-          },
-          onAdFailed: (error) async {
-            await onSuccess(baseReward);
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: baseReward),
-              );
-            }
-          },
-        );
-      },
+      onCancel: onCancel,
     ),
   );
 }

@@ -10,7 +10,7 @@ class AppColors {
   static const Color purple = Color(0xFF664DFF);
   static const Color white = Colors.white;
   static const Color background = Colors.white;
-  static const Color cardBorder = Color(0xFFF3F3F5);
+  static const Color cardBorder = Color(0xFFE0DCFA);
   static const Color divider = Color(0xFFF1F2F8);
   static const Color navBorder = Color(0xFFF2F4F7);
   static const Color darkText = Color(0xFF0F172A);
@@ -146,6 +146,7 @@ class AppAssets {
   static const String dailyRewardGift = 'assets/images/daily_reward_gift.webp';
   static const String chestIcon = 'assets/images/open_chest_quick_actions.webp';
   static const String spinWheelIcon = 'assets/images/spin_quick_action.webp';
+  static const String watchEarnIcon = 'assets/images/watch_earn_quick_action.png';
   static const String tapTapGame = 'assets/images/tap_tap_mini_game.webp';
   static const String quizMasterGame = 'assets/images/math_quiz_mini_game.webp';
   static const String quizMasterQuickActions =

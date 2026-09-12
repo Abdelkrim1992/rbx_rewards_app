@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/screen_title.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
+import '../../widgets/interactive_button.dart';
+import '../../core/constants/policy_constants.dart';
+import '../../models/reward_item.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
+import '../providers/reward_catalog_provider.dart';
+import '../providers/connectivity_provider.dart';
+import '../providers/user_provider.dart';
+import 'rewards/widgets/rewards_social_proof_ticker.dart';
 
 class RewardsScreen extends ConsumerStatefulWidget {
   final Function(int) onNavTap;
@@ -18,7 +26,10 @@ class RewardsScreen extends ConsumerStatefulWidget {
 }
 
 class _RewardsScreenState extends ConsumerState<RewardsScreen> {
+  int _currentSegment = 0; // 0 = Catalog, 1 = Claimed Codes
+  bool _isProcessing = false;
   ScaffoldMessengerState? _scaffoldMessenger;
+  final Set<String> _revealedPins = {};
 
   @override
   void didChangeDependencies() {
@@ -32,77 +43,38 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
     super.dispose();
   }
 
-  int _parseRewardCost(String cost) {
-    return int.tryParse(cost.replaceAll(',', '')) ?? 0;
-  }
-
   String _sanitizeRewardTitle(String title) {
-    // Replace $ with USD and remove other potentially problematic characters
     return title
         .replaceAll(r'$', 'USD ')
         .replaceAll(RegExp(r'[^\w\s-]'), '')
         .trim();
   }
 
-  Future<void> _redeemReward(_RewardData reward) async {
-    final cost = _parseRewardCost(reward.cost);
-    final balance = ref.read(coinProvider);
+  Future<void> _handleRedeem(RewardItem item, RewardDenomination denomination) async {
+    if (_isProcessing) return;
 
-    if (balance < cost) {
-      if (!mounted) return;
+    // Offline check
+    final isOnline = ref.read(connectivityProvider).value ?? true;
+    if (!isOnline) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'You need ${cost - balance} more RBX Coins to redeem ${reward.title}.'),
+        const SnackBar(
+          content: Text('You are offline. Please reconnect to redeem rewards.'),
+          backgroundColor: AppColors.purple,
           behavior: SnackBarBehavior.floating,
         ),
       );
       return;
     }
 
-    // Show confirmation dialog first
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black87,
-      builder: (_) => _RedeemConfirmDialog(
-        rewardTitle: reward.title,
-        cost: cost,
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    // Show success popup immediately after confirmation
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        barrierColor: Colors.black87,
-        builder: (_) => RedeemSuccessDialog(rewardTitle: reward.title),
-      );
-    }
-
-    // Sanitize the reward title for backend
-    final sanitizedTitle = _sanitizeRewardTitle(reward.title);
-
-    // Perform the redemption in the background
-    final success =
-        await ref.read(coinProvider.notifier).spend(cost, sanitizedTitle);
-
-    if (!mounted) return;
-
-    if (!success) {
-      // Close the success dialog
-      Navigator.of(context).pop();
-
-      // Show error message
+    // Balance check
+    final balance = ref.read(coinProvider);
+    if (balance < denomination.coinCost) {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to redeem ${reward.title}. Please try again.',
+            'You need ${(denomination.coinCost - balance).toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} more RBX Coins to redeem ${item.title}.',
           ),
           behavior: SnackBarBehavior.floating,
         ),
@@ -110,40 +82,101 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       return;
     }
 
-    // Reload history via Riverpod
-    ref.invalidate(rewardHistoryProvider);
+    // Confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black87,
+      builder: (_) => _RedeemConfirmDialog(
+        rewardTitle: '${item.title} (${denomination.shortLabel})',
+        cost: denomination.coinCost,
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isProcessing = true);
+
+    final fullTitle = '${item.title} - ${denomination.label}';
+    final sanitizedTitle = _sanitizeRewardTitle(fullTitle);
+
+    // Process redemption via atomic backend RPC
+    final success = await ref
+        .read(coinProvider.notifier)
+        .spend(denomination.coinCost, sanitizedTitle);
+
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+
+    if (success) {
+      // Invalidate history to fetch latest record
+      ref.invalidate(rewardHistoryProvider);
+      ref.invalidate(userProfileStreamProvider);
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black87,
+        builder: (_) => RedeemSuccessDialog(
+          rewardTitle: '${item.title} (${denomination.shortLabel})',
+          onViewClaimedCodes: () {
+            Navigator.of(context).pop();
+            setState(() => _currentSegment = 1);
+          },
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Redemption failed. Your coins were not deducted.'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _setAsGoal(RewardItem item, RewardDenomination denomination) {
+    HapticFeedback.lightImpact();
+    ref.read(activeGoalRewardProvider.notifier).setGoal(
+          '${item.title} (${denomination.shortLabel})',
+          denomination.coinCost,
+          denomination.shortLabel,
+        );
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.flag_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Set "${denomination.label}" as your target goal!',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final rewards = [
-      const _RewardData(
-        assetPath: AppAssets.roblox3UsdCard,
-        icon: Icons.card_giftcard,
-        title: '\$3 Roblox Gift Card',
-        description: 'Official Roblox Gift Card',
-        cost: '20,000',
-        bgColor: Color(0xFF2ECC71),
-      ),
-      const _RewardData(
-        assetPath: AppAssets.roblox5UsdCard,
-        icon: Icons.card_giftcard,
-        title: '\$5 Roblox Gift Card',
-        description: 'Official Roblox Gift Card',
-        cost: '40,000',
-        bgColor: Color(0xFF9B5CFF),
-      ),
-      const _RewardData(
-        assetPath: AppAssets.roblox10UsdCard,
-        icon: Icons.card_giftcard,
-        title: '\$10 Roblox Gift Card',
-        description: 'Official Roblox Gift Card',
-        cost: '70,000',
-        bgColor: Color(0xFF6A2FD8),
-      ),
-    ];
-
+    final catalog = ref.watch(rewardCatalogProvider);
+    final selectedCategory = ref.watch(rewardCategoryFilterProvider);
     final historyAsync = ref.watch(rewardHistoryProvider);
+    final userCoins = ref.watch(coinProvider);
+    final activeGoal = ref.watch(activeGoalRewardProvider);
+
+    final filteredCatalog = selectedCategory == null
+        ? catalog
+        : catalog.where((item) => item.category == selectedCategory).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -158,135 +191,240 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Top App Header
                     RbxAppHeader(
                       onNavTap: (index) {
                         ScaffoldMessenger.maybeOf(context)?.clearSnackBars();
                         widget.onNavTap(index);
                       },
                     ),
+
                     // Screen title
                     const RbxScreenTitle(
-                      title: 'Redeem Rewards',
-                      subtitle: 'Exchange your RBX coins for real gift cards',
+                      title: 'Rewards & Cashout',
+                      subtitle: 'Exchange your RBX coins for official Roblox gift cards',
                     ),
-                    // Balance widget
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        left: AppLayout.screenPadding,
-                        right: AppLayout.screenPadding,
-                      ),
-                      child: _BalanceWidget(
-                          balance: ref.watch(coinProvider)),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
-                    // Reward list
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      itemCount: rewards.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (ctx, i) {
-                        final reward = rewards[i];
-                        final userCoins = ref.watch(coinProvider);
-                        return _RewardItem(
-                          data: reward,
-                          canRedeem:
-                              userCoins >= _parseRewardCost(reward.cost),
-                          onRedeem: () => _redeemReward(reward),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Redemption History
+                    // Segmented Switcher: [ Redeem Catalog ] vs [ My Claimed Codes ]
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Redemption History',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primaryText,
+                        horizontal: AppLayout.screenPadding,
+                      ),
+                      child: Container(
+                        height: 48,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F2F8),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.cardBorder, width: 1.2),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _SegmentTabButton(
+                                title: 'Reward Catalog',
+                                icon: Icons.storefront_rounded,
+                                isSelected: _currentSegment == 0,
+                                onTap: () => setState(() => _currentSegment = 0),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: _SegmentTabButton(
+                                title: 'Claimed Codes',
+                                icon: Icons.vpn_key_rounded,
+                                isSelected: _currentSegment == 1,
+                                countBadge: historyAsync.valueOrNull?.length,
+                                onTap: () => setState(() => _currentSegment = 1),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Switch view based on active segment
+                    if (_currentSegment == 0) ...[
+                      // ── CATALOG VIEW ──
+
+                      // Live Social Proof Cashout Ticker
+                      const RewardsSocialProofTicker(),
+                      const SizedBox(height: 14),
+
+                      // Category Filter Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding,
+                        ),
+                        child: Row(
+                          children: [
+                            _CategoryChip(
+                              label: 'All Rewards',
+                              isSelected: selectedCategory == null,
+                              onTap: () => ref
+                                  .read(rewardCategoryFilterProvider.notifier)
+                                  .state = null,
+                            ),
+                            const SizedBox(width: 8),
+                            _CategoryChip(
+                              label: 'Gift Cards (\$)',
+                              isSelected:
+                                  selectedCategory == RewardCategory.giftCard,
+                              onTap: () => ref
+                                  .read(rewardCategoryFilterProvider.notifier)
+                                  .state = RewardCategory.giftCard,
+                            ),
+                            const SizedBox(width: 8),
+                            _CategoryChip(
+                              label: 'Robux Codes (R\$)',
+                              isSelected:
+                                  selectedCategory == RewardCategory.robuxCode,
+                              onTap: () => ref
+                                  .read(rewardCategoryFilterProvider.notifier)
+                                  .state = RewardCategory.robuxCode,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Reward Cards List
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding,
+                        ),
+                        itemCount: filteredCatalog.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 18),
+                        itemBuilder: (ctx, index) {
+                          final item = filteredCatalog[index];
+                          final selectedDenomIndex = ref.watch(
+                            selectedDenominationsProvider.select(
+                              (map) => map[item.id] ?? 0,
+                            ),
+                          );
+                          final activeDenom = item.denominations[
+                              selectedDenomIndex.clamp(
+                                  0, item.denominations.length - 1)];
+
+                          final isTargetGoal =
+                              activeGoal.targetCoins == activeDenom.coinCost &&
+                                  activeGoal.title.contains(activeDenom.shortLabel);
+
+                          return _DynamicRewardCard(
+                            item: item,
+                            selectedDenomination: activeDenom,
+                            userCoins: userCoins,
+                            isTargetGoal: isTargetGoal,
+                            onDenominationSelected: (idx) {
+                              ref
+                                  .read(selectedDenominationsProvider.notifier)
+                                  .select(item.id, idx);
+                            },
+                            onRedeem: () => _handleRedeem(item, activeDenom),
+                            onSetGoal: () => _setAsGoal(item, activeDenom),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Authenticity & Delivery Guarantee Reassurance
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.cardBorder,
+                              width: 1.2,
                             ),
                           ),
-                          if (historyAsync.isLoading)
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primarySoft,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.verified_user_rounded,
+                                  color: AppColors.primary,
+                                  size: 22,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
-                    
-                    historyAsync.when(
-                      loading: () => const SizedBox(),
-                      error: (err, stack) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                        child: Text('Error loading history: $err', style: const TextStyle(color: Colors.red)),
-                      ),
-                      data: (history) {
-                        if (history.isEmpty) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppLayout.screenPadding),
-                            child: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8F9FA),
-                                borderRadius: BorderRadius.circular(15),
-                                border: Border.all(color: const Color(0xFFF1F5F9)),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x1A000000),
-                                    blurRadius: 2,
-                                    spreadRadius: 0,
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                children: [
-                                  Icon(Icons.history,
-                                      color: AppColors.secondaryText, size: 20),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    'No redemptions yet.',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.secondaryText,
-                                      fontWeight: FontWeight.w500,
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '100% Genuine Roblox PINs Guarantee',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0F172A),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(height: 3),
+                                    Text(
+                                      'Official digital codes delivered to your locker within 24–48 hours. Fully verified & fraud protected.',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: Color(0xFF64748B),
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        } else {
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: AppLayout.screenPadding),
-                            itemCount: history.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (ctx, i) {
-                              final item = history[i];
-                              return _RedemptionHistoryItem(data: item);
-                            },
-                          );
-                        }
-                      },
-                    ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // FAQ & Redemption Guide Accordion
+                      const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding,
+                        ),
+                        child: _RedemptionFaqSection(),
+                      ),
+                    ] else ...[
+                      // ── CLAIMED CODES / INVENTORY LOCKER VIEW ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppLayout.screenPadding,
+                        ),
+                        child: _ClaimedCodesLocker(
+                          historyAsync: historyAsync,
+                          revealedPins: _revealedPins,
+                          onTogglePinReveal: (id) {
+                            setState(() {
+                              if (_revealedPins.contains(id)) {
+                                _revealedPins.remove(id);
+                              } else {
+                                _revealedPins.add(id);
+                              }
+                            });
+                          },
+                          onBrowseCatalog: () {
+                            setState(() => _currentSegment = 0);
+                          },
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -306,342 +444,136 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
   }
 }
 
-class _BalanceWidget extends StatelessWidget {
-  final int balance;
+// ─── Segment Tab Button ───────────────────────────────────────────────────────
 
-  const _BalanceWidget({required this.balance});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: AppColors.balanceCardGradient,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4828A8).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // Decorative glow circles in background
-          Positioned(
-            right: -10,
-            top: -20,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 70,
-            bottom: -25,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-          ),
-
-          Row(
-            children: [
-              Image.asset(
-                AppAssets.goldRbxCoin,
-                width: 45,
-                height: 45,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.monetization_on,
-                  size: 45,
-                  color: Color(0xFFFFCC44),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$balance',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: 0,
-                        height: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Your RBX Balance',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Image.asset(
-                  AppAssets.balanceWidgetImage,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
-                      Icons.account_balance_wallet,
-                      size: 60,
-                      color: Color(0xFF4A4B60)),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RewardData {
-  final String? assetPath;
-  final IconData? icon;
+class _SegmentTabButton extends StatelessWidget {
   final String title;
-  final String description;
-  final String cost;
-  final Color bgColor;
-
-  const _RewardData({
-    this.assetPath,
-    this.icon,
-    required this.title,
-    required this.description,
-    required this.cost,
-    required this.bgColor,
-  });
-}
-
-class _RewardItem extends StatelessWidget {
-  final _RewardData data;
-  final bool canRedeem;
-  final VoidCallback onRedeem;
-
-  const _RewardItem({
-    required this.data,
-    required this.canRedeem,
-    required this.onRedeem,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 88,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Image / Icon
-          Padding(
-            padding: const EdgeInsets.only(left: 8, right: 8),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                width: 100,
-                height: 62,
-                color: data.bgColor.withOpacity(0.08),
-                child: data.assetPath != null
-                    ? Image.asset(
-                        data.assetPath!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          data.icon ?? Icons.card_giftcard,
-                          color: data.bgColor,
-                          size: 32,
-                        ),
-                      )
-                    : Icon(
-                        data.icon ?? Icons.card_giftcard,
-                        color: data.bgColor,
-                        size: 32,
-                      ),
-              ),
-            ),
-          ),
-          // Info
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    data.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primaryText,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    data.description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.secondaryText,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Spacing padding between cost and title
-          const SizedBox(width: 15),
-          // Cost & Redeem
-          Padding(
-            padding: const EdgeInsets.fromLTRB(0, 12, 12, 12),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      AppAssets.goldCoin,
-                      width: 20,
-                      height: 20,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.monetization_on,
-                        size: 20,
-                        color: Color(0xFFFFCC44),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      data.cost,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                  ],
-                ),
-                _RedeemButton(
-                  canRedeem: canRedeem,
-                  onTap: onRedeem,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RedeemButton extends StatefulWidget {
-  final bool canRedeem;
+  final IconData icon;
+  final bool isSelected;
+  final int? countBadge;
   final VoidCallback onTap;
 
-  const _RedeemButton({required this.canRedeem, required this.onTap});
-
-  @override
-  State<_RedeemButton> createState() => _RedeemButtonState();
-}
-
-class _RedeemButtonState extends State<_RedeemButton> {
-  double _scale = 1.0;
+  const _SegmentTabButton({
+    required this.title,
+    required this.icon,
+    required this.isSelected,
+    this.countBadge,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.92),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOut,
-        child: Container(
-          width: 75,
-          height: 30,
-          decoration: BoxDecoration(
-            gradient: widget.canRedeem ? AppColors.primaryGradient : null,
-            color: widget.canRedeem ? null : const Color(0xFFE5E7EB),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: widget.canRedeem
-                ? const [
-                    BoxShadow(
-                      color: Color(0x446035EE),
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    widget.canRedeem ? Icons.lock_open_rounded : Icons.lock_rounded,
-                    size: 12,
-                    color: widget.canRedeem
-                        ? Colors.white
-                        : AppColors.secondaryText,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x14000000),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    widget.canRedeem ? 'Redeem' : 'Locked',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: widget.canRedeem
-                          ? Colors.white
-                          : AppColors.secondaryText,
-                    ),
-                  ),
-                ],
+                ]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected
+                  ? AppColors.primary
+                  : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF64748B),
               ),
             ),
+            if (countBadge != null && countBadge! > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$countBadge',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Category Filter Chip ───────────────────────────────────────────────────
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected ? AppColors.primaryGradient : null,
+          color: isSelected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : AppColors.cardBorder,
+            width: 1.2,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+            color: isSelected ? Colors.white : const Color(0xFF64748B),
           ),
         ),
       ),
@@ -649,143 +581,350 @@ class _RedeemButtonState extends State<_RedeemButton> {
   }
 }
 
-class _RedemptionHistoryItem extends StatelessWidget {
-  final Map<String, dynamic> data;
+// ─── Dynamic Reward Card with Denominations ─────────────────────────────────
 
-  const _RedemptionHistoryItem({required this.data});
+class _DynamicRewardCard extends StatelessWidget {
+  final RewardItem item;
+  final RewardDenomination selectedDenomination;
+  final int userCoins;
+  final bool isTargetGoal;
+  final Function(int) onDenominationSelected;
+  final VoidCallback onRedeem;
+  final VoidCallback onSetGoal;
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'fulfilled':
-      case 'success':
-        return const Color(0xFF27AE60);
-      case 'rejected':
-      case 'cancelled':
-        return const Color(0xFFE74C3C);
-      case 'pending':
-      default:
-        return const Color(0xFFFF9800);
-    }
-  }
-
-  Color _statusBgColor(String status) {
-    switch (status) {
-      case 'fulfilled':
-      case 'success':
-        return const Color(0xFFE8F5E9);
-      case 'rejected':
-      case 'cancelled':
-        return const Color(0xFFFFEBEE);
-      case 'pending':
-      default:
-        return const Color(0xFFFFF3E0);
-    }
-  }
-
-  String _formatDate(String? raw) {
-    if (raw == null) return '';
-    final dt = DateTime.tryParse(raw);
-    if (dt == null) return '';
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) {
-      if (diff.inHours == 0) return '${diff.inMinutes}m ago';
-      return '${diff.inHours}h ago';
-    }
-    if (diff.inDays == 1) return 'Yesterday';
-    return '${dt.day}/${dt.month}/${dt.year}';
-  }
+  const _DynamicRewardCard({
+    required this.item,
+    required this.selectedDenomination,
+    required this.userCoins,
+    required this.isTargetGoal,
+    required this.onDenominationSelected,
+    required this.onRedeem,
+    required this.onSetGoal,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final title = data['reward_title'] as String? ?? 'Unknown';
-    final cost = (data['cost'] as num?)?.toInt() ?? 0;
-    final status = data['status'] as String? ?? 'pending';
-    final createdAt = data['created_at'] as String?;
+    final canRedeem = userCoins >= selectedDenomination.coinCost;
+    final progress = selectedDenomination.coinCost > 0
+        ? (userCoins / selectedDenomination.coinCost).clamp(0.0, 1.0)
+        : 0.0;
+    final remainingCoins =
+        (selectedDenomination.coinCost - userCoins).clamp(0, 999999999);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF3F4F6)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder, width: 1.2),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
+            color: Color(0x0C000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.card_giftcard,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primaryText,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$cost RBX',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.secondaryText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Card Header: Image + Title + Delivery Pill
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: _statusBgColor(status),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status == 'fulfilled'
-                      ? 'Success'
-                      : status[0].toUpperCase() + status.substring(1),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: _statusColor(status),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 62,
+                  height: 44,
+                  color: item.bgColor.withValues(alpha: 0.1),
+                  child: Image.asset(
+                    item.assetPath,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.card_giftcard,
+                      color: item.bgColor,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                _formatDate(createdAt),
-                style: const TextStyle(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      item.subtitle,
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.bolt_rounded, size: 12, color: AppColors.primary),
+                    SizedBox(width: 2),
+                    Text(
+                      '24h Delivery',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Denomination Selector Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Select Denomination:',
+                style: TextStyle(
                   fontSize: 11,
-                  color: AppColors.mutedText,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF64748B),
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Text(
+                selectedDenomination.label,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Denomination Chips Row (Single horizontal scroll, no awkward multi-line wrapping)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: List.generate(item.denominations.length, (i) {
+                final denom = item.denominations[i];
+                final isSelected = denom.id == selectedDenomination.id;
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: i < item.denominations.length - 1 ? 8 : 0,
+                  ),
+                  child: GestureDetector(
+                    onTap: () => onDenominationSelected(i),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: isSelected ? AppColors.primaryGradient : null,
+                        color: isSelected ? null : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.transparent
+                              : AppColors.cardBorder,
+                          width: isSelected ? 1.5 : 1.0,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(alpha: 0.25),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            denom.shortLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected
+                                  ? FontWeight.w800
+                                  : FontWeight.w600,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '(${denom.formattedCost})',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.85)
+                                  : const Color(0xFF868A9F),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Progress bar towards this reward
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 5,
+              backgroundColor: const Color(0xFFF1F2F8),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                canRedeem ? const Color(0xFF16A34A) : AppColors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                canRedeem
+                    ? '🎉 Ready to redeem!'
+                    : 'Need ${remainingCoins.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} more',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: canRedeem
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFF64748B),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    AppAssets.goldCoin,
+                    width: 13,
+                    height: 13,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.monetization_on,
+                      size: 13,
+                      color: Color(0xFFFFCC44),
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${selectedDenomination.formattedCost} Coins',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Actions Row: [Set as Goal] / [Redeem Now or Locked]
+          Row(
+            children: [
+              if (!canRedeem) ...[
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: isTargetGoal ? null : onSetGoal,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: isTargetGoal
+                            ? const Color(0xFFF1F5F9)
+                            : AppColors.primarySoft.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isTargetGoal
+                              ? const Color(0xFFCBD5E1)
+                              : AppColors.primary.withValues(alpha: 0.35),
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isTargetGoal
+                                ? Icons.check_circle_rounded
+                                : Icons.flag_rounded,
+                            size: 15,
+                            color: isTargetGoal
+                                ? const Color(0xFF94A3B8)
+                                : AppColors.primary,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            isTargetGoal ? 'Current Goal' : 'Set Goal',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: isTargetGoal
+                                  ? const Color(0xFF94A3B8)
+                                  : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: InteractiveButton(
+                  height: 44,
+                  borderRadius: 14,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  icon: canRedeem
+                      ? Icons.lock_open_rounded
+                      : Icons.lock_rounded,
+                  iconSize: 15,
+                  iconSpacing: 6,
+                  text: canRedeem ? 'Redeem Now' : 'Locked',
+                  onTap: onRedeem,
                 ),
               ),
             ],
@@ -796,7 +935,469 @@ class _RedemptionHistoryItem extends StatelessWidget {
   }
 }
 
-// ─── Redeem Confirm Popup ─────────────────────────────────────────────
+// ─── Claimed Codes Locker Tab ────────────────────────────────────────────────
+
+class _ClaimedCodesLocker extends StatelessWidget {
+  final AsyncValue<List<Map<String, dynamic>>> historyAsync;
+  final Set<String> revealedPins;
+  final Function(String) onTogglePinReveal;
+  final VoidCallback onBrowseCatalog;
+
+  const _ClaimedCodesLocker({
+    required this.historyAsync,
+    required this.revealedPins,
+    required this.onTogglePinReveal,
+    required this.onBrowseCatalog,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return historyAsync.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      ),
+      error: (err, _) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFECACA)),
+        ),
+        child: Text(
+          'Could not load history: $err',
+          style: const TextStyle(color: Colors.red, fontSize: 13),
+        ),
+      ),
+      data: (history) {
+        if (history.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.cardBorder, width: 1.2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0A000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primarySoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.card_giftcard_rounded,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No Claimed Codes Yet',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Play mini-games and earn coins to redeem your first digital Roblox gift card!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                InteractiveButton(
+                  text: 'Browse Rewards',
+                  height: 48,
+                  width: 200,
+                  borderRadius: 16,
+                  onTap: onBrowseCatalog,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: history.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (ctx, i) {
+            final data = history[i];
+            final id = data['id']?.toString() ?? '$i';
+            final isRevealed = revealedPins.contains(id);
+
+            return _ClaimedCodeCard(
+              data: data,
+              isRevealed: isRevealed,
+              onToggleReveal: () => onTogglePinReveal(id),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ClaimedCodeCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final bool isRevealed;
+  final VoidCallback onToggleReveal;
+
+  const _ClaimedCodeCard({
+    required this.data,
+    required this.isRevealed,
+    required this.onToggleReveal,
+  });
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'fulfilled':
+      case 'success':
+        return const Color(0xFF16A34A);
+      case 'rejected':
+      case 'cancelled':
+        return const Color(0xFFDC2626);
+      case 'pending':
+      default:
+        return const Color(0xFFD97706);
+    }
+  }
+
+  Color _statusBg(String status) {
+    switch (status) {
+      case 'fulfilled':
+      case 'success':
+        return const Color(0xFFDCFCE7);
+      case 'rejected':
+      case 'cancelled':
+        return const Color(0xFFFEE2E2);
+      case 'pending':
+      default:
+        return const Color(0xFFFEF3C7);
+    }
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null) return '';
+    final dt = DateTime.tryParse(raw);
+    if (dt == null) return '';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['reward_title'] as String? ?? 'Roblox Gift Card';
+    final cost = (data['cost'] as num?)?.toInt() ?? 0;
+    final status = (data['status'] as String? ?? 'pending').toLowerCase();
+    final createdAt = data['created_at'] as String?;
+    final pinCode = data['pin_code'] as String? ?? 'RBX-9842-7719';
+
+    final isFulfilled = status == 'fulfilled' || status == 'success';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _statusBg(status),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isFulfilled
+                      ? Icons.check_circle_rounded
+                      : (status == 'pending'
+                          ? Icons.hourglass_top_rounded
+                          : Icons.cancel_rounded),
+                  color: _statusColor(status),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${cost.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} Coins • ${_formatDate(createdAt)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _statusBg(status),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  isFulfilled
+                      ? 'Ready'
+                      : (status == 'pending' ? 'Verifying' : 'Refunded'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: _statusColor(status),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Code Reveal Section if Fulfilled
+          if (isFulfilled) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF9FE),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.cardBorder, width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.key_rounded,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isRevealed
+                          ? pinCode
+                          : '•••• •••• •••• ${pinCode.length >= 4 ? pinCode.substring(pinCode.length - 4) : "****"}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: isRevealed ? 1.5 : 2.0,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isRevealed
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      size: 18,
+                      color: const Color(0xFF64748B),
+                    ),
+                    onPressed: onToggleReveal,
+                    tooltip: isRevealed ? 'Hide Code' : 'Reveal Code',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: pinCode));
+                      HapticFeedback.lightImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('PIN Code copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    tooltip: 'Copy PIN',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            InteractiveButton(
+              text: 'Redeem on Roblox.com',
+              icon: Icons.open_in_new_rounded,
+              iconSize: 14,
+              iconSpacing: 6,
+              height: 40,
+              borderRadius: 12,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              onTap: () =>
+                  PolicyConstants.openUrl('https://www.roblox.com/redeem'),
+            ),
+          ] else if (status == 'pending') ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFFB45309)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Automated fraud verification in progress (within 24–48h). Your PIN will appear here once approved.',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFB45309),
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── FAQ & Redemption Guide Accordion ────────────────────────────────────────
+
+class _RedemptionFaqSection extends StatelessWidget {
+  const _RedemptionFaqSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFD),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder, width: 1.2),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: const ExpansionTile(
+          tilePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: Icon(Icons.help_outline_rounded,
+              color: AppColors.primary, size: 22),
+          title: Text(
+            'How Redemption Works & FAQs',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _FaqItem(
+                    q: 'How do I receive my gift card or Robux?',
+                    a: 'All codes are delivered digitally to the "Claimed Codes" tab above. You can view, reveal, and copy your PIN at any time.',
+                  ),
+                  SizedBox(height: 10),
+                  _FaqItem(
+                    q: 'How long does verification take?',
+                    a: 'Most redemptions are verified and dispatched within 24 to 48 hours following automated fraud-prevention checks.',
+                  ),
+                  SizedBox(height: 10),
+                  _FaqItem(
+                    q: 'How do I apply the code on Roblox?',
+                    a: 'Go to roblox.com/redeem, log into your Roblox account, paste the PIN code from your Claimed Codes tab, and press Redeem.',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatelessWidget {
+  final String q;
+  final String a;
+
+  const _FaqItem({required this.q, required this.a});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Q: $q',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          a,
+          style: const TextStyle(
+            fontSize: 11.5,
+            color: Color(0xFF64748B),
+            height: 1.35,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Confirmation Dialog ─────────────────────────────────────────────────────
 
 class _RedeemConfirmDialog extends StatelessWidget {
   final String rewardTitle;
@@ -814,20 +1415,15 @@ class _RedeemConfirmDialog extends StatelessWidget {
       elevation: 0,
       insetPadding: const EdgeInsets.all(24),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withOpacity(0.25),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            ),
-            const BoxShadow(
-              color: Colors.black12,
-              blurRadius: 20,
-              offset: Offset(0, 10),
+              color: AppColors.primary.withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -835,118 +1431,103 @@ class _RedeemConfirmDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
+              width: 68,
+              height: 68,
+              decoration: const BoxDecoration(
+                color: AppColors.primarySoft,
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.15),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
               ),
               child: const Icon(
-                Icons.warning_amber_rounded,
-                color: Color(0xFFFF9800),
-                size: 40,
+                Icons.card_giftcard_rounded,
+                color: AppColors.primary,
+                size: 34,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             const Text(
               'Confirm Redemption',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 color: AppColors.primaryText,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Are you sure you want to redeem',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.secondaryText,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 4),
             Text(
               rewardTitle,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'for $cost RBX Coins?',
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  AppAssets.goldCoin,
+                  width: 16,
+                  height: 16,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.monetization_on,
+                    size: 16,
+                    color: Color(0xFFFFCC44),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${cost.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} Coins',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Your digital code will be sent to your Claimed Codes tab within 24–48 hours upon verification.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.secondaryText,
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF64748B),
                 height: 1.4,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
             Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(false),
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(14),
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: AppColors.secondaryText,
-                        ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF64748B),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: GestureDetector(
+                  child: InteractiveButton(
+                    text: 'Confirm',
+                    height: 46,
+                    borderRadius: 14,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
                     onTap: () => Navigator.of(context).pop(true),
-                    child: Container(
-                      height: 52,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'Confirm',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
                   ),
                 ),
               ],
@@ -958,12 +1539,17 @@ class _RedeemConfirmDialog extends StatelessWidget {
   }
 }
 
-// ─── Redeem Success Popup ─────────────────────────────────────────────
+// ─── Success Dialog ──────────────────────────────────────────────────────────
 
 class RedeemSuccessDialog extends StatelessWidget {
   final String rewardTitle;
+  final VoidCallback onViewClaimedCodes;
 
-  const RedeemSuccessDialog({super.key, required this.rewardTitle});
+  const RedeemSuccessDialog({
+    super.key,
+    required this.rewardTitle,
+    required this.onViewClaimedCodes,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -975,128 +1561,89 @@ class RedeemSuccessDialog extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.cardBorder, width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: AppColors.primary.withValues(alpha: 0.15),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('🎉', style: TextStyle(fontSize: 40)),
-            const SizedBox(height: 8),
-            const Text(
-              'Congratulations!',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF131326),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your reward has been requested',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF868A9F),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
+                color: const Color(0xFFDCFCE7),
+                borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                rewardTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF16A34A),
+                size: 36,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Redemption Requested!',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF131326),
+                letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'You will receive your reward within 48 hours.',
+            Text(
+              'Your code for "$rewardTitle" has been generated and stored safely in your Claimed Codes locker.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF868A9F),
-                height: 1.4,
+                color: Color(0xFF64748B),
+                height: 1.45,
               ),
             ),
-            const SizedBox(height: 24),
-            _InteractiveCard(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'Done',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
+                    child: const Text(
+                      'Done',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InteractiveButton(
+                    text: 'View Locker',
+                    height: 46,
+                    borderRadius: 14,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    onTap: onViewClaimedCodes,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InteractiveCard extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-
-  const _InteractiveCard({required this.child, this.onTap});
-
-  @override
-  State<_InteractiveCard> createState() => _InteractiveCardState();
-}
-
-class _InteractiveCardState extends State<_InteractiveCard> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _scale = 0.97);
-        if (widget.onTap != null) widget.onTap!();
-      },
-      onTapUp: (_) => setState(() => _scale = 1.0),
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: widget.child,
       ),
     );
   }

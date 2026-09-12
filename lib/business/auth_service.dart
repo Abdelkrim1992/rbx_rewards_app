@@ -34,12 +34,15 @@ class AuthService {
       String? deviceId;
       final deviceInfo = DeviceInfoPlugin();
       try {
-        if (Platform.isAndroid) {
+        if (!kIsWeb && Platform.isAndroid) {
           final androidInfo = await deviceInfo.androidInfo;
           deviceId = androidInfo.id; // Usually a unique board/hardware ID
-        } else if (Platform.isIOS) {
+        } else if (!kIsWeb && Platform.isIOS) {
           final iosInfo = await deviceInfo.iosInfo;
           deviceId = iosInfo.identifierForVendor;
+        } else if (kIsWeb) {
+          final webInfo = await deviceInfo.webBrowserInfo;
+          deviceId = webInfo.userAgent;
         }
       } catch (e) {
         debugPrint('Could not get device info: $e');

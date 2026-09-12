@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rbx_rewards/main.dart';
 import 'package:rbx_rewards/presentation/providers/user_provider.dart';
+import 'package:rbx_rewards/presentation/providers/coin_provider.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
+import 'package:rbx_rewards/widgets/welcome_bonus_overlay.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,15 +69,25 @@ void main() {
     expect(find.text('+50'), findsOneWidget);
     expect(find.text('Your first milestone'), findsOneWidget);
 
-    // 8. Tap 'Start Earning' -> credits bonus, marks onboarding completed, transitions to HomeScreen
+    // 8. Tap 'Start Earning' -> shows welcome bonus overlay if enabled, then transitions to HomeScreen
     await tester.tap(find.text('Start Earning'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    await tester.pump(const Duration(milliseconds: 600));
+    for (int i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
 
-    // 9. Verify transition to HomeScreen
+    final claimOverlayBtn = find.textContaining('Claim My 50 Coins');
+    if (claimOverlayBtn.evaluate().isNotEmpty) {
+      await tester.tap(claimOverlayBtn);
+      for (int i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+    }
+
+    // 9. Verify transition to HomeScreen and immediate 50 coins balance
     expect(find.text('Start Earning'), findsNothing);
     expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('50'), findsWidgets);
+    expect(container.read(coinProvider), 50);
 
     // 10. Verify SharedPreferences has persisted completion and bonus claim
     expect(prefs.getBool('onboarding_completed'), true);

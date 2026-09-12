@@ -47,11 +47,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _isClaiming = true);
     HapticFeedback.mediumImpact();
 
-    // Show the animated bonus overlay; actual navigation + coin credit
-    // happen only when the user taps "Claim My 50 Coins!".
+    // Show the animated bonus overlay; actual navigation happens after
+    // dismiss animation, while coin credit happens instantly on tap.
     if (!mounted) return;
     WelcomeBonusOverlay.show(
       context,
+      onClaimStart: () => _startBonusCredit(),
       onClaimed: () => _claimBonusAndNavigate(),
     );
 
@@ -59,28 +60,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     if (mounted) setState(() => _isClaiming = false);
   }
 
+  bool _bonusCredited = false;
+
+  void _startBonusCredit() {
+    if (_bonusCredited) return;
+    _bonusCredited = true;
+
+    // 1. Immediately & synchronously credit in-memory balance on the exact frame of the tap!
+    try {
+      final currentCoins = ref.read(coinProvider);
+      final newBalance = currentCoins > 0 ? currentCoins + 50 : 50;
+      ref.read(coinProvider.notifier).updateBalance(newBalance);
+      ref.read(dailyCapServiceProvider).addCoins(50, 'welcome_bonus');
+    } catch (e) {
+      debugPrint('Error updating in-memory balance: $e');
+    }
+
+    // 2. Persist to storage and sync with backend in background
+    () async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('welcome_bonus_claimed', true);
+
+        final currentCoins = ref.read(coinProvider);
+        final newBalance = currentCoins > 0 ? currentCoins : 50;
+        await ref.read(secureRepositoryProvider).saveBalance(newBalance);
+
+        ref.read(supabaseRepositoryProvider).claimWelcomeBonus().then((result) {
+          final balance =
+              result['balance'] as int? ?? result['new_balance'] as int?;
+          if (balance != null && balance > 0) {
+            ref.read(coinProvider.notifier).updateBalance(balance);
+          }
+        }).catchError((e) {
+          debugPrint('claimWelcomeBonus network error: $e');
+        });
+      } catch (e) {
+        debugPrint('Error persisting bonus credit: $e');
+      }
+    }();
+  }
+
   /// Credits the welcome bonus and navigates to home.
   Future<void> _claimBonusAndNavigate() async {
-    // Navigate immediately for a snappy transition
+    _startBonusCredit();
     widget.onGetStarted();
-
-    // Persist + credit in the background
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final alreadyClaimedLocal =
-          prefs.getBool('welcome_bonus_claimed') ?? false;
-
-      final claimResult =
-          await ref.read(supabaseRepositoryProvider).claimWelcomeBonus();
-      final bool wasClaimed = claimResult['claimed'] as bool? ?? false;
-
-      if (!alreadyClaimedLocal && wasClaimed) {
-        await prefs.setBool('welcome_bonus_claimed', true);
-        await ref.read(coinProvider.notifier).credit(50, 'welcome_bonus');
-      }
-    } catch (e) {
-      debugPrint('Error crediting welcome bonus: $e');
-    }
   }
 
   Future<void> _handleSignInWithGoogle() async {
@@ -338,7 +362,7 @@ class _MiniFeatureCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFCFCFD),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFECECF2)),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -523,7 +547,7 @@ class _StepCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isCompact ? 18 : 22),
-        border: Border.all(color: const Color(0xFFECECF2), width: 1.0),
+        border: Border.all(color: AppColors.cardBorder, width: 1.0),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
@@ -692,7 +716,7 @@ class _StepThreeContent extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
-              border: Border.all(color: const Color(0xFFECECF2)),
+              border: Border.all(color: AppColors.cardBorder),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x08000000),

@@ -29,6 +29,14 @@ class SecureRepository {
     );
   }
 
+  Future<DateTime?> getDailyRewardClaimedAtLocal() async {
+    final val = await _storage.read(key: _keyDailyRewardClaimedAt);
+    if (val == null) return null;
+    final claimedAtMs = int.tryParse(val);
+    if (claimedAtMs == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(claimedAtMs);
+  }
+
   Future<Duration> getDailyRewardCooldownLocal() async {
     final val = await _storage.read(key: _keyDailyRewardClaimedAt);
     if (val == null) return Duration.zero;

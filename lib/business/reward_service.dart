@@ -17,7 +17,7 @@ class RewardService {
         _secure = secure,
         _connectivity = connectivity;
 
-  Future<ClaimResult> claimDailyReward({int amount = 100}) async {
+  Future<ClaimResult> claimDailyReward({int amount = 100, bool saveStreak = false}) async {
     final online = await _connectivity.isOnline;
     if (!online) {
       final now = DateTime.now();
@@ -25,7 +25,10 @@ class RewardService {
       return ClaimResult.offlineClaim(amount: amount);
     }
     try {
-      final result = await _remote.callEdgeFunction('claim-daily-reward', body: {'amount': amount});
+      final result = await _remote.callEdgeFunction('claim-daily-reward', body: {
+        'amount': amount,
+        'save_streak': saveStreak,
+      });
       final claimResult = ClaimResult.fromMap(result);
       if (claimResult.success) {
         await _secure.writeDailyRewardClaimedAt(DateTime.now());

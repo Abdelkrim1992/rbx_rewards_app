@@ -237,7 +237,7 @@ class DailyCapService {
       categoryRemaining = (categoryCap - _todaySpinEarnings).clamp(0, categoryCap);
     } else if (source == 'scratch') {
       categoryRemaining = (categoryCap - _todayScratchEarnings).clamp(0, categoryCap);
-    } else if (source == 'quiz') {
+    } else if (source == 'quiz' || source == 'quizzes') {
       categoryRemaining = (categoryCap - _todayQuizEarnings).clamp(0, categoryCap);
     } else if (source == 'math_quiz') {
       categoryRemaining = (categoryCap - _todayGameMathQuizEarnings).clamp(0, categoryCap);
@@ -257,8 +257,33 @@ class DailyCapService {
   }
 
   int _getInitialCategoryCap(String source) {
-    if (source == 'survey') return _limits['global_offerwalls'] ?? offerwallsCap;
-    return _limits[source] ?? 0;
+    final key = (source == 'quizzes') ? 'quiz' : source;
+    if (key == 'survey') return _limits['global_offerwalls'] ?? offerwallsCap;
+    return _limits[key] ?? 0;
+  }
+
+  /// Get the total configured cap for a specific category or game
+  int getCategoryCap(String source) {
+    final key = (source == 'quizzes') ? 'quiz' : source;
+    return _limits[key] ?? _getInitialCategoryCap(key);
+  }
+
+  /// Get total earned today for a specific game or feature
+  int getEarnedToday(String source) {
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month}-${now.day}';
+    if (_currentDate != today) return 0;
+
+    if (source == 'daily_reward') return _todayDailyRewardEarnings;
+    if (source == 'chest') return _todayChestEarnings;
+    if (source == 'spin') return _todaySpinEarnings;
+    if (source == 'scratch') return _todayScratchEarnings;
+    if (source == 'quiz' || source == 'quizzes') return _todayQuizEarnings;
+    if (source == 'math_quiz') return _todayGameMathQuizEarnings;
+    if (source == 'flappy_jump') return _todayGameFlappyEarnings;
+    if (source == 'tap_tap') return _todayGameTapTapEarnings;
+    if (source == 'flip_card') return _todayGameFlipCardEarnings;
+    return 0;
   }
 
   bool isCapReachedFor(String source) {
@@ -292,7 +317,7 @@ class DailyCapService {
         categoryAvailable = (categoryCap - _todaySpinEarnings).clamp(0, categoryCap);
       } else if (source == 'scratch') {
         categoryAvailable = (categoryCap - _todayScratchEarnings).clamp(0, categoryCap);
-      } else if (source == 'quiz') {
+      } else if (source == 'quiz' || source == 'quizzes') {
         categoryAvailable = (categoryCap - _todayQuizEarnings).clamp(0, categoryCap);
       } else if (source == 'math_quiz') {
         categoryAvailable = (categoryCap - _todayGameMathQuizEarnings).clamp(0, categoryCap);
@@ -320,7 +345,7 @@ class DailyCapService {
           _todaySpinEarnings += toAdd;
         } else if (source == 'scratch') {
           _todayScratchEarnings += toAdd;
-        } else if (source == 'quiz') {
+        } else if (source == 'quiz' || source == 'quizzes') {
           _todayQuizEarnings += toAdd;
         } else if (source == 'math_quiz') {
           _todayGameMathQuizEarnings += toAdd;

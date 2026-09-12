@@ -59,13 +59,18 @@ class DailyRewardCooldownNotifier extends StateNotifier<Duration> {
     });
   }
 
-  Future<bool> claimDaily({int amount = 100}) async {
-    final result = await _ref.read(rewardServiceProvider).claimDailyReward(amount: amount);
+  Future<bool> claimDaily({int amount = 100, bool saveStreak = false}) async {
+    final result = await _ref.read(rewardServiceProvider).claimDailyReward(
+      amount: amount,
+      saveStreak: saveStreak,
+    );
     if (result.success) {
       state = const Duration(hours: 24);
       _cooldownEnd = DateTime.now().add(state);
       _startTimer();
       await _ref.read(coinProvider.notifier).credit(result.amount, 'daily_reward');
+      // Invalidate profile so consecutive days streak and stats update immediately
+      _ref.invalidate(userProfileStreamProvider);
       return true;
     }
     return false;

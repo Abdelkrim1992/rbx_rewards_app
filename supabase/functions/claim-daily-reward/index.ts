@@ -18,12 +18,16 @@ Deno.serve(async (req) => {
 
   const uid = user.id;
 
-  // Parse request body for amount (default 15)
+  // Parse request body for amount (default 15) and save_streak (default false)
   let amount = 15;
+  let saveStreak = false;
   try {
     const body = await req.json();
     if (body.amount && typeof body.amount === 'number') {
-      amount = Math.max(1, Math.min(30, body.amount)); // Clamp between 1-30 (max premium double)
+      amount = Math.max(1, Math.min(200, body.amount)); // Clamp between 1-200 (supports 15-100 base + 2x multiplier)
+    }
+    if (body.save_streak === true) {
+      saveStreak = true;
     }
   } catch {
     // No body or invalid JSON, use default
@@ -32,6 +36,7 @@ Deno.serve(async (req) => {
   const { data, error } = await supabase.rpc("claim_daily_reward", {
     p_user_id: uid,
     p_amount: amount,
+    p_save_streak: saveStreak,
   });
 
   if (error) {

@@ -906,7 +906,7 @@ class _HowToStep extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF1F2F8)),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
@@ -1532,7 +1532,7 @@ class _SpinRewardDialogState extends State<SpinRewardDialog>
             decoration: BoxDecoration(
               color: const Color(0xFFF8F9FA),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
+              border: Border.all(color: AppColors.cardBorder),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

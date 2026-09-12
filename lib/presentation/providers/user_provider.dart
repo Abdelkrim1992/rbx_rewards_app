@@ -96,16 +96,21 @@ final userProfileStreamProvider = StreamProvider<UserProfile>((ref) {
 });
 
 final userProfileProvider = Provider<UserProfile>((ref) {
-  return ref.watch(userProfileStreamProvider).value ??
+  final profile = ref.watch(userProfileStreamProvider).value ??
       UserProfile(
         id: '',
-        coins: 0,
+        coins: ref.watch(coinProvider),
         totalEarned: 0,
         consecutiveDays: 0,
         gamesPlayed: 0,
         offersCompleted: 0,
         displayName: 'Player',
       );
+  final currentCoins = ref.watch(coinProvider);
+  if (currentCoins > profile.coins) {
+    return profile.copyWith(coins: currentCoins);
+  }
+  return profile;
 });
 
 // ── App Lifecycle Observer ─────────────────────────────────────────────────

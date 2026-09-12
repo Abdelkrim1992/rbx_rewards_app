@@ -9,20 +9,29 @@ import '../theme/app_theme.dart';
 /// followed by a "Claim My 50 Coins!" button.
 /// Call [WelcomeBonusOverlay.show] to display it as an overlay entry.
 class WelcomeBonusOverlay extends StatefulWidget {
+  /// Called immediately when the user taps "Claim" (before dismiss animation begins).
+  final VoidCallback? onClaimStart;
+
   /// Called after the user taps "Claim" and the dismiss animation completes.
   final VoidCallback onClaimed;
 
-  const WelcomeBonusOverlay({super.key, required this.onClaimed});
+  const WelcomeBonusOverlay({
+    super.key,
+    required this.onClaimed,
+    this.onClaimStart,
+  });
 
   /// Inserts the overlay into the nearest [Overlay] and returns the entry.
   /// Remove the entry or call [onClaimed] to dismiss.
   static OverlayEntry show(
     BuildContext context, {
     required VoidCallback onClaimed,
+    VoidCallback? onClaimStart,
   }) {
     late final OverlayEntry entry;
     entry = OverlayEntry(
       builder: (_) => WelcomeBonusOverlay(
+        onClaimStart: onClaimStart,
         onClaimed: () {
           entry.remove();
           onClaimed();
@@ -185,6 +194,7 @@ class _WelcomeBonusOverlayState extends State<WelcomeBonusOverlay>
     if (_isClaiming) return;
     setState(() => _isClaiming = true);
     HapticFeedback.heavyImpact();
+    widget.onClaimStart?.call();
     await _dismissCtrl.forward();
     if (!mounted) return;
     await _bgCtrl.reverse();
@@ -457,6 +467,7 @@ class _ClaimButtonState extends State<_ClaimButton>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
       onTapCancel: _onTapCancel,
@@ -494,13 +505,17 @@ class _ClaimButtonState extends State<_ClaimButton>
                   ),
                 )
               else ...[
-                const Text(
-                  '🎉  Claim My 50 Coins!',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
+                Flexible(
+                  child: Text(
+                    '🎉  Claim My 50 Coins!',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

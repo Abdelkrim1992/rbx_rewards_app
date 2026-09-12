@@ -124,6 +124,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       baseReward: _rewardAmount,
       quickPlacement: AdPlacement.scratchCard,
       premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.goldRbxCoin,
       onSuccess: (coins) async {
         await ref.read(coinProvider.notifier).credit(coins, 'scratch');
         await GamePrefs.decrementScratchesRemaining();
@@ -608,7 +609,7 @@ class _HowToStep extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFF1F2F8)),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),

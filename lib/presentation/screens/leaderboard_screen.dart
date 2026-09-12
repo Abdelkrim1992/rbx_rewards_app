@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/data_providers.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/interactive_button.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
@@ -118,16 +119,14 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => ref.invalidate(leaderboardProvider('')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Retry'),
+                      InteractiveButton(
+                        text: 'Retry',
+                        width: 120,
+                        height: 42,
+                        borderRadius: 14,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        onTap: () => ref.invalidate(leaderboardProvider('')),
                       ),
                     ],
                   ),
@@ -489,7 +488,7 @@ class _LeaderboardListItem extends StatelessWidget {
         border: Border.all(
           color: entry.isUser
               ? AppColors.purple.withOpacity(0.3)
-              : const Color(0xFFF3F4F6),
+              : AppColors.cardBorder,
         ),
         boxShadow: const [
           BoxShadow(

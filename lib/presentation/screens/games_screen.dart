@@ -4,68 +4,296 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
-import '../../widgets/app_cached_image.dart';
+import '../../widgets/screen_title.dart';
+import '../../widgets/game_prefs.dart';
 import '../providers/providers.dart';
+import '../providers/user_provider.dart';
+
+// Game Screens
 import 'leaderboard_screen.dart';
 import 'tap_tap_game_screen.dart';
 import 'flappy_jump_game_screen.dart';
 import 'math_quiz_screen.dart';
+import 'quizzes_screen.dart';
 import 'flip_card_game_screen.dart';
 import 'scratch_card_screen.dart';
-import '../../widgets/screen_title.dart';
 
-class GamesScreen extends ConsumerWidget {
+// Modular Games Components
+import 'games/models/game_item_data.dart';
+import 'games/widgets/games_spotlight_banner.dart';
+import 'games/widgets/games_category_chips.dart';
+import 'games/widgets/game_card_enhanced.dart';
+import 'games/widgets/game_preview_sheet.dart';
+
+class GamesScreen extends ConsumerStatefulWidget {
   final Function(int) onNavTap;
 
   const GamesScreen({super.key, required this.onNavTap});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final capService = ref.watch(dailyCapServiceProvider);
-    
-    final tapTapRemaining = capService.getRemainingCap('tap_tap');
-    final mathQuizRemaining = capService.getRemainingCap('math_quiz');
-    final flappyRemaining = capService.getRemainingCap('flappy_jump');
-    final flipRemaining = capService.getRemainingCap('flip_card');
-    final scratchRemaining = capService.getRemainingCap('scratch');
+  ConsumerState<GamesScreen> createState() => _GamesScreenState();
+}
 
-    final games = [
-      _GameData(
-        imageUrl: AppAssets.tapTapGame,
-        title: 'Tap Tap',
-        coins: '+$tapTapRemaining RBX',
-        isBlocked: tapTapRemaining <= 0,
-        bgColor: const Color(0xFFEAF3FF),
-      ),
-      _GameData(
-        imageUrl: AppAssets.quizMasterGame,
-        title: 'Math Quiz',
-        coins: '+$mathQuizRemaining RBX',
-        isBlocked: mathQuizRemaining <= 0,
-        bgColor: const Color(0xFFE3F8EB),
-      ),
-      _GameData(
-        imageUrl: AppAssets.flappyJumpGame,
+class _GamesScreenState extends ConsumerState<GamesScreen> {
+  GameCategory _selectedCategory = GameCategory.all;
+  bool _isRefreshing = false;
+
+  late final List<GameItemData> _allGames;
+
+  @override
+  void initState() {
+    super.initState();
+    _allGames = _buildGamesList();
+  }
+
+  List<GameItemData> _buildGamesList() {
+    return [
+      GameItemData(
+        id: 'flappy_jump',
         title: 'Flappy Jump',
-        coins: '+ $flappyRemaining RBX',
-        isBlocked: flappyRemaining <= 0,
-        bgColor: const Color(0xFFFFF3E3),
+        subtitle: 'Fly through obstacles & grab coins',
+        capKey: 'flappy_jump',
+        imageUrl: AppAssets.flappyJumpGame,
+        category: GameCategory.arcade,
+        themeColor: const Color(0xFFF59E0B),
+        softBgColor: const Color(0xFFFFF3E3),
+        badgeText: '🔥 HOT',
+        badgeColor: const Color(0xFFF59E0B),
+        difficulty: 'Medium',
+        avgTime: '1 min',
+        description:
+            'Tap to stay airborne, dodge moving obstacles, and collect gold coins before crashing.',
+        rules: const [
+          'Tap the screen to keep your character flying.',
+          'Avoid touching barriers or hitting the ground.',
+          'Coins earned are added directly to your RBX balance.',
+        ],
+        getPersonalBest: GamePrefs.getFlappyBestScore,
+        personalBestUnit: 'pts',
+        isSpotlight: true,
+        screenBuilder: (ctx, onNav) => const FlappyJumpGameScreen(),
       ),
-      _GameData(
-        imageUrl: AppAssets.memoryMatchGame,
+      GameItemData(
+        id: 'tap_tap',
+        title: 'Tap Tap',
+        subtitle: '15-second fast reaction speed dash',
+        capKey: 'tap_tap',
+        imageUrl: AppAssets.tapTapGame,
+        category: GameCategory.arcade,
+        themeColor: const Color(0xFF2563EB),
+        softBgColor: const Color(0xFFEAF3FF),
+        badgeText: '⚡ 15s DASH',
+        badgeColor: const Color(0xFF2563EB),
+        difficulty: 'Easy',
+        avgTime: '15s',
+        description:
+            'Tap target coins as fast as humanly possible before the 15-second timer runs out.',
+        rules: const [
+          'Tap the moving coin target rapidly to build your score.',
+          'Maintain high combos to unlock multiplier bonuses.',
+          'Earn instant coins with no waiting time.',
+        ],
+        getPersonalBest: () => GamePrefs.getBestScore('tap_tap'),
+        personalBestUnit: 'hits',
+        screenBuilder: (ctx, onNav) => const TapTapGameScreen(),
+      ),
+      GameItemData(
+        id: 'math_quiz',
+        title: 'Math Quiz',
+        subtitle: 'Speed mental math brain challenge',
+        capKey: 'math_quiz',
+        imageUrl: AppAssets.quizMasterGame,
+        category: GameCategory.brain,
+        themeColor: const Color(0xFF10B981),
+        softBgColor: const Color(0xFFE3F8EB),
+        badgeText: '🧠 BRAIN IQ',
+        badgeColor: const Color(0xFF10B981),
+        difficulty: 'Medium',
+        avgTime: '45s',
+        description:
+            'Test your mental math agility with rapid questions and earn coins for every correct answer.',
+        rules: const [
+          'Pick the right answer from 4 choices before time runs out.',
+          'Each correct answer increases your RBX coin prize.',
+          'Finish all questions to receive maximum bonus coins.',
+        ],
+        getPersonalBest: () => GamePrefs.getBestScore('math_quiz'),
+        personalBestUnit: 'score',
+        screenBuilder: (ctx, onNav) => const MathQuizScreen(),
+      ),
+      GameItemData(
+        id: 'quizzes',
+        title: 'Roblox Trivia',
+        subtitle: 'Test your Roblox gaming knowledge',
+        capKey: 'quizzes',
+        imageUrl: AppAssets.quizMasterQuickActions,
+        category: GameCategory.brain,
+        themeColor: const Color(0xFF8B5CF6),
+        softBgColor: const Color(0xFFF5F3FF),
+        badgeText: '⭐ TRIVIA',
+        badgeColor: const Color(0xFF8B5CF6),
+        difficulty: 'Easy',
+        avgTime: '1 min',
+        description:
+            'Answer multiple-choice Roblox trivia questions and prove how much you know about the platform.',
+        rules: const [
+          'Answer 10 questions across various difficulty levels.',
+          'Get at least 7 correct answers to pass the challenge.',
+          'Optionally double your final reward with a bonus video.',
+        ],
+        getPersonalBest: () => GamePrefs.getBestScore('quizzes'),
+        personalBestUnit: 'correct',
+        screenBuilder: (ctx, onNav) => const QuizzesScreen(),
+      ),
+      GameItemData(
+        id: 'flip_card',
         title: 'Flip Cards',
-        coins: '+ $flipRemaining RBX',
-        isBlocked: flipRemaining <= 0,
-        bgColor: const Color(0xFFFFE8F0),
+        subtitle: 'Memory matching card puzzle',
+        capKey: 'flip_card',
+        imageUrl: AppAssets.memoryMatchGame,
+        category: GameCategory.brain,
+        themeColor: const Color(0xFFEC4899),
+        softBgColor: const Color(0xFFFFE8F0),
+        badgeText: '🎯 MEMORY',
+        badgeColor: const Color(0xFFEC4899),
+        difficulty: 'Medium',
+        avgTime: '1 min',
+        description:
+            'Memorize card locations and flip matching pairs in the fewest attempts possible.',
+        rules: const [
+          'Flip two cards at a time to find identical pairs.',
+          'Memorize revealed cards to minimize total moves.',
+          'Win coins based on completion speed and accuracy.',
+        ],
+        getPersonalBest: () => GamePrefs.getBestScore('flip_card'),
+        personalBestUnit: 'pairs',
+        screenBuilder: (ctx, onNav) => const FlipCardGameScreen(),
       ),
-      _GameData(
-        imageUrl: AppAssets.dailyRewardImage,
+      GameItemData(
+        id: 'scratch',
         title: 'Scratch Card',
-        coins: '+ $scratchRemaining RBX',
-        isBlocked: scratchRemaining <= 0,
-        bgColor: const Color(0xFFEAF3FF),
+        subtitle: 'Instant win lucky prize card',
+        capKey: 'scratch',
+        imageUrl: AppAssets.dailyRewardImage,
+        category: GameCategory.instant,
+        themeColor: AppColors.purple,
+        softBgColor: const Color(0xFFF1EDFF),
+        badgeText: '🎁 INSTANT',
+        badgeColor: AppColors.purple,
+        difficulty: 'Easy',
+        avgTime: '10s',
+        description:
+            'Scratch away the golden ticket surface to instantly reveal coins and surprise multipliers.',
+        rules: const [
+          'Rub your finger over the card to reveal the hidden reward.',
+          'Get 3 free tickets every single day.',
+          'Unlock additional bonus scratch tickets by watching ads.',
+        ],
+        getPersonalBest: () => GamePrefs.getScratchesRemaining(),
+        personalBestUnit: 'free left',
+        screenBuilder: (ctx, onNav) => ScratchCardScreen(
+          onBack: () => Navigator.of(ctx).pop(),
+        ),
       ),
     ];
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      ref.invalidate(userProfileStreamProvider);
+      final capService = ref.read(dailyCapServiceProvider);
+      await capService.load();
+      await Future.delayed(const Duration(milliseconds: 600));
+    } catch (e) {
+      debugPrint('Error refreshing games: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
+
+  void _launchGame(GameItemData game) {
+    final capService = ref.read(dailyCapServiceProvider);
+    final remaining = capService.getRemainingCap(game.capKey);
+
+    if (remaining <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Daily limit reached for ${game.title}! Resets at midnight.'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          backgroundColor: AppColors.purple,
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context)
+        .push<int>(
+      MaterialPageRoute(
+        builder: (ctx) => game.screenBuilder(ctx, widget.onNavTap),
+      ),
+    )
+        .then((coinsEarned) {
+      if (coinsEarned != null && coinsEarned > 0) {
+        ref.invalidate(userProfileStreamProvider);
+      }
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  void _showGamePreview(GameItemData game) {
+    final capService = ref.read(dailyCapServiceProvider);
+    final earned = capService.getEarnedToday(game.capKey);
+    final total = capService.getCategoryCap(game.capKey);
+    final remaining = capService.getRemainingCap(game.capKey);
+
+    GamePreviewSheet.show(
+      context: context,
+      game: game,
+      earnedToday: earned,
+      totalCap: total,
+      remainingCap: remaining,
+      onStartGame: () {
+        Navigator.of(context).pop();
+        _launchGame(game);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final capService = ref.watch(dailyCapServiceProvider);
+
+    // Compute category counts
+    final categoryCounts = <GameCategory, int>{
+      GameCategory.all: _allGames.length,
+      GameCategory.arcade:
+          _allGames.where((g) => g.category == GameCategory.arcade).length,
+      GameCategory.brain:
+          _allGames.where((g) => g.category == GameCategory.brain).length,
+      GameCategory.instant:
+          _allGames.where((g) => g.category == GameCategory.instant).length,
+    };
+
+    // Filter games by selected category
+    final filteredGames = _selectedCategory == GameCategory.all
+        ? _allGames
+        : _allGames.where((g) => g.category == _selectedCategory).toList();
+
+    // Spotlight game is Flappy Jump (or first spotlight game)
+    final spotlightGame = _allGames.firstWhere(
+      (g) => g.isSpotlight,
+      orElse: () => _allGames.first,
+    );
+    final spotlightEarned = capService.getEarnedToday(spotlightGame.capKey);
+    final spotlightTotal = capService.getCategoryCap(spotlightGame.capKey);
+    final spotlightRemaining = capService.getRemainingCap(spotlightGame.capKey);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -77,11 +305,13 @@ class GamesScreen extends ConsumerWidget {
             Expanded(
               child: RefreshableScrollView(
                 padding: const EdgeInsets.only(top: 2, bottom: 100),
+                onRefresh: _handleRefresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RbxAppHeader(onNavTap: onNavTap),
-                    // Section heading with Leaderboard button
+                    RbxAppHeader(onNavTap: widget.onNavTap),
+
+                    // Section Heading with Leaderboard Action
                     RbxScreenTitle(
                       title: 'Play & Earn',
                       subtitle: 'Complete mini games to collect RBX coins',
@@ -96,12 +326,33 @@ class GamesScreen extends ConsumerWidget {
                         );
                       },
                     ),
+                    const SizedBox(height: 6),
+
+                    // 1. Spotlight Hero Card
+                    GamesSpotlightBanner(
+                      game: spotlightGame,
+                      earnedToday: spotlightEarned,
+                      totalCap: spotlightTotal,
+                      remainingCap: spotlightRemaining,
+                      onPlayTap: () => _launchGame(spotlightGame),
+                    ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Game cards grid
+                    // 2. Category Filter Chips
+                    GamesCategoryChips(
+                      selectedCategory: _selectedCategory,
+                      categoryCounts: categoryCounts,
+                      onCategorySelected: (category) {
+                        setState(() => _selectedCategory = category);
+                      },
+                    ),
+                    const SizedBox(height: AppLayout.elementSpacing),
+
+                    // 3. 2-Column Enhanced Games Grid
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
+                        horizontal: AppLayout.screenPadding,
+                      ),
                       child: GridView.builder(
                         shrinkWrap: true,
                         padding: EdgeInsets.zero,
@@ -109,149 +360,107 @@ class GamesScreen extends ConsumerWidget {
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
-                          mainAxisSpacing: 14,
-                          crossAxisSpacing: 14,
-                          childAspectRatio: 0.82,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.74,
                         ),
-                        itemCount: games.length,
+                        itemCount: filteredGames.length,
                         itemBuilder: (ctx, i) {
-                          final game = games[i];
-                          return GestureDetector(
-                            onTap: () {
-                              if (game.isBlocked) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Daily limit reached for ${game.title}!'),
-                                    behavior: SnackBarBehavior.floating,
-                                    duration: const Duration(seconds: 2),
-                                    backgroundColor: AppColors.purple,
-                                  ),
-                                );
-                                return;
-                              }
-                              if (game.title == 'Tap Tap') {
-                                Navigator.of(context)
-                                    .push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const TapTapGameScreen(),
-                                  ),
-                                )
-                                    .then((coinsEarned) {
-                                  if (coinsEarned != null) {
-                                    onNavTap(0);
-                                  }
-                                });
-                              } else if (game.title == 'Flappy Jump') {
-                                Navigator.of(context)
-                                    .push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const FlappyJumpGameScreen(),
-                                  ),
-                                )
-                                    .then((coinsEarned) {
-                                  if (coinsEarned != null) {
-                                    onNavTap(0);
-                                  }
-                                });
-                              } else if (game.title == 'Math Quiz') {
-                                Navigator.of(context)
-                                    .push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MathQuizScreen(),
-                                  ),
-                                )
-                                    .then((coinsEarned) {
-                                  if (coinsEarned != null) {
-                                    onNavTap(0);
-                                  }
-                                });
-                              } else if (game.title == 'Flip Cards') {
-                                Navigator.of(context)
-                                    .push<int>(
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const FlipCardGameScreen(),
-                                  ),
-                                )
-                                    .then((coinsEarned) {
-                                  if (coinsEarned != null) {
-                                    onNavTap(0);
-                                  }
-                                });
-                              } else if (game.title == 'Scratch Card') {
-                                Navigator.of(context)
-                                    .push<void>(
-                                  MaterialPageRoute(
-                                    builder: (context) => ScratchCardScreen(
-                                      onBack: () => Navigator.of(context).pop(),
-                                    ),
-                                  ),
-                                )
-                                    .then((_) {
-                                  // Re-fetch cap values if scratch state changed
-                                });
-                              }
-                            },
-                            child: _GameCard(data: game),
+                          final game = filteredGames[i];
+                          final earned = capService.getEarnedToday(game.capKey);
+                          final total = capService.getCategoryCap(game.capKey);
+                          final remaining = capService.getRemainingCap(game.capKey);
+
+                          return GameCardEnhanced(
+                            game: game,
+                            earnedToday: earned,
+                            totalCap: total,
+                            remainingCap: remaining,
+                            onTap: () => _showGamePreview(game),
+                            onQuickPlay: () => _launchGame(game),
                           );
                         },
                       ),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
 
-                    // Coming soon banner
+                    // 4. More Games Coming Soon Teaser Banner
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppLayout.screenPadding),
+                        horizontal: AppLayout.screenPadding,
+                      ),
                       child: Container(
-                        height: 64,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
                               AppColors.primarySoft,
-                              AppColors.primarySoft.withValues(alpha: 0.7),
+                              AppColors.primarySoft.withValues(alpha: 0.55),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppColors.purple.withValues(alpha: 0.2),
-                          ),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           children: [
-                            const SizedBox(width: 16),
                             Container(
-                              width: 40,
-                              height: 40,
+                              width: 42,
+                              height: 42,
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: const Icon(Icons.lock,
-                                  color: AppColors.purple, size: 20),
+                              child: const Icon(
+                                Icons.lock_outline_rounded,
+                                color: AppColors.purple,
+                                size: 20,
+                              ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 14),
                             const Expanded(
-                              child: Text(
-                                'More games coming soon ✨',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryText,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'More Games Coming Soon ✨',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.primaryText,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'New arcade titles unlock with app updates',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.secondaryText,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const Icon(Icons.layers,
-                                color: AppColors.purple, size: 32),
-                            const SizedBox(width: 16),
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: AppColors.purple,
+                              size: 24,
+                            ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: AppLayout.sectionSpacing),
+
                     const SizedBox(height: 120),
                   ],
                 ),
@@ -260,173 +469,9 @@ class GamesScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: RbxBottomNav(currentIndex: 1, onTap: onNavTap),
-    );
-  }
-}
-
-class _GameData {
-  final String imageUrl;
-  final String title;
-  final String coins;
-  final Color bgColor;
-  final bool isBlocked;
-
-  const _GameData({
-    required this.imageUrl,
-    required this.title,
-    required this.coins,
-    required this.bgColor,
-    required this.isBlocked,
-  });
-}
-
-class _GameCard extends StatelessWidget {
-  final _GameData data;
-
-  const _GameCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: data.isBlocked ? 0.6 : 1.0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFF3F4F6)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Game image with padding and rounded corners
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: double.infinity,
-                      color: data.bgColor,
-                      child: AppCachedImage(
-                        imageUrl: data.imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: Icon(
-                          Icons.sports_esports,
-                          size: 48,
-                          color: data.bgColor == const Color(0xFFEAF3FF)
-                              ? Colors.blue
-                              : AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      data.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: data.isBlocked
-                                    ? const Color(0xFFF1F5F9)
-                                    : AppColors.primarySoft,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      data.coins,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w800,
-                                        color: data.isBlocked
-                                            ? Colors.grey
-                                            : AppColors.purple,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Image.asset(
-                                    AppAssets.goldCoin,
-                                    width: 18,
-                                    height: 18,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      Icons.monetization_on,
-                                      size: 18,
-                                      color: data.isBlocked
-                                          ? Colors.grey
-                                          : const Color(0xFFFFCC44),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            gradient: data.isBlocked ? null : AppColors.primaryGradient,
-                            color: data.isBlocked ? Colors.grey : null,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: data.isBlocked
-                                ? null
-                                : const [
-                                    BoxShadow(
-                                      color: Color(0x446035EE),
-                                      blurRadius: 8,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                          ),
-                          child: Icon(data.isBlocked ? Icons.lock : Icons.play_arrow,
-                              color: Colors.white, size: 16),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+      bottomNavigationBar: RbxBottomNav(
+        currentIndex: 1,
+        onTap: widget.onNavTap,
       ),
     );
   }

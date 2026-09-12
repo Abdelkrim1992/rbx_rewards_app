@@ -62,8 +62,17 @@ void main() {
 
     // Complete onboarding
     await tester.tap(find.text('Start Earning'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
+    for (int i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    final claimOverlayBtn = find.textContaining('Claim My 50 Coins');
+    if (claimOverlayBtn.evaluate().isNotEmpty) {
+      await tester.tap(claimOverlayBtn);
+      for (int i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+    }
 
     expect(find.text('Start Earning'), findsNothing);
   });

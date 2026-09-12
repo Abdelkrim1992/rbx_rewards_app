@@ -147,7 +147,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

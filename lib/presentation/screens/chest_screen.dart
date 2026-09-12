@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/chest_painter.dart';
 import '../../widgets/coin_burst.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/interactive_button.dart';
 import '../../core/utils/reward_helper.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
@@ -98,6 +99,7 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
       baseReward: earnedCoins,
       quickPlacement: AdPlacement.chestOpen,
       premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.megaChest,
       onSuccess: (coins) async {
         if (mounted) {
           await ref.read(coinProvider.notifier).credit(coins, 'chest');
@@ -282,7 +284,7 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
                         spreadRadius: 0,
                       ),
                     ],
-                    border: Border.all(color: const Color(0xFFF3F4F6)),
+                    border: Border.all(color: AppColors.cardBorder),
                   ),
                   child: Column(
                     children: [
@@ -379,59 +381,19 @@ class _TimeSeparator extends StatelessWidget {
 }
 
 // ─── Primary Button ───
-class _PrimaryButton extends StatefulWidget {
+class _PrimaryButton extends StatelessWidget {
   final String text;
   final VoidCallback? onTap;
-  const _PrimaryButton({required this.text, this.onTap});
-  @override
-  State<_PrimaryButton> createState() => _PrimaryButtonState();
-}
 
-class _PrimaryButtonState extends State<_PrimaryButton> {
-  double _scale = 1.0;
+  const _PrimaryButton({required this.text, this.onTap});
+
   @override
   Widget build(BuildContext context) {
-    final bool isEnabled = widget.onTap != null;
-    return GestureDetector(
-      onTapDown: isEnabled ? (_) => setState(() => _scale = 0.96) : null,
-      onTapUp: isEnabled
-          ? (_) {
-              setState(() => _scale = 1.0);
-              widget.onTap!();
-            }
-          : null,
-      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          width: double.infinity,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: isEnabled ? AppColors.primaryGradient : null,
-            color: isEnabled ? null : const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isEnabled
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            widget.text,
-            style: TextStyle(
-              color: isEnabled ? Colors.white : const Color(0xFF94A3B8),
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
+    return InteractiveButton(
+      text: text,
+      height: 56,
+      borderRadius: 16,
+      onTap: onTap,
     );
   }
 }
@@ -459,13 +421,8 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
 
   late Animation<double> _shakeAnim;
   late Animation<double> _openAnim;
-  late Animation<double> _rewardScale;
-  late Animation<double> _rewardOpacity;
 
-  final int _earnedCoins = 0;
-  final bool _showReward = false;
   bool _burstCoins = false;
-  final bool _isClaiming = false;
 
   @override
   void initState() {
@@ -490,12 +447,6 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
 
     _openAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(parent: _openController, curve: Curves.easeOutBack));
-
-    _rewardScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _rewardController, curve: Curves.elasticOut));
-
-    _rewardOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _rewardController, curve: Curves.easeIn));
 
     _runSequence();
   }

@@ -14,12 +14,14 @@ import '../../business/ad_service.dart';
 import '../../business/ad_tracker_service.dart';
 import '../../business/badge_service.dart';
 import '../../business/daily_cap_service.dart';
+import '../../business/anti_cheat_service.dart';
 
 final supabaseRepositoryProvider = Provider((ref) => SupabaseRepository());
 final hiveRepositoryProvider = Provider((ref) => HiveRepository());
 final secureRepositoryProvider = Provider((ref) => SecureRepository());
 
 final connectivityServiceProvider = Provider((ref) => ConnectivityService());
+final antiCheatServiceProvider = Provider((ref) => AntiCheatService());
 
 final authServiceProvider = Provider((ref) {
   return AuthService(secure: ref.watch(secureRepositoryProvider));
