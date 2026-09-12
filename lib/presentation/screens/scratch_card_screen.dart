@@ -28,9 +28,9 @@ class ScratchCardScreen extends ConsumerStatefulWidget {
 class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   final GlobalKey<ScratcherState> _scratcherKey = GlobalKey<ScratcherState>();
   bool _isScratched = false;
+  bool _hasStartedScratching = false;
   bool _isProcessing = false;
   late int _rewardAmount;
-  static int _scratchCount = 0; // Track scratches for ad display
   
   int _scratchesRemaining = GamePrefs.maxScratchesPerDay;
   int _extraScratchesRemaining = GamePrefs.maxExtraScratchesPerDay;
@@ -100,6 +100,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   void _resetScratchCard() {
     setState(() {
       _isScratched = false;
+      _hasStartedScratching = false;
       _generateReward();
     });
     _scratcherKey.currentState?.reset(duration: const Duration(milliseconds: 300));
@@ -110,6 +111,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     
     setState(() {
       _isScratched = true;
+      _hasStartedScratching = false;
       _isProcessing = true;
     });
 
@@ -128,7 +130,6 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       onSuccess: (coins) async {
         await ref.read(coinProvider.notifier).credit(coins, 'scratch');
         await GamePrefs.decrementScratchesRemaining();
-        _scratchCount++;
         if (mounted) {
           _resetScratchCard();
           await _loadScratchLimit();
@@ -139,7 +140,6 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       },
       onCancel: () async {
         await GamePrefs.decrementScratchesRemaining();
-        _scratchCount++;
         if (mounted) {
           _resetScratchCard();
           await _loadScratchLimit();
@@ -149,6 +149,24 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
         }
       },
     );
+  }
+
+  bool get _hasActiveScratch => !_isScratched && _hasStartedScratching;
+
+  Future<void> _handleBack() async {
+    if (_isProcessing) return;
+    if (_hasActiveScratch) {
+      final shouldLeave = await showQuitConfirmationDialog(
+        context,
+        title: 'Quit Scratching?',
+        message: 'You have an active scratch card. Are you sure you want to leave?',
+      );
+      if (shouldLeave && mounted) {
+        widget.onBack();
+      }
+    } else {
+      widget.onBack();
+    }
   }
 
   @override
@@ -162,19 +180,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        if (_isProcessing) return;
-        if (!_isScratched && _scratcherKey.currentState?.progress != 0.0) {
-          final shouldLeave = await showQuitConfirmationDialog(
-            context,
-            title: 'Quit Scratching?',
-            message: 'You have an active scratch card. Are you sure you want to leave?',
-          );
-          if (shouldLeave && mounted) {
-            widget.onBack();
-          }
-        } else {
-          widget.onBack();
-        }
+        await _handleBack();
       },
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -192,7 +198,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GestureDetector(
-                          onTap: widget.onBack,
+                          onTap: _handleBack,
                           child: Container(
                             width: 44,
                             height: 44,
@@ -380,9 +386,13 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                     AppAssets.dailyRewardImage,
                                     fit: BoxFit.cover,
                                   ),
-                                onChange: (value) {
-                                  // Can optionally play sound or haptics here
-                                },
+                                  onChange: (value) {
+                                    if (value > 0 && !_hasStartedScratching) {
+                                      setState(() {
+                                        _hasStartedScratching = true;
+                                      });
+                                    }
+                                  },
                                 onThreshold: () {
                                   _handleScratchWin();
                                 },

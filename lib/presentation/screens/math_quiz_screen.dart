@@ -6,13 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
-import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/game_prefs.dart';
-import '../../widgets/congratulations_dialog.dart';
 import '../../core/utils/game_reward_helper.dart';
+import '../../core/utils/reward_helper.dart';
 
 class MathQuestion {
   final String text;
@@ -268,23 +267,25 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
     _matchPopController.forward();
   }
 
-  Future<bool> _submitAndRecordReward() async {
+  Future<bool> _submitAndRecordReward({int multiplier = 1, int? coinsToAward}) async {
     final duration = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!).inSeconds
         : 1;
 
+    final targetCoins = coinsToAward ?? _originalCoinsEarned * multiplier;
+
     try {
       final result = await ref.read(gameServiceProvider).submitGameResult(
         gameName: 'math_quiz',
-        score: _originalCoinsEarned,
+        score: targetCoins,
         durationSeconds: duration.clamp(1, 3600),
         sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
         originalScore: _originalCoinsEarned,
-        multiplier: 1,
+        multiplier: multiplier,
       );
       if (!mounted) return false;
       if (result.success || result.queued) {
-        final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+        final earned = result.coinsEarned > 0 ? result.coinsEarned : targetCoins;
         ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
         ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
 
@@ -293,11 +294,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
             _hasClaimed = true;
             _coinsEarned = earned;
           });
-          await showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => CongratulationsDialog(earnedCoins: earned),
-          );
         }
         return true;
       } else {
@@ -317,7 +313,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   }
 
   void _claimQuizCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingClaim) {
       if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
@@ -328,30 +324,26 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
     await GamePrefs.incrementGamePlayCount('math_quiz');
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showRewardedInterstitial(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
-        await _submitAndRecordReward();
-      },
-      onAdDismissed: () {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
-          );
-        }
+    if (!mounted) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Math Quiz Reward',
+      baseReward: _originalCoinsEarned,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.quizMasterGame,
+      onSuccess: (coins) async {
+        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
+        await _submitAndRecordReward(multiplier: multiplier, coinsToAward: coins);
       },
     );
+
+    if (mounted) {
+      setState(() {
+        _isProcessingClaim = false;
+      });
+    }
   }
 
   Future<void> _autoCreditCoinsOnPlayAgain() async {

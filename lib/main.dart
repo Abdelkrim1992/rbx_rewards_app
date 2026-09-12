@@ -1,3 +1,19 @@
+/*
+ * ============================================================================
+ * RBX REWARDS APPLICATION
+ *
+ * Copyright (c) 2024-2026 Abdelkrim Salaghe & Youssef. All rights reserved.
+ *
+ * Founders & Project Leadership:
+ * - Abdelkrim Salaghe: Founder, Lead Software Architect & Primary Developer
+ * - Youssef: Co-Founder & App Publishing Partner
+ *
+ * This software, source code, design architecture, and related digital assets
+ * are proprietary intellectual property authored and owned by the founders
+ * named above.
+ * ============================================================================
+ */
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -430,6 +446,10 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
           if (didPop) return;
           if (_showSpin) {
             _backFromSpin();
+            return;
+          }
+          if (_currentTab != 0) {
+            _onNavTap(0);
             return;
           }
           final shouldQuit = await showQuitConfirmationDialog(

@@ -5,13 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
-import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/congratulations_dialog.dart';
 import '../../core/utils/game_reward_helper.dart';
+import '../../core/utils/reward_helper.dart';
 
 class TapTapGameScreen extends ConsumerStatefulWidget {
   const TapTapGameScreen({super.key});
@@ -980,7 +979,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
 
 
   void _claimCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingClaim) {
       if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
@@ -991,10 +990,17 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
 
     await GamePrefs.incrementGamePlayCount('tap_tap');
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showRewardedInterstitial(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
+    if (!mounted) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Tap Tap Reward',
+      baseReward: _originalCoinsEarned,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.tapTapGame,
+      onSuccess: (coins) async {
+        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
         final duration = _gameStartTime != null
             ? DateTime.now().difference(_gameStartTime!).inSeconds
             : 1;
@@ -1002,15 +1008,15 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
         try {
           final result = await ref.read(gameServiceProvider).submitGameResult(
             gameName: 'tap_tap',
-            score: _originalCoinsEarned,
+            score: coins,
             durationSeconds: duration.clamp(1, 3600),
             sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
             originalScore: _originalCoinsEarned,
-            multiplier: 1,
+            multiplier: multiplier,
           );
           if (!mounted) return;
           if (result.success || result.queued) {
-            final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+            final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
             ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
             ref.read(dailyCapServiceProvider).addCoins(earned, 'tap_tap');
 
@@ -1019,11 +1025,6 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                 _hasClaimed = true;
                 _coinsEarned = earned;
               });
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: earned),
-              );
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1038,24 +1039,13 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
           }
         }
       },
-      onAdDismissed: () {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
-          );
-        }
-      },
     );
+
+    if (mounted) {
+      setState(() {
+        _isProcessingClaim = false;
+      });
+    }
   }
 
   Future<void> _autoCreditCoinsOnPlayAgain() async {

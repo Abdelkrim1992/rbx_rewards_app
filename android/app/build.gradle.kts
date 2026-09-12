@@ -1,3 +1,10 @@
+/**
+ * RBX Rewards Android Application Build Configuration
+ * Copyright (c) 2024-2026 Abdelkrim Salaghe & Youssef. All rights reserved.
+ * Founder & Lead Developer: Abdelkrim Salaghe
+ * Co-Founder & Publishing Partner: Youssef
+ */
+
 plugins {
     id("com.android.application")
     id("kotlin-android")

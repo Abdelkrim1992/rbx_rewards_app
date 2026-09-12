@@ -823,7 +823,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 24),
                     Center(
                       child: Text(
-                        'RBX Rewards v1.2.0 • Build 45\nIndependent gaming loyalty companion',
+                        'RBX Rewards v1.2.0 • Build 45\nCreated by Abdelkrim Salaghe & Youssef\n© 2024-2026 All Rights Reserved',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 11,

@@ -204,6 +204,15 @@ rbx_rewards_app/
 
 ---
 
-## 📄 License
+## 👥 Authors & Leadership
 
-This project is proprietary software for the RBX Rewards App.
+- **Abdelkrim Salaghe**: Founder, Lead System Architect & Primary Software Engineer
+- **Youssef**: Co-Founder & App Publishing Partner
+
+---
+
+## 📄 License & Intellectual Property
+
+Copyright © 2024–2026 **Abdelkrim Salaghe** & **Youssef**. All rights reserved.  
+This project is proprietary software solely owned by the founders named above.
+

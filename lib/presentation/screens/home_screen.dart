@@ -168,7 +168,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (_) => const CongratulationsDialog(earnedCoins: 50),
+            builder: (_) => const CongratulationsDialog(
+              earnedCoins: 50,
+              title: 'Video Reward',
+              heroAsset: AppAssets.watchEarnIcon,
+            ),
           );
         }
       },
@@ -188,20 +192,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _completeMegaChestClaim() async {
-    setState(() => _isProcessing = true);
-    final success =
-        await ref.read(megaChestMilestoneProvider.notifier).claimReward();
-    setState(() => _isProcessing = false);
-
-    if (success && mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        barrierColor: Colors.black87,
-        builder: (_) => const CongratulationsDialog(earnedCoins: 1000),
-      );
-      ref.invalidate(userProfileStreamProvider);
-    }
+    if (_isProcessing) return;
+    await showRewardChoice(
+      context: context,
+      featureName: 'Chest Reward',
+      baseReward: 1000,
+      quickPlacement: AdPlacement.chestOpen,
+      premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.megaChest,
+      onSuccess: (coins) async {
+        setState(() => _isProcessing = true);
+        final success =
+            await ref.read(megaChestMilestoneProvider.notifier).claimReward();
+        if (success && coins > 1000) {
+          await ref.read(coinProvider.notifier).credit(coins - 1000, 'mega_chest_double');
+        }
+        ref.invalidate(userProfileStreamProvider);
+        if (mounted) setState(() => _isProcessing = false);
+      },
+    );
   }
 
   @override

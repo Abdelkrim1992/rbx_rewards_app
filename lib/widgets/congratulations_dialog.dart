@@ -1,95 +1,170 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import 'interactive_button.dart';
+import 'reward_claim_dialog.dart';
 
-/// A shared congratulations popup used across all reward flows.
-/// Matches the style of the spin screen congratulations dialog.
+/// Modern congratulations popup that matches the RewardClaimDialog visual standard.
 class CongratulationsDialog extends StatelessWidget {
   final int earnedCoins;
+  final String? title;
+  final String? heroAsset;
+  final VoidCallback? onDismiss;
 
-  const CongratulationsDialog({super.key, required this.earnedCoins});
+  const CongratulationsDialog({
+    super.key,
+    required this.earnedCoins,
+    this.title,
+    this.heroAsset,
+    this.onDismiss,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        constraints: const BoxConstraints(maxWidth: 380),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: Color(0x2E6035EE),
+              blurRadius: 28,
+              offset: Offset(0, 12),
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🎉', style: TextStyle(fontSize: 40)),
-            const SizedBox(height: 8),
-            const Text(
-              'Congratulations!',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF131326),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'You have earned',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF868A9F),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F9FA),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    AppAssets.goldRbxCoin,
-                    width: 28,
-                    height: 28,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.monetization_on,
-                      color: Color(0xFFFFCC44),
-                      size: 28,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Stack(
+            children: [
+              // Top glowing purple aura
+              Positioned(
+                top: -60,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    width: 220,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF8C62F8).withValues(alpha: 0.35),
+                          Colors.transparent,
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '+$earnedCoins RBX',
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                      letterSpacing: -0.5,
+                ),
+              ),
+
+              // Close button (X)
+              Positioned(
+                top: 14,
+                right: 14,
+                child: GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).pop();
+                    onDismiss?.call();
+                  },
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F3F9),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: Color(0xFF64748B),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 28),
-            InteractiveButton(
-              text: 'Done',
-              onTap: () => Navigator.of(context).pop(),
-            ),
-          ],
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Hero circular icon
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF6F3FF),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFE5DEFF),
+                          width: 2,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A6035EE),
+                            blurRadius: 18,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Center(
+                        child: Image.asset(
+                          heroAsset ?? AppAssets.onboardingCoin,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.stars_rounded,
+                            size: 46,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Title
+                    Text(
+                      (title ?? 'Reward Earned').toUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Reward box display
+                    RewardBox(amount: earnedCoins),
+                    const SizedBox(height: 18),
+
+                    // Goal progress tracking card
+                    const GoalProgressCard(),
+                    const SizedBox(height: 20),
+
+                    // Action button
+                    InteractiveButton(
+                      text: 'Collect +$earnedCoins RBX',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        Navigator.of(context).pop();
+                        onDismiss?.call();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

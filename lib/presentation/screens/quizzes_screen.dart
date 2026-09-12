@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/congratulations_dialog.dart';
-import '../providers/ad_provider.dart';
 import '../../core/utils/game_reward_helper.dart';
+import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/quit_confirmation_dialog.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/providers.dart';
@@ -250,7 +250,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   }
 
   void _claimQuizCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingClaim) {
       if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
@@ -261,22 +261,23 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
     await GamePrefs.incrementGamePlayCount('quizzes');
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showRewardedInterstitial(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
+    if (!mounted) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Quiz Master Reward',
+      baseReward: _originalCoinsEarned,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.quizMasterGame,
+      onSuccess: (coins) async {
         try {
-          await ref.read(coinProvider.notifier).credit(_originalCoinsEarned, 'quiz');
+          await ref.read(coinProvider.notifier).credit(coins, 'quiz');
           if (mounted) {
             setState(() {
               _hasClaimed = true;
-              _coinsEarned = _originalCoinsEarned;
+              _coinsEarned = coins;
             });
-            await showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => CongratulationsDialog(earnedCoins: _originalCoinsEarned),
-            );
           }
         } catch (e) {
           if (mounted) {
@@ -286,24 +287,13 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
           }
         }
       },
-      onAdDismissed: () {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
-          );
-        }
-      },
     );
+
+    if (mounted) {
+      setState(() {
+        _isProcessingClaim = false;
+      });
+    }
   }
 
   void _playAgain() async {
@@ -363,92 +353,13 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
-        final shouldLeave = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            title: Text(
-              'Quit Quiz?',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w800,
-                fontSize: 22,
-                color: const Color(0xFF131326),
-              ),
-            ),
-            content: Text(
-              'Are you sure you want to exit? You will lose unclaimed progress.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: const Color(0xFF4A4B60),
-                height: 1.4,
-              ),
-            ),
-            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            actions: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _InteractiveCard(
-                      onTap: () => Navigator.pop(ctx, false),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F1FB),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Cancel',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF868A9F),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _InteractiveCard(
-                      onTap: () => Navigator.pop(ctx, true),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFF5252), Color(0xFFFF1744)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF1744).withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          'Quit',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+        final shouldLeave = await showQuitConfirmationDialog(
+          context,
+          title: 'Quit Quiz?',
+          message: 'Are you sure you want to exit? You will lose unclaimed progress.',
         );
-        if (shouldLeave == true && mounted) {
-          Navigator.of(context).pop();
+        if (shouldLeave && mounted) {
+          _backToMenu();
         }
       },
       child: Scaffold(
@@ -494,100 +405,17 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
             Align(
               alignment: Alignment.centerLeft,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   if (_gameState == 'PLAYING') {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: Colors.white,
-                        surfaceTintColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        title: Text(
-                          'Quit Quiz?',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 22,
-                            color: const Color(0xFF131326),
-                          ),
-                        ),
-                        content: Text(
+                    final shouldLeave = await showQuitConfirmationDialog(
+                      context,
+                      title: 'Quit Quiz?',
+                      message:
                           'Are you sure you want to exit? You will lose unclaimed progress.',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: const Color(0xFF4A4B60),
-                            height: 1.4,
-                          ),
-                        ),
-                        actionsPadding:
-                            const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        actions: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () => Navigator.pop(ctx),
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F1FB),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Cancel',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF868A9F),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    _backToMenu();
-                                  },
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFF5252),
-                                          Color(0xFFFF1744)
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFFF1744)
-                                              .withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Quit',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
                     );
+                    if (shouldLeave && mounted) {
+                      _backToMenu();
+                    }
                   } else {
                     Navigator.of(context).pop();
                   }

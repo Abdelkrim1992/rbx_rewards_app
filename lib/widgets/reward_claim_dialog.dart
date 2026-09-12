@@ -9,6 +9,9 @@ import '../presentation/providers/coin_provider.dart';
 import '../presentation/providers/reward_catalog_provider.dart';
 import '../theme/app_theme.dart';
 import 'interactive_button.dart';
+import 'reward_box.dart';
+
+export 'reward_box.dart';
 
 /// Production-ready Reward Claim Dialog with "Double-Up" Video Ad Multiplier.
 /// Follows industry standards used by top reward apps (Mistplay, Freecash, Playbite).
@@ -228,7 +231,7 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
                         _buildInfoBanner(),
                       ],
                       const SizedBox(height: 18),
-                      _GoalProgressCard(),
+                      const GoalProgressCard(),
                       const SizedBox(height: 20),
                       _buildActionButtons(),
                     ],
@@ -290,19 +293,8 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   }
 
   String _resolveHeroAsset() {
-    // If explicitly provided and not the awkward tilted card gift box, use it
-    if (widget.heroAsset != null &&
-        widget.heroAsset!.isNotEmpty &&
-        widget.heroAsset != AppAssets.dailyRewardGift) {
-      return widget.heroAsset!;
-    }
-    final titleLower = widget.title.toLowerCase();
-    if (titleLower.contains('chest')) {
-      return AppAssets.megaChest;
-    } else if (titleLower.contains('spin')) {
-      return AppAssets.spinWheelIcon;
-    }
-    return AppAssets.goldRbxCoin;
+    // One common image for all features reward popups as requested
+    return AppAssets.onboardingCoin;
   }
 
   Widget _buildHeroIcon() {
@@ -310,8 +302,8 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
 
     final asset = _resolveHeroAsset();
     return Container(
-      width: 92,
-      height: 92,
+      width: 96,
+      height: 96,
       decoration: BoxDecoration(
         color: const Color(0xFFF6F3FF),
         shape: BoxShape.circle,
@@ -324,7 +316,7 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
           ),
         ],
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Center(
         child: Image.asset(
           asset,
@@ -369,47 +361,10 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   }
 
   Widget _buildOdometerDisplay() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _isDoubled ? const Color(0xFF8C62F8) : AppColors.cardBorder,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(
-            AppAssets.goldRbxCoin,
-            width: 32,
-            height: 32,
-            errorBuilder: (_, __, ___) => const Icon(
-              Icons.monetization_on,
-              color: Color(0xFFFFB000),
-              size: 32,
-            ),
-          ),
-          const SizedBox(width: 10),
-          AnimatedBuilder(
-            animation: _odometerAnimation,
-            builder: (context, child) {
-              return Text(
-                '+${_odometerAnimation.value} RBX',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.primary,
-                  letterSpacing: -0.5,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+    return RewardBox(
+      amount: widget.baseReward,
+      animation: _odometerAnimation,
+      isDoubled: _isDoubled,
     );
   }
 
@@ -524,7 +479,9 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
 
 /// Dynamic Goal-Gradient Context Widget
 /// Shows real progress towards the user's active Roblox gift card goal
-class _GoalProgressCard extends ConsumerWidget {
+class GoalProgressCard extends ConsumerWidget {
+  const GoalProgressCard({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final coins = ref.watch(coinProvider);

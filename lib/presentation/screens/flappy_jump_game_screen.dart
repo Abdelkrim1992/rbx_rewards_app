@@ -7,10 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../../theme/app_theme.dart';
-import '../../core/utils/game_reward_helper.dart';
+import '../../core/utils/reward_helper.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/congratulations_dialog.dart';
 import '../../widgets/game_prefs.dart';
 
 // --- Vector 3D Helper ---
@@ -846,7 +845,6 @@ class FlappyJumpGame extends FlameGame {
     // Neon glow styles
     const neonMagenta = Color(0xFFFF007F);
     const neonPurple = Color(0xFF6E3AFF);
-    const neonDark = Color(0xFF1D0E3D);
     const neonCyan = Color(0xFF00FFCC);
 
     final frontPaint = Paint()
@@ -1205,7 +1203,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
 
   // Game data state
   int _coins = 0;
-  int _displayedCoins = 0;
   int _highScore = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
@@ -1213,7 +1210,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   // Confetti / Coin claim animation state
   bool _showCoinClaimAnimation = false;
   bool _hasClaimedReward = false;
-  bool _adWatched = false;
   bool _handledGameOver = false;
   int _originalCoinsEarned = 0;
   late AnimationController _claimAnimController;
@@ -1318,31 +1314,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     )
       ..addListener(() {
         _updateFlyingCoins();
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed && mounted) {
-          final earned = _game.coinsEarned;
-          setState(() {
-            _showCoinClaimAnimation = false;
-            _displayedCoins = _coins;
-            _hasClaimedReward = false;
-            _adWatched = false;
-            _handledGameOver = false;
-            _originalCoinsEarned = 0;
-          });
-          // Reset game back to the menu overlay
-          _game.hasStarted = false;
-          _game.isGameOver = false;
-          _game.paused = false;
-          _game.onStateChanged?.call();
-
-          // Show congratulations dialog with specific earned coins
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => CongratulationsDialog(earnedCoins: earned),
-          );
-        }
       });
   }
 
@@ -1357,7 +1328,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     if (mounted) {
       setState(() {
         _coins = currentCoins;
-        _displayedCoins = currentCoins;
         _highScore = bestScore;
       });
     }
@@ -1373,104 +1343,65 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     if (_hasClaimedReward || _showCoinClaimAnimation || _game.coinsEarned <= 0) return;
 
     final baseAmt = _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned;
-    final detailsDescription = 'Score: ${_game.score}  •  Max Combo: x${_game.maxCombo}\n\nSupercharge your flappy jump rewards!';
 
-    await showGameRewardChoice(
+    await showRewardChoice(
       context: context,
-      featureName: 'Flappy Jump',
-      description: detailsDescription,
+      featureName: 'Flappy Jump Reward',
       baseReward: baseAmt,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
-      icon: Icons.rocket_launch,
-      iconBgColor: const Color(0xFFFFF0F5),
-      iconColor: const Color(0xFFFF52A2),
-      premiumGradient: const LinearGradient(
-        colors: [Color(0xFFFF52A2), Color(0xFF6E3AFF)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      quickTextColor: const Color(0xFFFF52A2),
-      quickBorderColor: const Color(0xFFFFD4E5),
-      enableQuickAd: true,
+      heroAsset: AppAssets.goldRbxCoin,
       onSuccess: (coins) async {
         if (!mounted) return;
-        setState(() {
-          _adWatched = (coins == baseAmt * 2);
-          _originalCoinsEarned = baseAmt;
-          _game.coinsEarned = coins;
-        });
+        final isDouble = (coins == baseAmt * 2);
+        final duration = _gameStartTime != null
+            ? DateTime.now().difference(_gameStartTime!).inSeconds
+            : 1;
 
-        _triggerClaimCoinsAfterChoice();
+        try {
+          final result = await ref.read(gameServiceProvider).submitGameResult(
+            gameName: 'flappy_jump',
+            score: coins,
+            durationSeconds: duration.clamp(1, 3600),
+            sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
+            originalScore: baseAmt,
+            multiplier: isDouble ? 2 : 1,
+          );
+          if (!mounted) return;
+          if (result.success || result.queued) {
+            final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
+            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
+
+            // Immediately reset game back to the menu overlay
+            _game.hasStarted = false;
+            _game.isGameOver = false;
+            _game.paused = false;
+            _game.onStateChanged?.call();
+
+            setState(() {
+              _hasClaimedReward = false;
+              _handledGameOver = false;
+              _originalCoinsEarned = 0;
+            });
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  result.error ?? 'Failed to save game reward',
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to save game reward')),
+            );
+          }
+        }
       },
     );
-  }
-
-  void _triggerClaimCoinsAfterChoice() async {
-    if (_hasClaimedReward ||
-        _game.coinsEarned <= 0) {
-      return;
-    }
-
-    final duration = _gameStartTime != null
-        ? DateTime.now().difference(_gameStartTime!).inSeconds
-        : 1;
-
-    final finalScore = _game.coinsEarned;
-
-    try {
-      final result = await ref.read(gameServiceProvider).submitGameResult(
-        gameName: 'flappy_jump',
-        score: finalScore,
-        durationSeconds: duration.clamp(1, 3600),
-        sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-        originalScore:
-            _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned,
-        multiplier: _adWatched ? 2 : 1,
-      );
-      if (!mounted) return;
-      if (result.success || result.queued) {
-        final earned = result.coinsEarned > 0 ? result.coinsEarned : finalScore;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-        ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
-
-        // Immediately reset game back to the menu overlay
-        _game.hasStarted = false;
-        _game.isGameOver = false;
-        _game.paused = false;
-        _game.onStateChanged?.call();
-
-        setState(() {
-          _hasClaimedReward = false;
-          _adWatched = false;
-          _handledGameOver = false;
-          _originalCoinsEarned = 0;
-          _displayedCoins = ref.read(coinProvider);
-        });
-
-        // Show congratulations dialog with specific earned coins
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => CongratulationsDialog(earnedCoins: earned),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.error ?? 'Failed to save game reward',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save game reward')),
-        );
-      }
-      debugPrint('Failed to submit game result: $e');
-    }
   }
 
   void _startGame() {
@@ -1484,102 +1415,11 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     _game.startGame();
   }
 
-  void _playAgainFromGameOver() async {
-    if (_game.coinsEarned > 0 && !_hasClaimedReward) {
-      final baseAmt = _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned;
-      
-      await showGameRewardChoice(
-        context: context,
-        featureName: 'Flappy Jump',
-        description: 'Supercharge your flappy jump rewards!',
-        baseReward: baseAmt,
-        quickPlacement: AdPlacement.miniGameCompletion,
-        premiumPlacement: AdPlacement.doubleReward,
-        icon: Icons.rocket_launch,
-        iconBgColor: const Color(0xFFFFF0F5),
-        iconColor: const Color(0xFFFF52A2),
-        premiumGradient: const LinearGradient(
-          colors: [Color(0xFFFF52A2), Color(0xFF6E3AFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        quickTextColor: const Color(0xFFFF52A2),
-        quickBorderColor: const Color(0xFFFFD4E5),
-        enableQuickAd: true,
-        onSuccess: (coins) async {
-          if (!mounted) return;
-          
-          final duration = _gameStartTime != null
-              ? DateTime.now().difference(_gameStartTime!).inSeconds
-              : 1;
-          
-          final isDouble = (coins == baseAmt * 2);
-
-          try {
-            final result = await ref.read(gameServiceProvider).submitGameResult(
-              gameName: 'flappy_jump',
-              score: coins,
-              durationSeconds: duration.clamp(1, 3600),
-              sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
-              originalScore: baseAmt,
-              multiplier: isDouble ? 2 : 1,
-            );
-            if (!mounted) return;
-            if (result.success || result.queued) {
-              final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-              ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
-              ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
-              
-              _claimAnimController.reset();
-              _flyingCoins.clear();
-              setState(() {
-                _showCoinClaimAnimation = false;
-                _hasClaimedReward = false;
-                _adWatched = false;
-                _handledGameOver = false;
-                _originalCoinsEarned = 0;
-                _displayedCoins = _coins;
-              });
-              _startGame();
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to save game reward')),
-              );
-            }
-          }
-        },
-      );
-    } else {
-      _claimAnimController.reset();
-      _flyingCoins.clear();
-      setState(() {
-        _showCoinClaimAnimation = false;
-        _hasClaimedReward = false;
-        _adWatched = false;
-        _handledGameOver = false;
-        _originalCoinsEarned = 0;
-        _displayedCoins = _coins;
-      });
-      _startGame();
-    }
-  }
-
   void _updateFlyingCoins() {
     if (!mounted) return;
 
     final dt = _claimAnimController.value;
     setState(() {
-      if (_showCoinClaimAnimation) {
-        final eased = Curves.easeOutCubic.transform(dt);
-        _displayedCoins =
-            (_coins - (_game.coinsEarned * (1.0 - eased))).round();
-      }
 
       for (var coin in _flyingCoins) {
         if (dt > coin.delay) {
@@ -1764,16 +1604,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () async {
-                      final shouldLeave = await showQuitConfirmationDialog(
-                        context,
-                        title: 'Quit Game?',
-                        message: 'Are you sure you want to go back?',
-                      );
-                      if (shouldLeave && context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
+                    onTap: () => Navigator.of(context).pop(),
                     child: Container(
                       width: 44,
                       height: 44,
@@ -2134,337 +1965,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     );
   }
 
-  // --- Game Over Overlay Screen ---
-  Widget _buildGameOverOverlay() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black.withOpacity(0.7),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Game Over header
-            Text(
-              'GAME OVER',
-              style: GoogleFonts.outfit(
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFFFF52A2),
-                letterSpacing: -0.5,
-                shadows: [
-                  const Shadow(
-                    color: Color(0xFFFF52A2),
-                    blurRadius: 15,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Stats Panel
-            Container(
-              width: 320,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: const Color(0xFF19163D),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                    color: const Color(0xFFFF52A2).withOpacity(0.4),
-                    width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF52A2).withOpacity(0.15),
-                    blurRadius: 20,
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Score Row
-                  _buildStatRow(
-                      'SCORE', '${_game.score}', const Color(0xFF00FFCC)),
-                  const Divider(color: Colors.white12, height: 24),
-
-                  _buildCoinStatRow('RBX BALANCE', _displayedCoins,
-                      highlight: _showCoinClaimAnimation),
-                  const Divider(color: Colors.white12, height: 24),
-
-                  // Max Combo Row
-                  _buildStatRow('MAX COMBO', 'x${_game.maxCombo}',
-                      const Color(0xFF8C62F8)),
-                  const Divider(color: Colors.white12, height: 24),
-
-                  // Coins Earned
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'EARNED',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white60,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Image.asset(
-                            AppAssets.goldRbxCoin,
-                            width: 22,
-                            height: 22,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.monetization_on,
-                              color: Color(0xFFFFCC44),
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '+${_game.coinsEarned} RBX',
-                            style: GoogleFonts.outfit(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFFFFCC44),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Buttons Row
-            if (!_showCoinClaimAnimation)
-              SizedBox(
-                width: 320,
-                child: Column(
-                  children: [
-                    // Claim button (Always first if earned > 0)
-                    if (_game.coinsEarned > 0 && !_hasClaimedReward)
-                      GestureDetector(
-                        onTap: _claimCoins,
-                        child: Container(
-                          width: double.infinity,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFFCC44), Color(0xFFFFCC44)],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF9E00).withOpacity(0.4),
-                                blurRadius: 15,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                            border: Border.all(color: Colors.white30),
-                          ),
-                          child: Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.bolt,
-                                    color: Color(0xFF0F172A), size: 20),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'CLAIM REWARD',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF0F172A),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_game.coinsEarned > 0 && _hasClaimedReward)
-                      Container(
-                        width: double.infinity,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color:
-                              const Color(0xFF00FFCC).withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color:
-                                const Color(0xFF00FFCC).withValues(alpha: 0.45),
-                          ),
-                        ),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check_circle,
-                                  color: Color(0xFF00FFCC), size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'REWARD CLAIMED',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF00FFCC),
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        // Play Again
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: _playAgainFromGameOver,
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6E3AFF),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'PLAY AGAIN',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Quit Button
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => Navigator.of(context).pop(
-                                _hasClaimedReward ? _game.coinsEarned : null),
-                            child: Container(
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'QUIT',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatRow(String label, String value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Colors.white60,
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.outfit(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCoinStatRow(String label, int value, {bool highlight = false}) {
-    final pulse = highlight
-        ? 1.0 + math.sin(_claimAnimController.value * math.pi) * 0.08
-        : 1.0;
-
-    return Transform.scale(
-      scale: pulse,
-      alignment: Alignment.centerRight,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.white60,
-            ),
-          ),
-          Row(
-            children: [
-              Image.asset(
-                AppAssets.goldRbxCoin,
-                width: 22,
-                height: 22,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.monetization_on,
-                  color: Color(0xFFFFCC44),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '$value RBX',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFFFFCC44),
-                  shadows: highlight
-                      ? [
-                          const Shadow(
-                            color: Color(0xFFFFCC44),
-                            blurRadius: 12,
-                          ),
-                        ]
-                      : null,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // --- Bezier Claim Coin ---

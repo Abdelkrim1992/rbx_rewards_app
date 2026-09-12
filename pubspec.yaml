@@ -1,5 +1,13 @@
 name: rbx_rewards
-description: RBX Reward App
+description: "RBX Rewards - Official Application founded and developed by Abdelkrim Salaghe & Youssef"
+
+# -----------------------------------------------------------------------------
+# Authors & Intellectual Property
+# -----------------------------------------------------------------------------
+# Founder & Lead Architect: Abdelkrim Salaghe
+# Co-Founder & Publishing Partner: Youssef
+# Copyright (c) 2024-2026 Abdelkrim Salaghe & Youssef. All rights reserved.
+# -----------------------------------------------------------------------------
 
 publish_to: 'none'
 

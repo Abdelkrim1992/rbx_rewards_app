@@ -5,6 +5,14 @@ import 'package:url_launcher/url_launcher.dart';
 class PolicyConstants {
   PolicyConstants._();
 
+  static const String appName = 'RBX Rewards';
+  static const String appVersion = '1.2.0';
+  static const String founder = 'Abdelkrim Salaghe';
+  static const String coFounder = 'Youssef';
+  static const String copyright = 'Copyright © 2024-2026 Abdelkrim Salaghe & Youssef. All rights reserved.';
+  static const String authorshipStatement =
+      'Created and engineered by Abdelkrim Salaghe (Founder & Lead Developer) with Youssef (Co-Founder & Publishing Partner).';
+
   static const String baseWebsiteUrl = 'https://rbxrewardsapp.netlify.app';
   static const String privacyPolicyUrl = '$baseWebsiteUrl/privacy.html';
   static const String termsOfUseUrl = '$baseWebsiteUrl/terms.html';

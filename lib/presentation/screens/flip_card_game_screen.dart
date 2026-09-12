@@ -6,13 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
-import '../providers/ad_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
-import '../../widgets/congratulations_dialog.dart';
 import '../../core/utils/game_reward_helper.dart';
+import '../../core/utils/reward_helper.dart';
 
 class FlipCardGameScreen extends ConsumerStatefulWidget {
   const FlipCardGameScreen({super.key});
@@ -255,7 +254,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
   }
 
   void _claimCoins() async {
-    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingAd) {
+    if (_originalCoinsEarned <= 0 || _hasClaimed || _isProcessingClaim) {
       if (_hasClaimed && mounted) Navigator.of(context).pop();
       return;
     }
@@ -266,10 +265,17 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
 
     await GamePrefs.incrementGamePlayCount('flip_card');
 
-    final adNotifier = ref.read(adProvider.notifier);
-    await adNotifier.showRewardedInterstitial(
-      AdPlacement.miniGameCompletion,
-      onReward: (_) async {
+    if (!mounted) return;
+
+    await showRewardChoice(
+      context: context,
+      featureName: 'Memory Match Reward',
+      baseReward: _originalCoinsEarned,
+      quickPlacement: AdPlacement.miniGameCompletion,
+      premiumPlacement: AdPlacement.doubleReward,
+      heroAsset: AppAssets.memoryMatchGame,
+      onSuccess: (coins) async {
+        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
         final duration = _gameStartTime != null
             ? DateTime.now().difference(_gameStartTime!).inSeconds
             : 1;
@@ -277,15 +283,15 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
         try {
           final result = await ref.read(gameServiceProvider).submitGameResult(
             gameName: 'flip_card',
-            score: _originalCoinsEarned,
+            score: coins,
             durationSeconds: duration.clamp(1, 3600),
             sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
             originalScore: _originalCoinsEarned,
-            multiplier: 1,
+            multiplier: multiplier,
           );
           if (!mounted) return;
           if (result.success || result.queued) {
-            final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
+            final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
             ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
             ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
 
@@ -294,11 +300,6 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                 _hasClaimed = true;
                 _coinsEarned = earned;
               });
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => CongratulationsDialog(earnedCoins: earned),
-              );
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -313,24 +314,13 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
           }
         }
       },
-      onAdDismissed: () {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-        }
-      },
-      onAdFailed: (error) async {
-        if (mounted) {
-          setState(() {
-            _isProcessingClaim = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.isNotEmpty ? error : 'Ad unavailable. Please try again.')),
-          );
-        }
-      },
     );
+
+    if (mounted) {
+      setState(() {
+        _isProcessingClaim = false;
+      });
+    }
   }
 
   Future<void> _autoCreditCoinsOnPlayAgain() async {
@@ -455,100 +445,17 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
             Align(
               alignment: Alignment.centerLeft,
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
                   if (_gameState == 'PLAYING') {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: Colors.white,
-                        surfaceTintColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24)),
-                        title: Text(
-                          'Quit Game?',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 22,
-                            color: const Color(0xFF131326),
-                          ),
-                        ),
-                        content: Text(
+                    final shouldLeave = await showQuitConfirmationDialog(
+                      context,
+                      title: 'Quit Game?',
+                      message:
                           'Are you sure you want to exit? You will lose unclaimed progress.',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: const Color(0xFF4A4B60),
-                            height: 1.4,
-                          ),
-                        ),
-                        actionsPadding:
-                            const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                        actions: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () => Navigator.pop(ctx),
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F1FB),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Cancel',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF868A9F),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _InteractiveCard(
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    Navigator.pop(context);
-                                  },
-                                  child: Container(
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFFF5252),
-                                          Color(0xFFFF1744)
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFFF1744)
-                                              .withOpacity(0.3),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                                    ),
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Quit',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
                     );
+                    if (shouldLeave && mounted) {
+                      Navigator.of(context).pop();
+                    }
                   } else {
                     Navigator.of(context).pop();
                   }
