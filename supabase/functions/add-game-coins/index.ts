@@ -75,11 +75,27 @@ Deno.serve(async (req) => {
   }
 
   // Ensure the user row exists (covers legacy accounts created before trigger setup).
+  const displayName =
+    (user.user_metadata?.display_name as string) ||
+    `Player_${uid.substring(0, 6)}`;
+
   const { error: userUpsertError } = await supabase
     .from("users")
-    .upsert({ id: uid }, { onConflict: "id", ignoreDuplicates: true });
+    .upsert(
+      { id: uid, display_name: displayName },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
   if (userUpsertError) {
-    return errorResponse(`Failed to initialize user profile: ${userUpsertError.message}`, 500);
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", uid)
+      .maybeSingle();
+
+    if (!existingUser) {
+      console.error("User upsert error in add-game-coins:", userUpsertError);
+      return errorResponse(`Failed to initialize user profile: ${userUpsertError.message}`, 500);
+    }
   }
 
   if (!amount || amount <= 0) {

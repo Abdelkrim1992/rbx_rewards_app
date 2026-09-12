@@ -14,6 +14,7 @@ import '../providers/data_providers.dart';
 import '../providers/reward_catalog_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/providers.dart';
 import 'rewards/widgets/rewards_social_proof_ticker.dart';
 
 class RewardsScreen extends ConsumerStatefulWidget {
@@ -82,18 +83,28 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       return;
     }
 
-    // Confirmation dialog
-    final confirmed = await showDialog<bool>(
+    // Claim dialog prompting for Roblox username & delivery email
+    final userProfile = ref.read(userProfileProvider);
+    final auth = ref.read(authServiceProvider);
+    final initialUsername = userProfile.displayName.isNotEmpty && userProfile.displayName != 'Player'
+        ? userProfile.displayName
+        : '';
+    final initialEmail = auth.currentUser?.email ?? '';
+
+    final claimResult = await showDialog<_ClaimResult?>(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.black87,
-      builder: (_) => _RedeemConfirmDialog(
+      builder: (_) => _ClaimRewardDialog(
         rewardTitle: '${item.title} (${denomination.shortLabel})',
+        denominationLabel: denomination.label,
         cost: denomination.coinCost,
+        defaultUsername: initialUsername,
+        defaultEmail: initialEmail,
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (claimResult == null || !mounted) return;
 
     setState(() => _isProcessing = true);
 
@@ -913,19 +924,49 @@ class _DynamicRewardCard extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               Expanded(
-                child: InteractiveButton(
-                  height: 44,
-                  borderRadius: 14,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  icon: canRedeem
-                      ? Icons.lock_open_rounded
-                      : Icons.lock_rounded,
-                  iconSize: 15,
-                  iconSpacing: 6,
-                  text: canRedeem ? 'Redeem Now' : 'Locked',
-                  onTap: onRedeem,
-                ),
+                child: canRedeem
+                    ? InteractiveButton(
+                        height: 44,
+                        borderRadius: 14,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        icon: Icons.celebration_rounded,
+                        iconSize: 15,
+                        iconSpacing: 6,
+                        text: 'Claim',
+                        onTap: onRedeem,
+                      )
+                    : Container(
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1.0,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.lock_rounded,
+                              size: 14,
+                              color: Color(0xFF94A3B8),
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Locked',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),
@@ -1397,142 +1438,331 @@ class _FaqItem extends StatelessWidget {
   }
 }
 
-// ─── Confirmation Dialog ─────────────────────────────────────────────────────
+// ─── Claim Reward Dialog ─────────────────────────────────────────────────────
 
-class _RedeemConfirmDialog extends StatelessWidget {
-  final String rewardTitle;
-  final int cost;
+class _ClaimResult {
+  final String robloxUsername;
+  final String email;
 
-  const _RedeemConfirmDialog({
-    required this.rewardTitle,
-    required this.cost,
+  const _ClaimResult({
+    required this.robloxUsername,
+    required this.email,
   });
+}
+
+class _ClaimRewardDialog extends StatefulWidget {
+  final String rewardTitle;
+  final String denominationLabel;
+  final int cost;
+  final String defaultUsername;
+  final String defaultEmail;
+
+  const _ClaimRewardDialog({
+    required this.rewardTitle,
+    required this.denominationLabel,
+    required this.cost,
+    required this.defaultUsername,
+    required this.defaultEmail,
+  });
+
+  @override
+  State<_ClaimRewardDialog> createState() => _ClaimRewardDialogState();
+}
+
+class _ClaimRewardDialogState extends State<_ClaimRewardDialog> {
+  late final TextEditingController _usernameController;
+  late final TextEditingController _emailController;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController = TextEditingController(text: widget.defaultUsername);
+    _emailController = TextEditingController(text: widget.defaultEmail);
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+
+    if (username.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your Roblox username');
+      return;
+    }
+
+    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+      setState(() => _errorMessage = 'Please enter a valid delivery email address');
+      return;
+    }
+
+    Navigator.of(context).pop(_ClaimResult(
+      robloxUsername: username,
+      email: email,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      insetPadding: const EdgeInsets.all(24),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.2),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 68,
-              height: 68,
-              decoration: const BoxDecoration(
-                color: AppColors.primarySoft,
-                shape: BoxShape.circle,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.cardBorder, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.18),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
               ),
-              child: const Icon(
-                Icons.card_giftcard_rounded,
-                color: AppColors.primary,
-                size: 34,
-              ),
-            ),
-            const SizedBox(height: 18),
-            const Text(
-              'Confirm Redemption',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryText,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              rewardTitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  AppAssets.goldCoin,
-                  width: 16,
-                  height: 16,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.monetization_on,
-                    size: 16,
-                    color: Color(0xFFFFCC44),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  '${cost.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} Coins',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Your digital code will be sent to your Claimed Codes tab within 24–48 hours upon verification.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF64748B),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 22),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Icon & Title
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primarySoft,
+                        shape: BoxShape.circle,
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: const Icon(
+                        Icons.card_giftcard_rounded,
+                        color: AppColors.primary,
+                        size: 30,
+                      ),
                     ),
-                    child: const Text(
-                      'Cancel',
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Claim Your Reward',
                       style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryText,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.rewardTitle,
+                      style: const TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF64748B),
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF9FE),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.cardBorder),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            AppAssets.goldCoin,
+                            width: 14,
+                            height: 14,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.monetization_on,
+                              size: 14,
+                              color: Color(0xFFFFCC44),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '-${widget.cost.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} Coins',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+
+              // Roblox Username Input
+              const Text(
+                'Roblox Username',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _usernameController,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  hintText: 'e.g. GamerPro123',
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  prefixIcon: const Icon(Icons.sports_esports_rounded, color: AppColors.primary, size: 20),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+                onChanged: (_) {
+                  if (_errorMessage != null) setState(() => _errorMessage = null);
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Delivery Email Input
+              const Text(
+                'Delivery Email Address',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  hintText: 'Where to send your digital card PIN',
+                  hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary, size: 20),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.cardBorder, width: 1.0),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  ),
+                ),
+                onChanged: (_) {
+                  if (_errorMessage != null) setState(() => _errorMessage = null);
+                },
+              ),
+
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, size: 14, color: Colors.redAccent),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 14),
+
+              // Trust Info Container
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Your digital Roblox gift card PIN will be sent to this email and saved in your Claimed Locker within 24–48 hours.',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Actions
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.cardBorder, width: 1.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF64748B),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InteractiveButton(
-                    text: 'Confirm',
-                    height: 46,
-                    borderRadius: 14,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w800,
-                    onTap: () => Navigator.of(context).pop(true),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InteractiveButton(
+                      text: 'Confirm Claim',
+                      height: 46,
+                      borderRadius: 14,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      onTap: _submit,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

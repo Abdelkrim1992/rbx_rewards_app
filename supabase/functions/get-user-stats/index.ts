@@ -57,17 +57,43 @@ Deno.serve(async (req) => {
     if (error || !data) {
       // 2.5 Auto-heal: If the user exists in Auth but not in public.users, create the row
       console.log(`User ${uid} not found in public.users, creating...`);
+      const defaultName =
+        (user.user_metadata?.display_name as string) ||
+        `Player_${uid.substring(0, 6)}`;
       const { data: newUser, error: insertError } = await supabase
         .from("users")
-        .insert([{ id: uid }])
+        .insert([{
+          id: uid,
+          display_name: defaultName,
+          balance: 0,
+          total_earned: 0,
+          total_spent: 0,
+          games_played: 0,
+          offers_completed: 0,
+          consecutive_days: 0,
+          spin_free_spins: 3,
+          level: 1,
+        }])
         .select()
         .single();
 
       if (insertError || !newUser) {
-        console.error("Failed to auto-heal user row:", insertError);
-        return errorResponse("User not found and could not be created", 404);
+        // Fallback: check if created concurrently
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", uid)
+          .maybeSingle();
+
+        if (existingUser) {
+          data = existingUser;
+        } else {
+          console.error("Failed to auto-heal user row:", insertError);
+          return errorResponse("User not found and could not be created", 404);
+        }
+      } else {
+        data = newUser;
       }
-      data = newUser;
     }
 
     // 3. Populate Redis cache (fire-and-forget, swallow errors)

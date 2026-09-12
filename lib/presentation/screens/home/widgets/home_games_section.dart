@@ -82,7 +82,7 @@ class HomeGamesSection extends StatelessWidget {
 
         // Horizontal Games Shelf
         SizedBox(
-          height: 190,
+          height: 170,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(
               horizontal: AppLayout.screenPadding,

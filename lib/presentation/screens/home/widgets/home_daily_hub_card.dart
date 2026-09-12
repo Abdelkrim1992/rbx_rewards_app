@@ -140,14 +140,15 @@ class _DailyHubTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 60,
+      height: 46,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAF9FE),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF4F2FD),
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(color: AppColors.cardBorder, width: 1.0),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _TabPillItem(
             title: 'Daily Streak',
@@ -196,22 +197,23 @@ class _TabPillItem extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 180),
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(10),
             border: isSelected
                 ? Border.all(
-                    color: AppColors.cardBorder.withValues(alpha: 0.7),
-                    width: 1.0,
+                    color: AppColors.primary.withValues(alpha: 0.18),
+                    width: 1.2,
                   )
                 : null,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1.5),
+                      color: AppColors.primary.withValues(alpha: 0.10),
+                      blurRadius: 8,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
                     ),
                   ]
                 : null,
@@ -219,20 +221,26 @@ class _TabPillItem extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(icon, style: const TextStyle(fontSize: 13)),
+              Text(
+                icon,
+                style: TextStyle(
+                  fontSize: isSelected ? 14 : 13,
+                ),
+              ),
               const SizedBox(width: 5),
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: -0.1,
                   color: isSelected
                       ? AppColors.primary
-                      : const Color(0xFF64748B),
+                      : const Color(0xFF94A3B8),
                 ),
               ),
               if (badgeText != null) ...[
-                const SizedBox(width: 5),
+                const SizedBox(width: 6),
                 _TabBadge(text: badgeText!, isSelected: isSelected),
               ],
               if (hasActionAlert) ...[
@@ -255,22 +263,36 @@ class _TabBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      height: 20,
+      constraints: BoxConstraints(minWidth: isSelected ? 24 : 20),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSelected ? 6.5 : 5.5,
+      ),
       decoration: BoxDecoration(
         color: isSelected
-            ? AppColors.primarySoft
-            : const Color(0xFFE2E8F0),
-        borderRadius: BorderRadius.circular(6),
+            ? AppColors.primary.withValues(alpha: 0.12)
+            : const Color(0xFFE8EDF2),
+        borderRadius: BorderRadius.circular(10),
+        border: isSelected
+            ? Border.all(
+                color: AppColors.primary.withValues(alpha: 0.30),
+                width: 1.0,
+              )
+            : null,
       ),
+      alignment: Alignment.center,
       child: Text(
         text,
+        textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 9.5,
-          fontWeight: FontWeight.w700,
+          fontSize: isSelected ? 10.5 : 9.5,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+          height: 1.15,
           color: isSelected
               ? AppColors.primary
-              : const Color(0xFF475569),
+              : const Color(0xFF94A3B8),
         ),
       ),
     );
