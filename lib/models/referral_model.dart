@@ -49,10 +49,14 @@ class ReferralRedeemResult {
   final bool isSuccess;
   final String message;
   final int coinsAwarded;
+  final String? referrerName;
+  final int? newBalance;
 
   const ReferralRedeemResult({
     required this.isSuccess,
     required this.message,
     this.coinsAwarded = 0,
+    this.referrerName,
+    this.newBalance,
   });
 }

@@ -3,7 +3,6 @@ import '../../models/referral_model.dart';
 import '../../business/referral_service.dart';
 import 'coin_provider.dart';
 import 'providers.dart';
-import 'user_provider.dart';
 
 final referralServiceProvider = Provider<ReferralService>((ref) {
   return ReferralService(
@@ -40,9 +39,22 @@ class ReferralNotifier extends StateNotifier<AsyncValue<ReferralState>> {
     final result = await service.redeemCode(code);
 
     if (result.isSuccess) {
-      // Refresh user balance and profile
-      _ref.invalidate(coinProvider);
-      _ref.invalidate(userProfileStreamProvider);
+      final currentCoins = _ref.read(coinProvider);
+      final coinsAwarded = result.coinsAwarded > 0
+          ? result.coinsAwarded
+          : ReferralState.welcomeBonusCoins;
+
+      final int targetBalance = (result.newBalance != null && result.newBalance! > currentCoins)
+          ? result.newBalance!
+          : (currentCoins + coinsAwarded);
+
+      // Instantly update user balance in memory and secure storage without resetting to 0
+      _ref.read(coinProvider.notifier).updateBalance(targetBalance);
+      try {
+        await _ref.read(secureRepositoryProvider).saveBalance(targetBalance);
+      } catch (_) {}
+
+      // Refresh referral state data
       await load();
     }
 

@@ -139,14 +139,36 @@ class SupabaseRepository {
       return {'success': false, 'error': 'Unauthorized'};
     }
     return _call(() async {
+      // 1. Ensure user row exists in public.users first
+      try {
+        await _client.from('users').upsert({
+          'id': uid,
+          'welcome_bonus_claimed': false,
+          'balance': 0,
+        }, onConflict: 'id');
+      } catch (e) {
+        debugPrint('ensure user in claimWelcomeBonus notice: $e');
+      }
+
+      // 2. Attempt atomic claim via database RPC
       try {
         final resp = await _client.rpc('claim_welcome_bonus');
         if (resp is Map) {
-          return Map<String, dynamic>.from(resp);
+          final map = Map<String, dynamic>.from(resp);
+          if (map['success'] == true) {
+            debugPrint('✅ Welcome bonus claimed via RPC: ${map['balance']}');
+            return map;
+          }
+          debugPrint('claim_welcome_bonus RPC returned non-success: $map');
+        } else {
+          return {'success': true, 'claimed': true, 'amount': 500};
         }
-        return {'success': true, 'claimed': true, 'amount': 50};
       } catch (e) {
-        debugPrint('claim_welcome_bonus RPC error, attempting fallback: $e');
+        debugPrint('claim_welcome_bonus RPC error, attempting direct fallback: $e');
+      }
+
+      // 3. Fallback: Direct database upsert
+      try {
         final userRow = await _client
             .from('users')
             .select('welcome_bonus_claimed, balance')
@@ -158,21 +180,42 @@ class SupabaseRepository {
           return {
             'success': false,
             'error': 'Welcome bonus already claimed',
-            'balance': userRow['balance'] ?? 0
+            'balance': userRow['balance'] ?? 500
           };
         }
         final currentBal = (userRow?['balance'] as int?) ?? 0;
-        final newBal = currentBal + 50;
-        await _client.from('users').update({
+        final newBal = currentBal + 500;
+        await _client.from('users').upsert({
+          'id': uid,
           'balance': newBal,
+          'total_earned': newBal,
           'welcome_bonus_claimed': true,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
-        }).eq('id', uid);
+        }, onConflict: 'id');
+
+        try {
+          await _client.from('transactions').insert({
+            'user_id': uid,
+            'amount': 500,
+            'source': 'welcome_bonus',
+            'tx_id': 'welcome_${DateTime.now().millisecondsSinceEpoch}',
+            'processed_at': DateTime.now().toUtc().toIso8601String(),
+          });
+        } catch (_) {}
+
+        debugPrint('✅ Welcome bonus saved directly to database: $newBal');
         return {
           'success': true,
           'claimed': true,
           'balance': newBal,
-          'amount': 50
+          'amount': 500
+        };
+      } catch (directError) {
+        debugPrint('Direct welcome bonus database save error: $directError');
+        return {
+          'success': false,
+          'error': directError.toString(),
+          'balance': 500,
         };
       }
     });
@@ -192,6 +235,72 @@ class SupabaseRepository {
       debugPrint('hasClaimedWelcomeBonus error: $e');
       return false;
     }
+  }
+
+  /// Redeems a friend's referral code atomically via Supabase RPC or Edge Function
+  Future<Map<String, dynamic>> redeemReferralCode(
+    String code,
+    String deviceFingerprint,
+  ) async {
+    final uid = currentUserId;
+    if (uid == null) {
+      return {'success': false, 'error': 'Unauthorized. Please sign in.'};
+    }
+    return _call(() async {
+      try {
+        final resp = await _client.rpc('redeem_referral_code', params: {
+          'p_code': code,
+          'p_device_fingerprint': deviceFingerprint,
+        });
+        if (resp is Map) {
+          return Map<String, dynamic>.from(resp);
+        }
+        return {'success': false, 'error': 'Invalid response from server.'};
+      } catch (e) {
+        debugPrint('redeem_referral_code RPC error, trying edge function fallback: $e');
+        try {
+          return await callEdgeFunction('redeem-referral', body: {
+            'code': code,
+            'deviceFingerprint': deviceFingerprint,
+          });
+        } catch (edgeErr) {
+          debugPrint('redeem-referral edge fallback error: $edgeErr');
+          rethrow;
+        }
+      }
+    });
+  }
+
+  /// Fetches referral statistics (invite count, earnings, code, referred by) from Supabase
+  Future<Map<String, dynamic>> getReferralStats() async {
+    final uid = currentUserId;
+    if (uid == null) return <String, dynamic>{};
+    return _call(() async {
+      final data = await _client
+          .from('users')
+          .select('referral_code, referred_by, referral_count, referral_earnings')
+          .eq('id', uid)
+          .maybeSingle();
+      if (data == null) return <String, dynamic>{};
+
+      String? referredByCode;
+      if (data['referred_by'] != null) {
+        final refUser = await _client
+            .from('users')
+            .select('referral_code')
+            .eq('id', data['referred_by'])
+            .maybeSingle();
+        referredByCode = refUser?['referral_code'] as String?;
+      }
+
+      return {
+        'referral_code': data['referral_code'],
+        'referred_by_code': referredByCode,
+        'referral_count': (data['referral_count'] as int?) ?? 0,
+        'referral_earnings': (data['referral_earnings'] as int?) ?? 0,
+        'has_redeemed': data['referred_by'] != null,
+      };
+    });
   }
 
   bool _isJwtFutureError(Object e) {

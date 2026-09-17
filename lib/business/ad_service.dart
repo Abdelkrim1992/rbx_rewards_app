@@ -250,16 +250,34 @@ class AdService {
     Future<void> Function(AdError error)? onAdFailedToShow,
   }) async {
     final completer = Completer<bool>();
+    bool hasEarnedReward = false;
+    int rewardAmount = 0;
+    bool isDismissed = false;
+
+    Future<void> deliverReward() async {
+      if (!completer.isCompleted) {
+        try {
+          await onReward(rewardAmount > 0 ? rewardAmount : 1);
+        } catch (e) {
+          debugPrint('AdService: onReward error: $e');
+        }
+        if (!completer.isCompleted) completer.complete(true);
+      }
+    }
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
         debugPrint('AdService: ad showed');
         if (placement != null) _recordImpression(placement);
       },
-      onAdDismissedFullScreenContent: (ad) {
+      onAdDismissedFullScreenContent: (ad) async {
+        isDismissed = true;
         ad.dispose();
+        if (hasEarnedReward) {
+          await deliverReward();
+        }
         onAdDismissed?.call();
-        if (!completer.isCompleted) completer.complete(false);
+        if (!completer.isCompleted) completer.complete(hasEarnedReward);
       },
       onAdFailedToShowFullScreenContent: (ad, error) async {
         ad.dispose();
@@ -271,9 +289,12 @@ class AdService {
     await ad.setImmersiveMode(true);
     ad.show(
       onUserEarnedReward: (ad, reward) async {
-        final amount = reward.amount.toInt();
-        await onReward(amount);
-        if (!completer.isCompleted) completer.complete(true);
+        debugPrint('AdService: user earned reward (${reward.amount})');
+        hasEarnedReward = true;
+        rewardAmount = reward.amount.toInt();
+        if (isDismissed) {
+          await deliverReward();
+        }
       },
     );
 

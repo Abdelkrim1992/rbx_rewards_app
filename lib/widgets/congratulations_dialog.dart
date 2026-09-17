@@ -5,19 +5,30 @@ import 'interactive_button.dart';
 import 'reward_claim_dialog.dart';
 
 /// Modern congratulations popup that matches the RewardClaimDialog visual standard.
-class CongratulationsDialog extends StatelessWidget {
+class CongratulationsDialog extends StatefulWidget {
   final int earnedCoins;
   final String? title;
   final String? heroAsset;
+  final String? buttonText;
   final VoidCallback? onDismiss;
+  final Future<void> Function()? onClaim;
 
   const CongratulationsDialog({
     super.key,
     required this.earnedCoins,
     this.title,
     this.heroAsset,
+    this.buttonText,
     this.onDismiss,
+    this.onClaim,
   });
+
+  @override
+  State<CongratulationsDialog> createState() => _CongratulationsDialogState();
+}
+
+class _CongratulationsDialogState extends State<CongratulationsDialog> {
+  bool _isClaiming = false;
 
   @override
   Widget build(BuildContext context) {
@@ -72,7 +83,7 @@ class CongratulationsDialog extends StatelessWidget {
                   onTap: () {
                     HapticFeedback.lightImpact();
                     Navigator.of(context).pop();
-                    onDismiss?.call();
+                    widget.onDismiss?.call();
                   },
                   child: Container(
                     width: 32,
@@ -118,7 +129,7 @@ class CongratulationsDialog extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       child: Center(
                         child: Image.asset(
-                          heroAsset ?? AppAssets.onboardingCoin,
+                          widget.heroAsset ?? AppAssets.onboardingCoin,
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Icon(
                             Icons.stars_rounded,
@@ -132,7 +143,7 @@ class CongratulationsDialog extends StatelessWidget {
 
                     // Title
                     Text(
-                      (title ?? 'Reward Earned').toUpperCase(),
+                      (widget.title ?? 'Reward Earned').toUpperCase(),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 18,
@@ -144,21 +155,34 @@ class CongratulationsDialog extends StatelessWidget {
                     const SizedBox(height: 12),
 
                     // Reward box display
-                    RewardBox(amount: earnedCoins),
+                    RewardBox(amount: widget.earnedCoins),
                     const SizedBox(height: 18),
 
                     // Goal progress tracking card
                     const GoalProgressCard(),
                     const SizedBox(height: 20),
 
-                    // Action button
+                    // Action button — coins are credited ONLY when this is tapped
                     InteractiveButton(
-                      text: 'Collect +$earnedCoins RBX',
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.of(context).pop();
-                        onDismiss?.call();
-                      },
+                      text: widget.buttonText ?? 'Claim +${widget.earnedCoins} RBX',
+                      isLoading: _isClaiming,
+                      onTap: _isClaiming
+                          ? null
+                          : () async {
+                              HapticFeedback.lightImpact();
+                              final navigator = Navigator.of(context);
+                              if (widget.onClaim != null) {
+                                setState(() => _isClaiming = true);
+                                try {
+                                  await widget.onClaim!();
+                                } finally {
+                                  if (mounted) setState(() => _isClaiming = false);
+                                }
+                              } else {
+                                widget.onDismiss?.call();
+                              }
+                              navigator.pop();
+                            },
                     ),
                   ],
                 ),

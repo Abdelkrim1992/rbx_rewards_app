@@ -138,25 +138,9 @@ Deno.serve(async (req) => {
     console.error("Failed to query coin_distributions:", e);
   }
 
-  // Daily Cap Check in Redis (overall games limit & subgame limit) - Fast path
   const todayStr = new Date().toISOString().split("T")[0];
   const capKey = `cap:game:${uid}:${todayStr}`;
   const subGameCapKey = `cap:game:${uid}:${gameName}:${todayStr}`;
-  try {
-    const currentDailyCap = parseInt(await redis.get(capKey) || "0", 10);
-    if (currentDailyCap + finalScore > gameDailyCap) {
-      const allowed = Math.max(0, gameDailyCap - currentDailyCap);
-      return errorResponse(`Daily game cap reached. Max allowed: ${allowed}`, 400);
-    }
-
-    const currentSubGameCap = parseInt(await redis.get(subGameCapKey) || "0", 10);
-    if (currentSubGameCap + finalScore > subGameLimit) {
-      const allowed = Math.max(0, subGameLimit - currentSubGameCap);
-      return errorResponse(`Daily limit reached for ${gameName}. Max allowed: ${allowed}`, 400);
-    }
-  } catch (capErr) {
-    console.warn("Redis cap check failed, relying on Postgres RPC process_game_session:", capErr);
-  }
 
   // Feasibility check first — reject unknown games and impossible scores
   const feasibility = isSessionFeasible(gameName, scoreToValidate, durationSeconds);
@@ -177,7 +161,7 @@ Deno.serve(async (req) => {
     ? clientTxId
     : `game_${sessionId}`;
 
-  // Atomic session processing via single RPC (prevents double-crediting race condition)
+  // Atomic session processing via single RPC (evaluates diminishing yield curve & awards scaled coins)
   const { data: result, error: processError } = await supabase.rpc("process_game_session", {
     p_session_id: sessionId,
     p_user_id: uid,
@@ -197,12 +181,14 @@ Deno.serve(async (req) => {
     return errorResponse(resultJson.error || "Session processing failed", 400);
   }
 
+  const creditedAmount = resultJson.credited ?? finalScore;
+
   // 3. Update Redis caps, leaderboard, and user profile cache in background (best-effort)
   (async () => {
     try {
-      await redis.incrby(capKey, finalScore);
+      await redis.incrby(capKey, creditedAmount);
       await redis.expire(capKey, 86400);
-      await redis.incrby(subGameCapKey, finalScore);
+      await redis.incrby(subGameCapKey, creditedAmount);
       await redis.expire(subGameCapKey, 86400);
 
       // Update Game High Score Leaderboard in Redis
@@ -220,11 +206,11 @@ Deno.serve(async (req) => {
     }
   })();
 
-  console.log(`User ${uid} earned ${finalScore} from ${gameName} (session ${sessionId})`);
+  console.log(`User ${uid} earned ${creditedAmount} from ${gameName} (session ${sessionId})`);
   return jsonResponse({
     success: true,
-    credited: finalScore,
-    dailyTotal: resultJson.dailyTotal ?? finalScore,
+    credited: creditedAmount,
+    dailyTotal: resultJson.dailyTotal ?? creditedAmount,
     balance: resultJson.balance,
   });
 });

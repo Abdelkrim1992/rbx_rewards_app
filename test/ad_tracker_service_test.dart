@@ -7,7 +7,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   FlutterSecureStorage.setMockInitialValues({});
 
-  group('AdTrackerService 20-Max Daily Limit Tests', () {
+  group('AdTrackerService 60-Max Daily Limit Tests', () {
     late AdTrackerService service;
 
     setUp(() async {
@@ -17,46 +17,47 @@ void main() {
       await service.resetDailyCounters();
     });
 
-    test('Default limits are configured to 20 max', () {
-      expect(AdTrackerService.maxDailyTotalAds, 20);
-      expect(AdTrackerService.maxDailyOptionalAds, 20);
+    test('Default limits are configured to 60 total and 55 optional max', () {
+      expect(AdTrackerService.maxDailyTotalAds, 60);
+      expect(AdTrackerService.maxDailyOptionalAds, 55);
       expect(AdTrackerService.maxDailyForcedAds, 10);
     });
 
-    test('Allows optional ads until daily 20 limit is reached', () async {
-      for (int i = 0; i < 19; i++) {
+    test('Allows optional ads until daily 55 optional limit is reached', () async {
+      for (int i = 0; i < 54; i++) {
         expect(service.canShowOptionalAd(), isTrue);
         await service.incrementDailyAdCount(AdType.optional);
       }
 
-      // 19th ad watched, 1 remaining
-      expect(service.dailyAdsWatched, 19);
+      // 54th ad watched, 1 remaining optional
+      expect(service.dailyAdsWatched, 54);
       expect(service.getRemainingOptionalAds(), 1);
       expect(service.canShowOptionalAd(), isTrue);
 
-      // 20th ad watched
+      // 55th ad watched
       await service.incrementDailyAdCount(AdType.optional);
-      expect(service.dailyAdsWatched, 20);
+      expect(service.dailyAdsWatched, 55);
       expect(service.canShowOptionalAd(), isFalse);
-      expect(service.canShowForcedAd(), isFalse);
       expect(service.getRemainingOptionalAds(), 0);
-      expect(service.getRemainingForcedAds(), 0);
+      // Forced ads still has remaining slots up to 60 total
+      expect(service.canShowForcedAd(), isTrue);
+      expect(service.getRemainingForcedAds(), 5);
     });
 
-    test('Total cap of 20 stops optional ads if forced ads also contributed', () async {
-      // 5 forced ads
-      for (int i = 0; i < 5; i++) {
+    test('Total cap of 60 stops optional ads if forced ads also contributed', () async {
+      // 10 forced ads
+      for (int i = 0; i < 10; i++) {
         await service.incrementDailyAdCount(AdType.forced);
       }
-      expect(service.dailyAdsWatched, 5);
+      expect(service.dailyAdsWatched, 10);
 
-      // 15 optional ads
-      for (int i = 0; i < 15; i++) {
+      // 50 optional ads (total = 60)
+      for (int i = 0; i < 50; i++) {
         await service.incrementDailyAdCount(AdType.optional);
       }
-      expect(service.dailyAdsWatched, 20);
+      expect(service.dailyAdsWatched, 60);
 
-      // Both should be capped at 20 total
+      // Both should be capped at 60 total
       expect(service.canShowOptionalAd(), isFalse);
       expect(service.canShowForcedAd(), isFalse);
       expect(service.getRemainingOptionalAds(), 0);

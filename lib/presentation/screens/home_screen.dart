@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/coin_provider.dart';
@@ -9,6 +10,7 @@ import '../providers/providers.dart';
 import '../providers/mega_chest_provider.dart';
 import '../providers/reward_catalog_provider.dart';
 import '../../models/ad_models.dart';
+import '../../models/reward_config.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/screen_title.dart';
@@ -16,6 +18,7 @@ import '../../widgets/streak_saver_sheet.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/congratulations_dialog.dart';
+import '../../widgets/ad_reward_dialog.dart';
 import '../../widgets/coin_burst.dart';
 import '../../core/utils/reward_helper.dart';
 
@@ -54,6 +57,26 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isProcessing = false;
   bool _showCoinBurst = false;
+  late final ScrollController _scrollController;
+  bool _isScrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        final scrolled = _scrollController.hasClients && _scrollController.offset > 12;
+        if (scrolled != _isScrolled) {
+          setState(() => _isScrolled = scrolled);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
@@ -65,11 +88,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _completeClaim({bool saveStreak = false}) async {
     final userProfile = ref.read(userProfileProvider);
-    final isWithinFirstWeek = userProfile.consecutiveDays < 7;
     final nextDay = (userProfile.consecutiveDays % 7) + 1;
-    final rewardAmount = isWithinFirstWeek
-        ? (nextDay == 7 ? 100 : 10 + (nextDay * 5))
-        : 15;
+    final rewardAmount = RewardConfig.getDailyStreakBaseReward(nextDay);
 
     await showRewardChoice(
       context: context,
@@ -78,6 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       quickPlacement: AdPlacement.dailyReward,
       premiumPlacement: AdPlacement.dailyReward,
       heroAsset: nextDay == 7 ? AppAssets.megaChest : AppAssets.goldRbxCoin,
+      multiplier: 3,
       onSuccess: (coins) async {
         await ref.read(dailyRewardCooldownProvider.notifier).claimDaily(
               amount: coins,
@@ -90,9 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _promptStreakSaver(int consecutiveDays) async {
     final nextDay = (consecutiveDays % 7) + 1;
-    final rewardAmount = consecutiveDays < 7
-        ? (nextDay == 7 ? 100 : 10 + (nextDay * 5))
-        : 15;
+    final rewardAmount = RewardConfig.getDailyStreakBaseReward(nextDay);
 
     await StreakSaverSheet.show(
       context: context,
@@ -158,30 +177,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
+    // Read dynamic reward amount from database via DailyCapService
+    final reward = ref.read(dailyCapServiceProvider).getBaseReward('ad', fallback: 50);
+
+    Future<void> claimReward() async {
+      await ref.read(coinProvider.notifier).credit(reward, 'ad');
+      ref.invalidate(userProfileStreamProvider);
+      ref.read(questStateProvider.notifier).recordVideoOrChest();
+    }
+
+    if (kIsWeb) {
+      setState(() => _isProcessing = false);
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AdRewardDialog(
+          title: 'WATCH & EARN',
+          subtitle: 'Ad Completed! +$reward Coins Unlocked',
+          buttonText: 'Claim $reward Coins',
+          onRewardGranted: () async {
+            await claimReward();
+          },
+        ),
+      );
+      return;
+    }
+
     await ref.read(adProvider.notifier).showOptionalAd(
       AdPlacement.doubleReward,
       onReward: (_) async {
-        await ref.read(coinProvider.notifier).credit(50, 'watch_video');
-        ref.invalidate(userProfileStreamProvider);
-        ref.read(questStateProvider.notifier).recordVideoOrChest();
         if (mounted) {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (_) => const CongratulationsDialog(
-              earnedCoins: 50,
+            builder: (_) => CongratulationsDialog(
+              earnedCoins: reward,
               title: 'Video Reward',
               heroAsset: AppAssets.watchEarnIcon,
+              buttonText: 'Claim $reward Coins',
+              onClaim: () async {
+                await claimReward();
+              },
             ),
           );
         }
       },
       onAdFailed: (error) async {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not load video: $error'),
-              backgroundColor: AppColors.purple,
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AdRewardDialog(
+              title: 'WATCH & EARN',
+              subtitle: 'Ad Completed! +$reward Coins Unlocked',
+              buttonText: 'Claim $reward Coins',
+              onRewardGranted: () async {
+                await claimReward();
+              },
             ),
           );
         }
@@ -193,19 +246,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _completeMegaChestClaim() async {
     if (_isProcessing) return;
+    // Read dynamic mega chest base reward from database
+    final megaChestBase = ref.read(dailyCapServiceProvider).getBaseReward('mega_chest', fallback: 1000);
     await showRewardChoice(
       context: context,
       featureName: 'Chest Reward',
-      baseReward: 1000,
+      baseReward: megaChestBase,
       quickPlacement: AdPlacement.chestOpen,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.megaChest,
       onSuccess: (coins) async {
         setState(() => _isProcessing = true);
         final success =
-            await ref.read(megaChestMilestoneProvider.notifier).claimReward();
-        if (success && coins > 1000) {
-          await ref.read(coinProvider.notifier).credit(coins - 1000, 'mega_chest_double');
+            await ref.read(megaChestMilestoneProvider.notifier).claimReward(baseReward: megaChestBase);
+        if (success && coins > megaChestBase) {
+          await ref.read(coinProvider.notifier).credit(coins - megaChestBase, 'mega_chest_double');
         }
         ref.invalidate(userProfileStreamProvider);
         if (mounted) setState(() => _isProcessing = false);
@@ -239,6 +294,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         subtitle: 'Tap & collect',
         imageUrl: AppAssets.tapTapGame,
         remainingCoins: capService.getRemainingCap('tap_tap'),
+        rewardAmount: capService.getPremiumReward('tap_tap'),
+        totalCap: capService.getCategoryCap('tap_tap'),
         bgColor: const Color(0xFFEAF3FF),
         onTap: () async {
           if (!isOnline) return;
@@ -257,6 +314,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         subtitle: 'Solve & win',
         imageUrl: AppAssets.quizMasterGame,
         remainingCoins: capService.getRemainingCap('math_quiz'),
+        rewardAmount: capService.getPremiumReward('math_quiz'),
+        totalCap: capService.getCategoryCap('math_quiz'),
         bgColor: const Color(0xFFE3F8EB),
         onTap: () async {
           if (!isOnline) return;
@@ -275,6 +334,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         subtitle: 'Fly & score',
         imageUrl: AppAssets.flappyJumpGame,
         remainingCoins: capService.getRemainingCap('flappy_jump'),
+        rewardAmount: capService.getPremiumReward('flappy_jump'),
+        totalCap: capService.getCategoryCap('flappy_jump'),
         bgColor: const Color(0xFFFFF3E3),
         onTap: () async {
           if (!isOnline) return;
@@ -293,6 +354,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         subtitle: 'Match pairs',
         imageUrl: AppAssets.memoryMatchGame,
         remainingCoins: capService.getRemainingCap('flip_card'),
+        rewardAmount: capService.getPremiumReward('flip_card'),
+        totalCap: capService.getCategoryCap('flip_card'),
         bgColor: const Color(0xFFFFE8F0),
         onTap: () async {
           if (!isOnline) return;
@@ -311,6 +374,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         subtitle: 'Answer & earn',
         imageUrl: AppAssets.quizMasterQuickActions,
         remainingCoins: capService.getRemainingCap('quizzes'),
+        rewardAmount: capService.getPremiumReward('quizzes'),
+        totalCap: capService.getCategoryCap('quizzes'),
         bgColor: const Color(0xFFEDE9FE),
         onTap: () async {
           if (!isOnline) return;
@@ -327,22 +392,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBody: true,
       body: Stack(
         children: [
           SafeArea(
             bottom: false,
             child: Column(
               children: [
+                // Top App Header (Fixed & Sticky with subtle scroll elevation)
+                RbxAppHeader(
+                  onNavTap: widget.onNavTap,
+                  isScrolled: _isScrolled,
+                ),
+
                 Expanded(
                   child: RefreshableScrollView(
-                    padding: const EdgeInsets.only(top: 2, bottom: 100),
+                    controller: _scrollController,
+                    padding: const EdgeInsets.only(
+                        top: 2, bottom: AppLayout.sectionSpacing),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // App Logo & Profile Header
-                        RbxAppHeader(onNavTap: widget.onNavTap),
-
                         // Offline banner if disconnected
                         if (!isOnline)
                           Padding(
@@ -403,6 +472,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // 4-Item Quick Earning Hub (Above the fold)
                         HomeQuickActionsGrid(
                           isOnline: isOnline,
+                          watchEarnCoins: capService.getBaseReward('ad', fallback: 50),
+                          isWatchEarnCapped: capService.isCapReachedFor('ad') || isFeaturesCapReached,
                           onChestTap: () async {
                             final earned =
                                 await Navigator.of(context).push<int>(
@@ -461,7 +532,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                         // Viral Referral Card
                         const HomeReferralCard(),
-                        const SizedBox(height: 24),
                       ],
                     ),
                   ),

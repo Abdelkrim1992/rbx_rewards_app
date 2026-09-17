@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../../models/reward_config.dart';
 import '../../../../theme/app_theme.dart';
 
 /// Smart-collapsing Daily Streak Card.
@@ -55,9 +57,9 @@ class _HomeDailyStreakCardState extends State<HomeDailyStreakCard> {
       activeDayToClaim = cycleStreak + 1;
     }
 
-    final activeDayReward = activeDayToClaim == 7
-        ? 100
-        : (activeDayToClaim != null ? 10 + (activeDayToClaim * 5) : 15);
+    final activeDayReward = activeDayToClaim != null
+        ? RewardConfig.getDailyStreakBaseReward(activeDayToClaim)
+        : RewardConfig.getDailyStreakBaseReward(1);
 
     // When claimed and not expanded, show the compact status pill
     final isCompact = widget.isDailyClaimed &&
@@ -560,7 +562,7 @@ class _StreakDayItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final coinReward = dayNum == 7 ? 100 : 10 + (dayNum * 5);
+    final coinReward = RewardConfig.getDailyStreakBaseReward(dayNum);
 
     return GestureDetector(
       onTap: onTap,

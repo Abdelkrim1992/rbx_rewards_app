@@ -69,51 +69,54 @@ class RewardBox extends StatelessWidget {
               ],
       ),
       child: Center(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              AppAssets.goldRbxCoin,
-              width: coinSize,
-              height: coinSize,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.monetization_on,
-                color: const Color(0xFFFFB000),
-                size: coinSize,
-              ),
-            ),
-            const SizedBox(width: 10),
-            if (animation != null)
-              AnimatedBuilder(
-                animation: animation!,
-                builder: (context, _) {
-                  return Text(
-                    '+${animation!.value} RBX',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w900,
-                      color: isDoubled
-                          ? const Color(0xFF8C62F8)
-                          : AppColors.primary,
-                      letterSpacing: -0.5,
-                    ),
-                  );
-                },
-              )
-            else
-              Text(
-                '+$amount RBX',
-                style: TextStyle(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w900,
-                  color: isDoubled
-                      ? const Color(0xFF8C62F8)
-                      : AppColors.primary,
-                  letterSpacing: -0.5,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                AppAssets.goldRbxCoin,
+                width: coinSize,
+                height: coinSize,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.monetization_on,
+                  color: const Color(0xFFFFB000),
+                  size: coinSize,
                 ),
               ),
-          ],
+              const SizedBox(width: 10),
+              if (animation != null)
+                AnimatedBuilder(
+                  animation: animation!,
+                  builder: (context, _) {
+                    return Text(
+                      '+${animation!.value} RBX',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w900,
+                        color: isDoubled
+                            ? const Color(0xFF8C62F8)
+                            : AppColors.primary,
+                        letterSpacing: -0.5,
+                      ),
+                    );
+                  },
+                )
+              else
+                Text(
+                  '+$amount RBX',
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w900,
+                    color: isDoubled
+                        ? const Color(0xFF8C62F8)
+                        : AppColors.primary,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

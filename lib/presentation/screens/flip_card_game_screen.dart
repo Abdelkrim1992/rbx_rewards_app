@@ -237,8 +237,9 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     final int baseCoins = _matchesFound * 2;
     int timeBonus = (_secondsLeft > 0) ? (_secondsLeft * 2) : 0;
     int comboBonus = _maxCombo >= 3 ? (_maxCombo * 25) : 0;
-    // Cap total at 15 base coins
-    int total = (baseCoins + timeBonus + comboBonus).clamp(0, 15);
+    final capService = ref.read(dailyCapServiceProvider);
+    final maxReward = capService.getBaseReward('flip_card', fallback: 15);
+    int total = (baseCoins + timeBonus + comboBonus).clamp(0, maxReward);
 
     setState(() {
       _originalCoinsEarned = total;
@@ -274,8 +275,11 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.memoryMatchGame,
+      multiplier: 4,
       onSuccess: (coins) async {
-        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
+        final multiplier = coins > _originalCoinsEarned
+            ? (coins / _originalCoinsEarned).round().clamp(1, 4)
+            : 1;
         final duration = _gameStartTime != null
             ? DateTime.now().difference(_gameStartTime!).inSeconds
             : 1;

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +37,12 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
 
   Future<void> _handleRedeem() async {
     final code = _codeController.text.trim();
-    if (code.isEmpty) return;
+    if (code.isEmpty) {
+      setState(() {
+        _errorMessage = 'Please enter an invite code.';
+      });
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -52,6 +58,7 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
       if (result.isSuccess) {
         _successMessage = result.message;
         _codeController.clear();
+        HapticFeedback.heavyImpact();
       } else {
         _errorMessage = result.message;
       }
@@ -73,117 +80,167 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final referralAsync = ref.watch(referralStateProvider);
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final isSmallScreen = screenWidth < 360 || screenHeight < 680;
+    final viewInsetsBottom = mediaQuery.viewInsets.bottom;
+    final bottomPadding = mediaQuery.padding.bottom;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: referralAsync.when(
-        data: (data) => _buildContent(data),
-        loading: () => const SizedBox(
-          height: 300,
-          child: Center(child: CircularProgressIndicator()),
+    return Stack(
+      children: [
+        // Tap outside to dismiss
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         ),
-        error: (err, _) => SizedBox(
-          height: 200,
-          child: Center(child: Text('Error loading referrals: $err')),
+
+        // Bottom sheet card
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {}, // Prevent taps inside sheet from dismissing
+              child: Container(
+                width: double.infinity,
+                constraints: BoxConstraints(
+                  maxHeight: screenHeight * 0.90,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  bottom: true,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      isSmallScreen ? 16 : 20,
+                      16,
+                      isSmallScreen ? 16 : 20,
+                      math.max(16.0, viewInsetsBottom + math.max(12.0, bottomPadding)),
+                    ),
+                    child: referralAsync.when(
+                      data: (data) => _buildContent(data, isSmallScreen),
+                      loading: () => const SizedBox(
+                        height: 240,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (err, _) => SizedBox(
+                        height: 180,
+                        child: Center(
+                          child: Text(
+                            'Error loading referrals: $err',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildContent(ReferralState data) {
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Drag handle
+  Widget _buildContent(ReferralState data, bool isSmallScreen) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Drag handle
+        Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Header
+        Text(
+          'Invite Friends & Earn',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: isSmallScreen ? 20 : 22,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Give a friend +100 RBX, and get +200 RBX for yourself!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 13,
+            color: Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // My Code Card
+        _buildMyCodeCard(data.myReferralCode, isSmallScreen),
+        const SizedBox(height: 20),
+
+        // Redeem Section
+        if (!data.hasRedeemedCode) ...[
+          _buildRedeemSection(isSmallScreen),
+          const SizedBox(height: 20),
+        ] else ...[
           Container(
-            width: 40,
-            height: 4,
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(2),
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
             ),
-          ),
-          const SizedBox(height: 16),
-
-          // Header
-          const Text('🎁', style: TextStyle(fontSize: 44)),
-          const SizedBox(height: 8),
-          const Text(
-            'Invite Friends & Earn',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Give a friend +100 RBX, and get +200 RBX for yourself!',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // My Code Card
-          _buildMyCodeCard(data.myReferralCode),
-          const SizedBox(height: 20),
-
-          // Redeem Section
-          if (!data.hasRedeemedCode) ...[
-            _buildRedeemSection(),
-            const SizedBox(height: 20),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
-                  const SizedBox(width: 8),
-                  Text(
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
                     'Redeemed code: ${data.referredByCode}',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF15803D),
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
-
-          // Referral Stats
-          _buildStatsRow(data),
+          ),
+          const SizedBox(height: 20),
         ],
-      ),
+
+        // Referral Stats
+        _buildStatsRow(data),
+      ],
     );
   }
 
-  Widget _buildMyCodeCard(String myCode) {
+  Widget _buildMyCodeCard(String myCode, bool isSmallScreen) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FF),
         borderRadius: BorderRadius.circular(18),
@@ -201,13 +258,16 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            myCode,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              color: AppColors.primary,
-              letterSpacing: 2.0,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              myCode,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 22 : 26,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
+                letterSpacing: 2.0,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -215,7 +275,7 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
             icon: Icons.copy_rounded,
             iconSize: 18,
             text: 'Copy Invite Code',
-            height: 48,
+            height: isSmallScreen ? 44 : 48,
             borderRadius: 16,
             fontSize: 14,
             fontWeight: FontWeight.w700,
@@ -226,7 +286,7 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
     );
   }
 
-  Widget _buildRedeemSection() {
+  Widget _buildRedeemSection(bool isSmallScreen) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -245,12 +305,20 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
               child: TextField(
                 controller: _codeController,
                 textCapitalization: TextCapitalization.characters,
+                onSubmitted: (_) => _handleRedeem(),
+                style: TextStyle(fontSize: isSmallScreen ? 12.5 : 13),
                 decoration: InputDecoration(
-                  hintText: 'Enter code (e.g. RBX-XXXX)',
-                  hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                  hintText: isSmallScreen ? 'Enter code' : 'Enter code (e.g. RBX-XXXX)',
+                  hintStyle: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    color: const Color(0xFF94A3B8),
+                  ),
                   filled: true,
                   fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 10 : 14,
+                    vertical: isSmallScreen ? 10 : 12,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -263,15 +331,18 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
               ),
             ),
             const SizedBox(width: 8),
-            InteractiveButton(
-              text: 'Claim +100',
-              width: 105,
-              height: 48,
-              borderRadius: 12,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              isLoading: _isSubmitting,
-              onTap: _handleRedeem,
+            SizedBox(
+              width: isSmallScreen ? 102 : 115,
+              child: InteractiveButton(
+                text: 'Claim +100',
+                height: isSmallScreen ? 44 : 48,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                borderRadius: 12,
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w700,
+                isLoading: _isSubmitting,
+                onTap: _handleRedeem,
+              ),
             ),
           ],
         ),
@@ -295,11 +366,14 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _StatTile(label: 'Friends Invited', value: '${data.totalFriendsInvited}'),
+          Expanded(
+            child: _StatTile(label: 'Friends Invited', value: '${data.totalFriendsInvited}'),
+          ),
           Container(width: 1, height: 24, color: const Color(0xFFCBD5E1)),
-          _StatTile(label: 'Total Earned', value: '+${data.totalCoinsEarned} RBX'),
+          Expanded(
+            child: _StatTile(label: 'Total Earned', value: '+${data.totalCoinsEarned} RBX'),
+          ),
         ],
       ),
     );
@@ -315,21 +389,29 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+            ),
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
         ),
       ],
     );
   }
 }
+

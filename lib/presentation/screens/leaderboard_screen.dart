@@ -302,7 +302,8 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                 child: RefreshIndicator(
                   onRefresh: () async => ref.invalidate(leaderboardProvider('')),
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.fromLTRB(
+                        24, 0, 24, AppLayout.sectionSpacing),
                     itemCount:
                         entries.length > 3 ? min(7, entries.length - 3) : 0,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),

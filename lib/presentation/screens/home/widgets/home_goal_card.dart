@@ -15,8 +15,8 @@ class HomeGoalCard extends StatefulWidget {
     super.key,
     required this.coins,
     required this.onRedeemTap,
-    this.targetCoins = 20000,
-    this.targetTitle = '\$3 Roblox Gift Card',
+    this.targetCoins = 4500,
+    this.targetTitle = r'$0.50 Starter Robux (40 R$)',
   });
 
   @override
@@ -140,7 +140,9 @@ class _GoalIconBadge extends StatelessWidget {
         ? AppAssets.roblox10UsdCard
         : (targetTitle.contains('3')
             ? AppAssets.roblox3UsdCard
-            : AppAssets.roblox5UsdCard);
+            : (targetTitle.contains('Starter') || targetTitle.contains('40')
+                ? AppAssets.roblox3UsdCard
+                : AppAssets.roblox5UsdCard));
 
     return Container(
       width: 38,
@@ -192,9 +194,20 @@ class _GoalProgressInfo extends StatelessWidget {
     required this.percent,
   });
 
+  String _formatCoins(int amount) {
+    return amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCompleted = remainingCoins == 0;
+    final isStarterOr40 = targetCoins == 4500 ||
+        targetTitle.contains('40') ||
+        targetTitle.toLowerCase().contains('starter');
+    final formattedRemaining = _formatCoins(remainingCoins);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,15 +235,17 @@ class _GoalProgressInfo extends StatelessWidget {
         Text(
           isCompleted
               ? '$coins / $targetCoins RBX • Ready to Claim! 🎉'
-              : (percent < 5
-                  ? '$coins / $targetCoins RBX • First milestone: 500 RBX 🚀'
-                  : '$coins / $targetCoins RBX • $remainingCoins left'),
+              : isStarterOr40
+                  ? '🎯 Only $formattedRemaining coins left to claim your 40 Robux!'
+                  : '🎯 Only $formattedRemaining coins left to claim your $targetTitle!',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 11,
             fontWeight: isCompleted ? FontWeight.w700 : FontWeight.w600,
             color: isCompleted
                 ? const Color(0xFF16A34A)
-                : const Color(0xFF868A9F),
+                : (isStarterOr40 ? const Color(0xFF6366F1) : const Color(0xFF868A9F)),
           ),
         ),
       ],
@@ -350,14 +365,21 @@ class _GoalProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(999),
-      child: LinearProgressIndicator(
-        value: progress,
-        minHeight: 4.5,
-        backgroundColor: const Color(0xFFF1F5F9),
-        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-      ),
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: progress),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOutCubic,
+      builder: (context, animatedProgress, _) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: LinearProgressIndicator(
+            value: animatedProgress,
+            minHeight: 4.5,
+            backgroundColor: const Color(0xFFF1F5F9),
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+          ),
+        );
+      },
     );
   }
 }

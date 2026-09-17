@@ -52,12 +52,16 @@ class HomeReferralCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Text(
-                              'Invite & Earn',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                            Flexible(
+                              child: Text(
+                                'Invite & Earn',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(width: 8),

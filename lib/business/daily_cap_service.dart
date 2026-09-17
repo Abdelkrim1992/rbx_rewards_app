@@ -3,16 +3,32 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/supabase_repository.dart';
 
 /// Tracks daily coin earnings and enforces in-app feature level daily caps.
-class DailyCapService {
+/// Extends [ChangeNotifier] so any [ref.watch(dailyCapServiceProvider)]
+/// automatically rebuilds UI when fresh database limits arrive.
+class DailyCapService extends ChangeNotifier {
   final SupabaseRepository _repository;
-  
+  bool _isDisposed = false;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
   static const _secureStorage = FlutterSecureStorage();
-  
+
   // Storage Keys
   static const String _earningsDateKey = 'earnings_date';
   static const String _featuresEarningsKey = 'daily_features_earnings';
   static const String _offerwallsEarningsKey = 'daily_offerwalls_earnings';
-  
+
   static const String _dailyRewardEarningsKey = 'daily_reward_earnings';
   static const String _chestEarningsKey = 'daily_chest_earnings';
   static const String _spinEarningsKey = 'daily_spin_earnings';
@@ -22,22 +38,26 @@ class DailyCapService {
   static const String _gameFlappyEarningsKey = 'daily_game_flappy_earnings';
   static const String _gameTapTapEarningsKey = 'daily_game_tap_tap_earnings';
   static const String _gameFlipCardEarningsKey = 'daily_game_flip_card_earnings';
+  static const String _watchVideoEarningsKey = 'daily_watch_video_earnings';
 
   // Static Fallback Caps (defaults)
   static const int featuresCap = 1000;
   static const int offerwallsCap = 1000;
-  
+
   static const int dailyRewardCap = 30;
-  static const int chestCap = 120;
-  static const int spinCap = 150;
-  static const int scratchCap = 100;
-  static const int quizCap = 120;
-  
-  // Sub-game caps
-  static const int gameMathQuizCap = 120;
-  static const int gameFlappyCap = 150;
-  static const int gameTapTapCap = 150;
-  static const int gameFlipCardCap = 60;
+  // Repeatable game / feature caps are governed by the 3-Tier Soft Cap (1,200 Tier-1).
+  // These constants represent the Tier-1 soft target shown in the UI progress bar.
+  static const int chestCap = 1200;
+  static const int spinCap = 1200;
+  static const int scratchCap = 1200;
+  static const int quizCap = 1200;
+
+  // Sub-game caps – all tied to Tier-1 (1,200 coins) soft cap.
+  static const int gameMathQuizCap = 1200;
+  static const int gameFlappyCap = 1200;
+  static const int gameTapTapCap = 1200;
+  static const int gameFlipCardCap = 1200;
+  static const int watchVideoCap = 1200;
 
   // Dynamic Limits Map (pre-seeded with default static fallbacks)
   final Map<String, int> _limits = {
@@ -53,14 +73,23 @@ class DailyCapService {
     'flappy_jump': gameFlappyCap,
     'tap_tap': gameTapTapCap,
     'flip_card': gameFlipCardCap,
+    'ad': watchVideoCap,
+    'watch_video': watchVideoCap,
+    'video': watchVideoCap,
+    'watch_earn': watchVideoCap,
+    'mega_chest': 250,
+    'mega_chest_double': 250,
   };
+
+  /// Dynamic reward limits: (baseReward, premiumReward) per feature
+  final Map<String, (int, int)> _rewardLimits = {};
 
   DailyCapService(this._repository);
 
   // Earnings
   int _todayFeaturesEarnings = 0;
   int _todayOfferwallsEarnings = 0;
-  
+
   int _todayDailyRewardEarnings = 0;
   int _todayChestEarnings = 0;
   int _todaySpinEarnings = 0;
@@ -70,13 +99,14 @@ class DailyCapService {
   int _todayGameFlappyEarnings = 0;
   int _todayGameTapTapEarnings = 0;
   int _todayGameFlipCardEarnings = 0;
-  
+  int _todayWatchVideoEarnings = 0;
+
   String _currentDate = '';
 
   // Getters
   int get todayFeaturesEarnings => _todayFeaturesEarnings;
   int get todayOfferwallsEarnings => _todayOfferwallsEarnings;
-  
+
   int get todayDailyRewardEarnings => _todayDailyRewardEarnings;
   int get todayChestEarnings => _todayChestEarnings;
   int get todaySpinEarnings => _todaySpinEarnings;
@@ -86,27 +116,179 @@ class DailyCapService {
   int get todayGameFlappyEarnings => _todayGameFlappyEarnings;
   int get todayGameTapTapEarnings => _todayGameTapTapEarnings;
   int get todayGameFlipCardEarnings => _todayGameFlipCardEarnings;
+  int get todayWatchVideoEarnings => _todayWatchVideoEarnings;
 
   // Dynamic Caps getters (read from dynamic map)
   int get dynamicFeaturesCap => _limits['global_features'] ?? featuresCap;
   int get dynamicOfferwallsCap => _limits['global_offerwalls'] ?? offerwallsCap;
 
-  // Backwards compatibility properties
-  int get todayEarnings => _todayFeaturesEarnings + _todayOfferwallsEarnings;
-  int get remainingToday => (dynamicFeaturesCap - _todayFeaturesEarnings).clamp(0, dynamicFeaturesCap);
-  bool get isCapReached => _todayFeaturesEarnings >= dynamicFeaturesCap;
+  /// 3-Tier Diminishing Yield Curve (Soft Cap) multiplier:
+  /// - Tier 1 (0 – 1,200 coins earned today): 1.0x (100% full speed)
+  /// - Tier 2 (1,201 – 2,200 coins earned today): 0.5x (50% normal speed)
+  /// - Tier 3 (2,201+ coins earned today - Grinders): 0.15x (15% micro-rewards)
+  double getYieldMultiplier() {
+    if (_todayFeaturesEarnings <= 1200) {
+      return 1.0;
+    } else if (_todayFeaturesEarnings <= 2200) {
+      return 0.5;
+    } else {
+      return 0.15;
+    }
+  }
 
-  int get remainingFeaturesToday => (dynamicFeaturesCap - _todayFeaturesEarnings).clamp(0, dynamicFeaturesCap);
+  /// Calculates the yield-aware ad bonus coins for a given base reward.
+  /// If [multiplier] is provided (e.g. 4 for mini-games/chest, 3 for streak/video),
+  /// the ad bonus is calculated as (baseReward * (multiplier - 1)) scaled by the yield curve.
+  /// Otherwise, scales [targetBonus] (default 25) by the yield curve:
+  /// Tier 1 (0 – 1,200 coins): 100% yield
+  /// Tier 2 (1,201 – 2,200 coins): 50% yield
+  /// Tier 3 (2,201+ coins): 15% yield (minimum 1)
+  int calculateAdBonusReward(
+    int baseReward, {
+    int targetBonus = 25,
+    int? multiplier,
+  }) {
+    final yieldMult = getYieldMultiplier();
+    if (multiplier != null && multiplier > 1) {
+      final bonusTotal = baseReward * (multiplier - 1);
+      final scaledBonus = (bonusTotal * yieldMult).round();
+      return baseReward + (scaledBonus > 0 ? scaledBonus : 1);
+    }
+    final bonus = (targetBonus * yieldMult).round().clamp(4, targetBonus);
+    return baseReward + bonus;
+  }
+
+  @visibleForTesting
+  void setTodayFeaturesEarningsForTest(int earnings) {
+    _todayFeaturesEarnings = earnings;
+  }
+
+  // Soft Cap Economy: Continuous gameplay without hard lockouts
+  int get todayEarnings => _todayFeaturesEarnings + _todayOfferwallsEarnings;
+  int get remainingToday => getRemainingCap('features');
+  bool get isCapReached => false;
+
+  int get remainingFeaturesToday => getRemainingCap('features');
   int get remainingOfferwallsToday => (dynamicOfferwallsCap - _todayOfferwallsEarnings).clamp(0, dynamicOfferwallsCap);
 
-  bool get isFeaturesCapReached => _todayFeaturesEarnings >= dynamicFeaturesCap;
+  bool get isFeaturesCapReached => false;
   bool get isOfferwallsCapReached => _todayOfferwallsEarnings >= dynamicOfferwallsCap;
+
+  String _getTodayUtcString() {
+    final now = DateTime.now().toUtc();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  void _checkMidnightReset() {
+    final today = _getTodayUtcString();
+    if (_currentDate.isNotEmpty && _currentDate != today) {
+      _resetEarnings();
+      _currentDate = today;
+      _persist();
+      notifyListeners();
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dynamic Reward Helpers
+  // ---------------------------------------------------------------------------
+
+  /// Normalize source aliases to the canonical key used in coin_distributions.
+  String _normalizeSource(String source) {
+    if (source == 'watch_earn' || source == 'watch_video' || source == 'video') {
+      return 'ad';
+    }
+    if (source == 'quizzes') return 'quiz';
+    return source;
+  }
+
+  /// Get the base (single-view) reward for a feature from the database.
+  /// Falls back to [fallback] if not configured.
+  int getBaseReward(String source, {int fallback = 10}) {
+    final key = _normalizeSource(source);
+    if (_rewardLimits.containsKey(key)) {
+      return _rewardLimits[key]!.$1;
+    }
+    // Harmonized fallbacks according to Phase 6 economy
+    switch (key) {
+      case 'ad':
+        return 8;
+      case 'chest':
+        return 15;
+      case 'scratch':
+        return 12;
+      case 'spin':
+        return 10;
+      case 'quiz':
+      case 'math_quiz':
+      case 'flappy_jump':
+      case 'flip_card':
+        return 6;
+      case 'tap_tap':
+        return 5;
+      case 'mega_chest':
+      case 'mega_chest_double':
+        return 250;
+      case 'daily_reward':
+        return 10;
+      default:
+        return fallback;
+    }
+  }
+
+  /// Get the premium (doubled/ad-boosted) reward for a feature from the database.
+  /// Falls back to [fallback] if not configured.
+  int getPremiumReward(String source, {int fallback = 20}) {
+    final key = _normalizeSource(source);
+    if (_rewardLimits.containsKey(key)) {
+      return _rewardLimits[key]!.$2;
+    }
+    switch (key) {
+      case 'ad':
+        return 25; // 8 x 3 ≈ 25
+      case 'chest':
+        return 60; // 15 x 4
+      case 'scratch':
+        return 48; // 12 x 4
+      case 'spin':
+        return 40; // 10 x 4
+      case 'quiz':
+      case 'math_quiz':
+      case 'flappy_jump':
+      case 'flip_card':
+        return 60; // Up to 60 (15 max base x 4)
+      case 'tap_tap':
+        return 60; // Up to 60 (15 max base x 4)
+      case 'mega_chest':
+      case 'mega_chest_double':
+        return 250;
+      case 'daily_reward':
+        return 30; // 10 x 3
+      default:
+        return fallback;
+    }
+  }
+
+  /// Get the random reward range for a feature, defaults to hardcoded values if not in DB.
+  (int min, int max) getRewardLimits(String source) {
+    final key = _normalizeSource(source);
+    if (_rewardLimits.containsKey(key)) {
+      return _rewardLimits[key]!;
+    }
+    if (key == 'chest') return (12, 18);
+    if (key == 'scratch') return (10, 14);
+    if (key == 'mega_chest') return (250, 250);
+    return (5, 10);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Load & Refresh
+  // ---------------------------------------------------------------------------
 
   /// Load persisted daily earnings.
   Future<void> load() async {
     final storedDate = await _secureStorage.read(key: _earningsDateKey) ?? '';
-    final now = DateTime.now();
-    final today = '${now.year}-${now.month}-${now.day}';
+    final today = _getTodayUtcString();
 
     if (storedDate == today) {
       final featuresStr = await _secureStorage.read(key: _featuresEarningsKey);
@@ -119,24 +301,33 @@ class DailyCapService {
       _todaySpinEarnings = int.tryParse(await _secureStorage.read(key: _spinEarningsKey) ?? '0') ?? 0;
       _todayScratchEarnings = int.tryParse(await _secureStorage.read(key: _scratchEarningsKey) ?? '0') ?? 0;
       _todayQuizEarnings = int.tryParse(await _secureStorage.read(key: _quizEarningsKey) ?? '0') ?? 0;
-      
+
       _todayGameMathQuizEarnings = int.tryParse(await _secureStorage.read(key: _gameMathQuizEarningsKey) ?? '0') ?? 0;
       _todayGameFlappyEarnings = int.tryParse(await _secureStorage.read(key: _gameFlappyEarningsKey) ?? '0') ?? 0;
       _todayGameTapTapEarnings = int.tryParse(await _secureStorage.read(key: _gameTapTapEarningsKey) ?? '0') ?? 0;
       _todayGameFlipCardEarnings = int.tryParse(await _secureStorage.read(key: _gameFlipCardEarningsKey) ?? '0') ?? 0;
+      _todayWatchVideoEarnings = int.tryParse(await _secureStorage.read(key: _watchVideoEarningsKey) ?? '0') ?? 0;
     } else {
       _resetEarnings();
     }
     _currentDate = today;
 
-    // Load cached dynamic limits from secure storage if available
+    // Load cached dynamic limits from secure storage if available.
+    // Sanitize stale legacy caps (≤ 150) to 1200 for all repeatable features
+    // so devices that cached the old 120 value are automatically corrected.
+    final nonScaledKeys = const {'daily_reward', 'global_offerwalls', 'survey', 'mega_chest', 'mega_chest_double'};
     for (final key in _limits.keys) {
       try {
         final val = await _secureStorage.read(key: 'cap_limit_$key');
         if (val != null) {
           final parsed = int.tryParse(val);
           if (parsed != null) {
-            _limits[key] = parsed;
+            final isStale = parsed <= 150 && !nonScaledKeys.contains(key);
+            _limits[key] = isStale ? 1200 : parsed;
+            if (isStale) {
+              // Overwrite stale value in storage so next cold-start is clean.
+              await _secureStorage.write(key: 'cap_limit_$key', value: '1200');
+            }
           }
         }
       } catch (_) {}
@@ -153,10 +344,26 @@ class DailyCapService {
       if (scratchBase != null && scratchPremium != null) {
         _rewardLimits['scratch'] = (int.parse(scratchBase), int.parse(scratchPremium));
       }
+      // Load any other cached reward limits
+      for (final source in ['ad', 'spin', 'quiz', 'math_quiz', 'tap_tap', 'flappy_jump', 'flip_card', 'mega_chest', 'daily_reward']) {
+        final base = await _secureStorage.read(key: 'reward_base_$source');
+        final premium = await _secureStorage.read(key: 'reward_premium_$source');
+        if (base != null && premium != null) {
+          _rewardLimits[source] = (int.parse(base), int.parse(premium));
+        }
+      }
     } catch (_) {}
+
+    // Notify widgets with cached values immediately
+    notifyListeners();
 
     // Async background fetch fresh limits from database
     _fetchFreshLimits();
+  }
+
+  /// Force-refresh limits from the database. Call on pull-to-refresh.
+  Future<void> refreshLimits() async {
+    await _fetchFreshLimits();
   }
 
   Future<void> _fetchFreshLimits() async {
@@ -169,17 +376,33 @@ class DailyCapService {
         final premium = item['premium_reward'] as int?;
 
         if (id != null && cap != null) {
-          _limits[id] = cap;
-          // Cache in secure storage
-          await _secureStorage.write(key: 'cap_limit_$id', value: cap.toString());
+          // Sanitize stale legacy values from DB (≤ 150 for repeatable features → 1200)
+          const nonScaledDb = {'daily_reward', 'global_offerwalls', 'survey', 'mega_chest', 'mega_chest_double'};
+          final effectiveCap = (cap <= 150 && !nonScaledDb.contains(id)) ? 1200 : cap;
+          _limits[id] = effectiveCap;
+          // Also sync aliases for watch features
+          if (id == 'ad') {
+            _limits['watch_video'] = effectiveCap;
+            _limits['video'] = effectiveCap;
+            _limits['watch_earn'] = effectiveCap;
+          }
+          // Cache effective value in secure storage
+          await _secureStorage.write(key: 'cap_limit_$id', value: effectiveCap.toString());
         }
 
         if (id != null && base != null && premium != null) {
           _rewardLimits[id] = (base, premium);
+          // Sync aliases
+          if (id == 'ad') {
+            _rewardLimits['watch_video'] = (base, premium);
+            _rewardLimits['watch_earn'] = (base, premium);
+          }
           await _secureStorage.write(key: 'reward_base_$id', value: base.toString());
           await _secureStorage.write(key: 'reward_premium_$id', value: premium.toString());
         }
       }
+      // Notify all listening widgets that fresh values have arrived
+      notifyListeners();
     } catch (e) {
       debugPrint('DailyCapService: Failed to fetch fresh coin distributions from DB: $e');
     }
@@ -197,81 +420,60 @@ class DailyCapService {
     _todayGameFlappyEarnings = 0;
     _todayGameTapTapEarnings = 0;
     _todayGameFlipCardEarnings = 0;
+    _todayWatchVideoEarnings = 0;
   }
 
-  final Map<String, (int, int)> _rewardLimits = {};
-
-  /// Get the random reward range for a feature, defaults to hardcoded values if not in DB
-  (int min, int max) getRewardLimits(String source) {
-    if (_rewardLimits.containsKey(source)) {
-      return _rewardLimits[source]!;
-    }
-    if (source == 'chest') return (15, 45); // Fallback
-    if (source == 'scratch') return (5, 50); // Fallback
-    return (1, 10);
+  /// Resets all in-memory daily earnings to 0. Used during account deletion or fresh reset.
+  void resetAllEarnings() {
+    _resetEarnings();
+    _currentDate = _getTodayUtcString();
+    notifyListeners();
   }
 
   /// Get the remaining cap for a specific feature source.
+  /// Uses soft-tier remaining values for repeatable features/games,
+  /// and hard daily limits for single-claim daily rewards & offerwalls.
   int getRemainingCap(String source) {
-    final now = DateTime.now();
-    final today = '${now.year}-${now.month}-${now.day}';
-    if (_currentDate != today) {
-      return _getInitialCategoryCap(source);
-    }
+    _checkMidnightReset();
 
-    final globalRemaining = (dynamicFeaturesCap - _todayFeaturesEarnings).clamp(0, dynamicFeaturesCap);
-    
     if (source == 'survey') {
       final maxOfferwalls = _limits['global_offerwalls'] ?? offerwallsCap;
       return (maxOfferwalls - _todayOfferwallsEarnings).clamp(0, maxOfferwalls);
     }
-    
-    int categoryRemaining = 0;
-    final categoryCap = _limits[source] ?? _getInitialCategoryCap(source);
-    
+
     if (source == 'daily_reward') {
-      categoryRemaining = (categoryCap - _todayDailyRewardEarnings).clamp(0, categoryCap);
-    } else if (source == 'chest') {
-      categoryRemaining = (categoryCap - _todayChestEarnings).clamp(0, categoryCap);
-    } else if (source == 'spin') {
-      categoryRemaining = (categoryCap - _todaySpinEarnings).clamp(0, categoryCap);
-    } else if (source == 'scratch') {
-      categoryRemaining = (categoryCap - _todayScratchEarnings).clamp(0, categoryCap);
-    } else if (source == 'quiz' || source == 'quizzes') {
-      categoryRemaining = (categoryCap - _todayQuizEarnings).clamp(0, categoryCap);
-    } else if (source == 'math_quiz') {
-      categoryRemaining = (categoryCap - _todayGameMathQuizEarnings).clamp(0, categoryCap);
-    } else if (source == 'flappy_jump') {
-      categoryRemaining = (categoryCap - _todayGameFlappyEarnings).clamp(0, categoryCap);
-    } else if (source == 'tap_tap') {
-      categoryRemaining = (categoryCap - _todayGameTapTapEarnings).clamp(0, categoryCap);
-    } else if (source == 'flip_card') {
-      categoryRemaining = (categoryCap - _todayGameFlipCardEarnings).clamp(0, categoryCap);
-    } else if (source == 'game' || source == 'welcome_bonus') {
-      return globalRemaining;
-    } else {
-      return 0;
+      final categoryCap = _limits['daily_reward'] ?? dailyRewardCap;
+      return (categoryCap - _todayDailyRewardEarnings).clamp(0, categoryCap);
     }
 
-    return categoryRemaining < globalRemaining ? categoryRemaining : globalRemaining;
+    // Repeatable gameplay & ad features are governed by the soft-cap yield curve
+    if (_todayFeaturesEarnings < 1200) {
+      return 1200 - _todayFeaturesEarnings;
+    } else if (_todayFeaturesEarnings < 2200) {
+      return 2200 - _todayFeaturesEarnings;
+    } else {
+      // Grinder tier (uncapped gameplay at 0.15x)
+      return 999;
+    }
   }
 
-  int _getInitialCategoryCap(String source) {
-    final key = (source == 'quizzes') ? 'quiz' : source;
-    if (key == 'survey') return _limits['global_offerwalls'] ?? offerwallsCap;
-    return _limits[key] ?? 0;
-  }
 
-  /// Get the total configured cap for a specific category or game
+  /// Get the total configured cap for a specific category or game.
+  /// For repeatable games / features, returns the Tier-1 soft cap (1,200).
+  /// For daily_reward / offerwalls, returns the specific hard daily limit.
   int getCategoryCap(String source) {
-    final key = (source == 'quizzes') ? 'quiz' : source;
-    return _limits[key] ?? _getInitialCategoryCap(key);
+    final key = _normalizeSource(source);
+    if (key == 'daily_reward') return _limits[key] ?? dailyRewardCap;
+    if (key == 'survey' || key == 'global_offerwalls') return _limits[key] ?? offerwallsCap;
+    // All repeatable game / feature keys: enforce minimum 1,200 (Tier-1 target)
+    final stored = _limits[key] ?? 1200;
+    return stored < 200 ? 1200 : stored;
   }
 
   /// Get total earned today for a specific game or feature
   int getEarnedToday(String source) {
-    final now = DateTime.now();
-    final today = '${now.year}-${now.month}-${now.day}';
+    _checkMidnightReset();
+    final today = _getTodayUtcString();
     if (_currentDate != today) return 0;
 
     if (source == 'daily_reward') return _todayDailyRewardEarnings;
@@ -283,18 +485,23 @@ class DailyCapService {
     if (source == 'flappy_jump') return _todayGameFlappyEarnings;
     if (source == 'tap_tap') return _todayGameTapTapEarnings;
     if (source == 'flip_card') return _todayGameFlipCardEarnings;
+    if (source == 'ad' || source == 'watch_video' || source == 'video' || source == 'watch_earn') return _todayWatchVideoEarnings;
     return 0;
   }
 
   bool isCapReachedFor(String source) {
-    return getRemainingCap(source) <= 0;
+    if (source == 'daily_reward' || source == 'survey') {
+      return getRemainingCap(source) <= 0;
+    }
+    return false;
   }
 
-  /// Try to add coins. Returns the amount actually added (may be less than requested if cap hit).
+  /// Try to add coins. Applies diminishing yield multiplier for repeatable features.
+  /// Returns the amount actually added.
   int addCoins(int amount, String source) {
+    _checkMidnightReset();
     if (_currentDate.isEmpty) {
-      final now = DateTime.now();
-      _currentDate = '${now.year}-${now.month}-${now.day}';
+      _currentDate = _getTodayUtcString();
     }
 
     if (source == 'survey') {
@@ -303,38 +510,15 @@ class DailyCapService {
       final toAdd = amount.clamp(0, available);
       _todayOfferwallsEarnings += toAdd;
       _persist();
+      if (toAdd > 0) notifyListeners();
       return toAdd;
     } else {
-      final globalAvailable = (dynamicFeaturesCap - _todayFeaturesEarnings).clamp(0, dynamicFeaturesCap);
-      int categoryAvailable = 0;
-      final categoryCap = _limits[source] ?? _getInitialCategoryCap(source);
-      
-      if (source == 'daily_reward') {
-        categoryAvailable = (categoryCap - _todayDailyRewardEarnings).clamp(0, categoryCap);
-      } else if (source == 'chest') {
-        categoryAvailable = (categoryCap - _todayChestEarnings).clamp(0, categoryCap);
-      } else if (source == 'spin') {
-        categoryAvailable = (categoryCap - _todaySpinEarnings).clamp(0, categoryCap);
-      } else if (source == 'scratch') {
-        categoryAvailable = (categoryCap - _todayScratchEarnings).clamp(0, categoryCap);
-      } else if (source == 'quiz' || source == 'quizzes') {
-        categoryAvailable = (categoryCap - _todayQuizEarnings).clamp(0, categoryCap);
-      } else if (source == 'math_quiz') {
-        categoryAvailable = (categoryCap - _todayGameMathQuizEarnings).clamp(0, categoryCap);
-      } else if (source == 'flappy_jump') {
-        categoryAvailable = (categoryCap - _todayGameFlappyEarnings).clamp(0, categoryCap);
-      } else if (source == 'tap_tap') {
-        categoryAvailable = (categoryCap - _todayGameTapTapEarnings).clamp(0, categoryCap);
-      } else if (source == 'flip_card') {
-        categoryAvailable = (categoryCap - _todayGameFlipCardEarnings).clamp(0, categoryCap);
-      } else if (source == 'game' || source == 'welcome_bonus') {
-        categoryAvailable = globalAvailable;
-      } else {
-        categoryAvailable = 0;
+      final multiplier = getYieldMultiplier();
+      int toAdd = (amount * multiplier).round();
+      if (amount > 0 && toAdd <= 0) {
+        toAdd = 1;
       }
 
-      final toAdd = amount.clamp(0, categoryAvailable < globalAvailable ? categoryAvailable : globalAvailable);
-      
       if (toAdd > 0) {
         _todayFeaturesEarnings += toAdd;
         if (source == 'daily_reward') {
@@ -355,8 +539,11 @@ class DailyCapService {
           _todayGameTapTapEarnings += toAdd;
         } else if (source == 'flip_card') {
           _todayGameFlipCardEarnings += toAdd;
+        } else if (source == 'ad' || source == 'watch_video' || source == 'video' || source == 'watch_earn') {
+          _todayWatchVideoEarnings += toAdd;
         }
         _persist();
+        notifyListeners();
       }
       return toAdd;
     }
@@ -372,10 +559,11 @@ class DailyCapService {
     await _secureStorage.write(key: _spinEarningsKey, value: _todaySpinEarnings.toString());
     await _secureStorage.write(key: _scratchEarningsKey, value: _todayScratchEarnings.toString());
     await _secureStorage.write(key: _quizEarningsKey, value: _todayQuizEarnings.toString());
-    
+
     await _secureStorage.write(key: _gameMathQuizEarningsKey, value: _todayGameMathQuizEarnings.toString());
     await _secureStorage.write(key: _gameFlappyEarningsKey, value: _todayGameFlappyEarnings.toString());
     await _secureStorage.write(key: _gameTapTapEarningsKey, value: _todayGameTapTapEarnings.toString());
     await _secureStorage.write(key: _gameFlipCardEarningsKey, value: _todayGameFlipCardEarnings.toString());
+    await _secureStorage.write(key: _watchVideoEarningsKey, value: _todayWatchVideoEarnings.toString());
   }
 }

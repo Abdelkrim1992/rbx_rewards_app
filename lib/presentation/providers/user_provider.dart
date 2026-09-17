@@ -76,9 +76,10 @@ final userProfileStreamProvider = StreamProvider<UserProfile>((ref) {
     ref.read(supabaseRepositoryProvider).getUserStats(),
   ).map((data) {
     if (data.isEmpty) {
+      final currentCoins = ref.read(coinProvider);
       return UserProfile(
         id: uid,
-        coins: 0,
+        coins: currentCoins,
         totalEarned: 0,
         consecutiveDays: 0,
         gamesPlayed: 0,

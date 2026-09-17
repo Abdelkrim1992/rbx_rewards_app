@@ -9,6 +9,8 @@ import '../../widgets/coin_burst.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/interactive_button.dart';
 import '../../core/utils/reward_helper.dart';
+import '../../business/sound_service.dart';
+import '../../business/notification_service.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 
@@ -100,6 +102,7 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
       quickPlacement: AdPlacement.chestOpen,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.megaChest,
+      multiplier: 4,
       onSuccess: (coins) async {
         if (mounted) {
           await ref.read(coinProvider.notifier).credit(coins, 'chest');
@@ -111,6 +114,9 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
     // Step 4: Reset chest timer
     if (claimed && mounted) {
       await GamePrefs.setChestUnlockTime(10800); // Reset to 3 hours
+      NotificationService.instance.scheduleChestReady(
+        DateTime.now().add(const Duration(seconds: 10800)),
+      );
       setState(() {
         _secondsRemaining = 10800;
       });
@@ -453,11 +459,13 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
 
   Future<void> _runSequence() async {
     await _shakeController.forward();
+    SoundService.instance.playChestOpen();
     await _openController.forward();
     if (mounted) {
       setState(() {
         _burstCoins = true;
       });
+      SoundService.instance.playJackpot();
     }
     // Wait for the coin burst to fully finish (2 seconds) before closing
     await Future.delayed(const Duration(milliseconds: 2000));

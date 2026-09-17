@@ -8,6 +8,8 @@ class HomeGameItemData {
   final String subtitle;
   final String imageUrl;
   final int remainingCoins;
+  final int rewardAmount;
+  final int totalCap;
   final Color bgColor;
   final VoidCallback onTap;
 
@@ -17,6 +19,8 @@ class HomeGameItemData {
     required this.subtitle,
     required this.imageUrl,
     required this.remainingCoins,
+    required this.rewardAmount,
+    this.totalCap = 1200,
     required this.bgColor,
     required this.onTap,
   });
@@ -82,7 +86,7 @@ class HomeGamesSection extends StatelessWidget {
 
         // Horizontal Games Shelf
         SizedBox(
-          height: 170,
+          height: 186,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(
               horizontal: AppLayout.screenPadding,
@@ -174,7 +178,7 @@ class _GameShelfCardState extends State<_GameShelfCard> {
                   child: Stack(
                     children: [
                       Container(
-                        height: 84,
+                        height: 76,
                         width: double.infinity,
                         color: game.bgColor,
                         child: AppCachedImage(
@@ -252,46 +256,68 @@ class _GameShelfCardState extends State<_GameShelfCard> {
               ),
               const Spacer(),
 
-              // Coin Reward Badge
+              // Coin Reward Badge & Daily Cap Indicator
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                  decoration: BoxDecoration(
-                    color: isBlocked
-                        ? const Color(0xFFF1F5F9)
-                        : AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+                padding: const EdgeInsets.only(bottom: 8, left: 6, right: 6),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: isBlocked
+                            ? const Color(0xFFF1F5F9)
+                            : AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              isBlocked
+                                  ? 'Daily Limit'
+                                  : 'Up to +${game.rewardAmount}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: isBlocked
+                                    ? const Color(0xFF94A3B8)
+                                    : AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          if (!isBlocked) ...[
+                            const SizedBox(width: 3),
+                            Image.asset(
+                              AppAssets.goldCoin,
+                              width: 12,
+                              height: 12,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.monetization_on,
+                                size: 12,
+                                color: Color(0xFFFFCC44),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (!isBlocked && game.remainingCoins < game.totalCap) ...[
+                      const SizedBox(height: 3),
                       Text(
-                        isBlocked ? 'Limit Reached' : '+${game.remainingCoins} RBX',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: isBlocked
-                              ? const Color(0xFF94A3B8)
-                              : AppColors.primary,
+                        '${game.remainingCoins} left today',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF94A3B8),
                         ),
                       ),
-                      if (!isBlocked) ...[
-                        const SizedBox(width: 3),
-                        Image.asset(
-                          AppAssets.goldCoin,
-                          width: 13,
-                          height: 13,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.monetization_on,
-                            size: 13,
-                            color: Color(0xFFFFCC44),
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
               ),
             ],

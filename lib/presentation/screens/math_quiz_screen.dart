@@ -252,8 +252,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
 
-    // 2 coins per correct answer, max 20 base coins
-    final coins = (_correctCount * 2).clamp(0, 20);
+    final capService = ref.read(dailyCapServiceProvider);
+    final maxReward = capService.getBaseReward('math_quiz', fallback: 15);
+    // Dynamic action calculation: 3 base coins per correct answer (5 questions = max 15 base coins)
+    final perCorrect = (maxReward / _totalQuestions).ceil();
+    final coins = (_correctCount * perCorrect).clamp(0, maxReward);
 
     setState(() {
       _originalCoinsEarned = coins;
@@ -333,8 +336,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.quizMasterGame,
+      multiplier: 4,
       onSuccess: (coins) async {
-        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
+        final multiplier = coins > _originalCoinsEarned
+            ? (coins / _originalCoinsEarned).round().clamp(1, 4)
+            : 1;
         await _submitAndRecordReward(multiplier: multiplier, coinsToAward: coins);
       },
     );

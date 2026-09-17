@@ -45,9 +45,9 @@ class GoalRewardState {
   });
 
   static const GoalRewardState defaultGoal = GoalRewardState(
-    title: r'$5 Roblox Gift Card',
-    targetCoins: 40000,
-    label: r'$5 USD',
+    title: r'$0.50 Starter Robux (40 R$)',
+    targetCoins: 4500,
+    label: r'40 R$',
   );
 }
 

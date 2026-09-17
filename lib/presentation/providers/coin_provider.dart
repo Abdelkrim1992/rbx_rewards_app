@@ -7,6 +7,7 @@ final coinProvider = NotifierProvider<CoinNotifier, int>(() => CoinNotifier());
 
 class CoinNotifier extends Notifier<int> {
   bool _mounted = true;
+  int _lastCreditTime = 0;
 
   @override
   int build() {
@@ -54,6 +55,11 @@ class CoinNotifier extends Notifier<int> {
       if (balance >= 0) {
         // Prevent stale backend cache with 0 coins from wiping out an active positive balance
         if (state > 0 && balance == 0) return;
+        // Prevent stale backend cache from wiping out a recent optimistic credit
+        if (state > balance &&
+            (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {
+          return;
+        }
         state = balance;
         // Persist to local cache so next startup shows correct value instantly
         ref.read(secureRepositoryProvider).saveBalance(balance);
@@ -77,6 +83,7 @@ class CoinNotifier extends Notifier<int> {
     }
 
     final txId = UuidGenerator.generateV4();
+    _lastCreditTime = DateTime.now().millisecondsSinceEpoch;
     final optimisticBalance = state + allowedAmount;
     state = optimisticBalance; // immediate UI update
     _saveLocally(optimisticBalance);
@@ -129,6 +136,11 @@ class CoinNotifier extends Notifier<int> {
   void updateBalance(int balance) {
     if (!_mounted) return;
     if (state > 0 && balance == 0) return;
+    // Prevent stale backend cache from wiping out a recent optimistic credit
+    if (state > balance &&
+        (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {
+      return;
+    }
     state = balance;
     _saveLocally(balance);
   }
@@ -137,6 +149,15 @@ class CoinNotifier extends Notifier<int> {
   /// or after an offerwall session ends.
   void refresh() {
     _syncFromBackend();
+  }
+
+  /// Unconditionally resets the balance to 0, wiping in-memory state and local cache.
+  /// Used during account deletion or fresh reset.
+  void forceReset() {
+    if (!_mounted) return;
+    _lastCreditTime = 0;
+    state = 0;
+    _saveLocally(0);
   }
 
   void _saveLocally(int balance) {

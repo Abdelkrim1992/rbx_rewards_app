@@ -14,6 +14,8 @@ class RewardDenomination {
   final int? robuxAmount;
   final int coinCost;
   final bool inStock;
+  final bool isOneTimeStarter;
+  final int minLifetimeAds;
 
   const RewardDenomination({
     required this.id,
@@ -23,6 +25,8 @@ class RewardDenomination {
     this.robuxAmount,
     required this.coinCost,
     this.inStock = true,
+    this.isOneTimeStarter = false,
+    this.minLifetimeAds = 0,
   });
 
   String get formattedCost {
@@ -63,6 +67,66 @@ class RewardItem {
 
   static List<RewardItem> get defaultCatalog => [
         const RewardItem(
+          id: 'robux_direct_code',
+          title: 'Robux Direct Voucher',
+          subtitle: 'Direct Robux PIN Code',
+          description:
+              'Adds Robux currency directly to your Roblox avatar balance without needing a credit card.',
+          category: RewardCategory.robuxCode,
+          assetPath: AppAssets.roblox10UsdCard,
+          bgColor: Color(0xFF2ECC71),
+          deliveryHours: 24,
+          redeemInstructions:
+              '1. Visit roblox.com/redeem.\n'
+              '2. Enter your Robux voucher code.\n'
+              '3. Confirm your avatar username.\n'
+              '4. Robux will appear in your wallet instantly.',
+          denominations: [
+            RewardDenomination(
+              id: 'starter_rbx_50c',
+              label: r'$0.50 Starter Robux (40 R$)',
+              shortLabel: '40 R\$',
+              usdAmount: 0.50,
+              robuxAmount: 40,
+              coinCost: 4500,
+              isOneTimeStarter: true,
+              minLifetimeAds: 70,
+            ),
+            RewardDenomination(
+              id: 'robux_code_400',
+              label: '400 Robux Voucher',
+              shortLabel: '400 R\$',
+              robuxAmount: 400,
+              coinCost: 35000,
+              minLifetimeAds: 850,
+            ),
+            RewardDenomination(
+              id: 'robux_code_800',
+              label: '800 Robux Voucher',
+              shortLabel: '800 R\$',
+              robuxAmount: 800,
+              coinCost: 65000,
+              minLifetimeAds: 1600,
+            ),
+            RewardDenomination(
+              id: 'robux_code_2000',
+              label: '2,000 Robux Voucher',
+              shortLabel: '2,000 R\$',
+              robuxAmount: 2000,
+              coinCost: 130000,
+              minLifetimeAds: 3200,
+            ),
+            RewardDenomination(
+              id: 'robux_code_4500',
+              label: '4,500 Robux Voucher',
+              shortLabel: '4,500 R\$',
+              robuxAmount: 4500,
+              coinCost: 280000,
+              minLifetimeAds: 6000,
+            ),
+          ],
+        ),
+        const RewardItem(
           id: 'roblox_gift_card',
           title: 'Roblox Digital Gift Card',
           subtitle: 'Official USD Prepaid Card',
@@ -84,7 +148,8 @@ class RewardItem {
               shortLabel: r'$3 USD',
               usdAmount: 3.0,
               robuxAmount: 240,
-              coinCost: 20000,
+              coinCost: 24000,
+              minLifetimeAds: 500,
             ),
             RewardDenomination(
               id: 'rbx_card_5',
@@ -92,7 +157,8 @@ class RewardItem {
               shortLabel: r'$5 USD',
               usdAmount: 5.0,
               robuxAmount: 400,
-              coinCost: 40000,
+              coinCost: 38000,
+              minLifetimeAds: 850,
             ),
             RewardDenomination(
               id: 'rbx_card_10',
@@ -100,7 +166,8 @@ class RewardItem {
               shortLabel: r'$10 USD',
               usdAmount: 10.0,
               robuxAmount: 800,
-              coinCost: 70000,
+              coinCost: 72000,
+              minLifetimeAds: 1600,
             ),
             RewardDenomination(
               id: 'rbx_card_25',
@@ -109,52 +176,7 @@ class RewardItem {
               usdAmount: 25.0,
               robuxAmount: 2000,
               coinCost: 160000,
-            ),
-          ],
-        ),
-        const RewardItem(
-          id: 'robux_direct_code',
-          title: 'Robux Direct Voucher',
-          subtitle: 'Direct Robux PIN Code',
-          description:
-              'Adds Robux currency directly to your Roblox avatar balance without needing a credit card.',
-          category: RewardCategory.robuxCode,
-          assetPath: AppAssets.roblox10UsdCard,
-          bgColor: Color(0xFF2ECC71),
-          deliveryHours: 24,
-          redeemInstructions:
-              '1. Visit roblox.com/redeem.\n'
-              '2. Enter your Robux voucher code.\n'
-              '3. Confirm your avatar username.\n'
-              '4. Robux will appear in your wallet instantly.',
-          denominations: [
-            RewardDenomination(
-              id: 'robux_code_400',
-              label: '400 Robux Voucher',
-              shortLabel: '400 R\$',
-              robuxAmount: 400,
-              coinCost: 35000,
-            ),
-            RewardDenomination(
-              id: 'robux_code_800',
-              label: '800 Robux Voucher',
-              shortLabel: '800 R\$',
-              robuxAmount: 800,
-              coinCost: 65000,
-            ),
-            RewardDenomination(
-              id: 'robux_code_2000',
-              label: '2,000 Robux Voucher',
-              shortLabel: '2,000 R\$',
-              robuxAmount: 2000,
-              coinCost: 130000,
-            ),
-            RewardDenomination(
-              id: 'robux_code_4500',
-              label: '4,500 Robux Voucher',
-              shortLabel: '4,500 R\$',
-              robuxAmount: 4500,
-              coinCost: 280000,
+              minLifetimeAds: 3600,
             ),
           ],
         ),

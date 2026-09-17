@@ -6,8 +6,8 @@ import '../models/ad_models.dart';
 
 /// Tracks daily/lifetime ad counts, enforces limits, and syncs to backend.
 class AdTrackerService {
-  static const int maxDailyTotalAds = 20;
-  static const int maxDailyOptionalAds = 20;
+  static const int maxDailyTotalAds = 60;
+  static const int maxDailyOptionalAds = 55;
   static const int maxDailyForcedAds = 10;
   static const int _syncThreshold = 10;
 
@@ -119,6 +119,18 @@ class AdTrackerService {
 
   int get dailyAdsWatched =>
       _trackingData.dailyForcedAds + _trackingData.dailyOptionalAds;
+
+  /// Total lifetime ads watched (forced + optional).
+  int get lifetimeAdsWatched =>
+      _trackingData.lifetimeForcedAds + _trackingData.lifetimeOptionalAds;
+
+  @visibleForTesting
+  void setLifetimeAdsForTest(int count) {
+    _trackingData = _trackingData.copyWith(
+      lifetimeOptionalAds: count,
+      lifetimeForcedAds: 0,
+    );
+  }
 
   /// Reset daily counters (typically at midnight).
   Future<void> resetDailyCounters() async {

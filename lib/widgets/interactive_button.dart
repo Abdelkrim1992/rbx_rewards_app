@@ -57,14 +57,16 @@ class _InteractiveButtonState extends State<InteractiveButton> {
     final bool isEnabled = widget.onTap != null && !widget.isLoading;
 
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: isEnabled ? (_) => setState(() => _scale = 0.96) : null,
-      onTapUp: isEnabled
-          ? (_) {
+      onTapUp: isEnabled ? (_) => setState(() => _scale = 1.0) : null,
+      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
+      onTap: isEnabled
+          ? () {
               setState(() => _scale = 1.0);
               widget.onTap?.call();
             }
           : null,
-      onTapCancel: isEnabled ? () => setState(() => _scale = 1.0) : null,
       child: AnimatedScale(
         scale: _scale,
         duration: const Duration(milliseconds: 100),
@@ -107,33 +109,36 @@ class _InteractiveButtonState extends State<InteractiveButton> {
                   ),
                 )
               : widget.child ??
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(
-                          widget.icon,
-                          size: widget.iconSize,
-                          color: isEnabled
-                              ? (widget.textColor ?? Colors.white)
-                              : const Color(0xFF94A3B8),
-                        ),
-                        SizedBox(width: widget.iconSpacing),
-                      ],
-                      if (widget.text != null)
-                        Text(
-                          widget.text!,
-                          style: TextStyle(
-                            fontSize: widget.fontSize,
-                            fontWeight: widget.fontWeight,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (widget.icon != null) ...[
+                          Icon(
+                            widget.icon,
+                            size: widget.iconSize,
                             color: isEnabled
                                 ? (widget.textColor ?? Colors.white)
                                 : const Color(0xFF94A3B8),
-                            letterSpacing: 0.2,
                           ),
-                        ),
-                    ],
+                          SizedBox(width: widget.iconSpacing),
+                        ],
+                        if (widget.text != null)
+                          Text(
+                            widget.text!,
+                            style: TextStyle(
+                              fontSize: widget.fontSize,
+                              fontWeight: widget.fontWeight,
+                              color: isEnabled
+                                  ? (widget.textColor ?? Colors.white)
+                                  : const Color(0xFF94A3B8),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
         ),
       ),

@@ -53,6 +53,7 @@ void main() {
     expect(lockedButton, findsOneWidget);
 
     // Tap the locked redeem button
+    await tester.ensureVisible(lockedButton);
     await tester.tap(lockedButton);
     await tester.pump();
 

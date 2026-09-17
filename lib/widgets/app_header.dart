@@ -5,10 +5,89 @@ import '../presentation/providers/coin_provider.dart';
 import '../presentation/providers/user_provider.dart';
 import '../theme/app_theme.dart';
 
-class RbxAppHeader extends ConsumerWidget {
+class RbxAppHeader extends ConsumerStatefulWidget implements PreferredSizeWidget {
   final ValueChanged<int>? onNavTap;
+  final bool isScrolled;
+  final bool isSticky;
 
-  const RbxAppHeader({super.key, this.onNavTap});
+  /// Global key to target the active coin balance badge during flying coin animations
+  static GlobalKey? get balanceBadgeKey => _headerState?._badgeKey;
+
+  /// Public hook to trigger balance badge bounce pulse from external overlays
+  static void pulseBadge() {
+    _headerState?.pulse();
+  }
+
+  static _RbxAppHeaderState? _headerState;
+
+  const RbxAppHeader({
+    super.key,
+    this.onNavTap,
+    this.isScrolled = false,
+    this.isSticky = true,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(66);
+
+  @override
+  ConsumerState<RbxAppHeader> createState() => _RbxAppHeaderState();
+}
+
+class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+  int _previousCoins = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    RbxAppHeader._headerState = this;
+    _previousCoins = ref.read(coinProvider);
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 1.22)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.22, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 55,
+      ),
+    ]).animate(_pulseController);
+  }
+
+  @override
+  void dispose() {
+    if (RbxAppHeader._headerState == this) {
+      RbxAppHeader._headerState = null;
+    }
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  void pulse() {
+    if (mounted) {
+      _pulseController.reset();
+      _pulseController.forward();
+    }
+  }
+
+  final GlobalKey _badgeKey = GlobalKey();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    RbxAppHeader._headerState = this;
+  }
 
   String _formatCoins(int coins) {
     if (coins >= 1000000) {
@@ -21,17 +100,45 @@ class RbxAppHeader extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
     final coins = ref.watch(coinProvider);
     final profilePhotoUrl = userProfile.profilePhotoUrl;
 
-    return Padding(
-      padding: const EdgeInsets.only(
+    if (coins > _previousCoins) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) pulse();
+      });
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: widget.isScrolled ? 0.96 : 1.0),
+        border: Border(
+          bottom: BorderSide(
+            color: widget.isScrolled
+                ? AppColors.cardBorder.withValues(alpha: 0.8)
+                : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        boxShadow: widget.isScrolled
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      padding: EdgeInsets.only(
         left: 13,
         right: AppLayout.screenPadding,
-        top: 15,
-        bottom: 15,
+        top: widget.isScrolled ? 10 : 14,
+        bottom: widget.isScrolled ? 10 : 14,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -47,77 +154,92 @@ class RbxAppHeader extends ConsumerWidget {
             children: [
               // Live Coin Balance Badge (Tap to View Rewards)
               GestureDetector(
-                onTap: () => onNavTap?.call(2), // Index 2 is Rewards
+                onTap: () => widget.onNavTap?.call(2), // Index 2 is Rewards
                 behavior: HitTestBehavior.opaque,
-                child: Container(
-                  height: 36,
-                  padding: const EdgeInsets.only(left: 8, right: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x0A000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset(
-                        AppAssets.goldCoin,
-                        width: 20,
-                        height: 20,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.monetization_on,
-                          color: Color(0xFFFFB000),
-                          size: 20,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Container(
+                    key: _badgeKey,
+                    height: 36,
+                    padding: const EdgeInsets.only(left: 8, right: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: AppColors.cardBorder, width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 4,
+                          offset: Offset(0, 1),
                         ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        _formatCoins(coins),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primaryText,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.35),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.add_rounded,
-                            size: 13,
-                            color: Colors.white,
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          AppAssets.goldCoin,
+                          width: 20,
+                          height: 20,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.monetization_on,
+                            color: Color(0xFFFFB000),
+                            size: 20,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 5),
+                        TweenAnimationBuilder<int>(
+                          tween: IntTween(begin: _previousCoins, end: coins),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOutCubic,
+                          onEnd: () {
+                            _previousCoins = coins;
+                          },
+                          builder: (context, animatedValue, child) {
+                            return Text(
+                              _formatCoins(animatedValue),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primaryText,
+                                letterSpacing: 0.2,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.35),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.add_rounded,
+                              size: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               // Profile avatar
               GestureDetector(
-                onTap: () => onNavTap?.call(3), // Index 3 is Profile
+                onTap: () => widget.onNavTap?.call(3), // Index 3 is Profile
                 child: Container(
                   width: 40,
                   height: 40,
@@ -136,7 +258,8 @@ class RbxAppHeader extends ConsumerWidget {
                     ],
                   ),
                   child: ClipOval(
-                    child: (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty)
+                    child: (profilePhotoUrl != null &&
+                            profilePhotoUrl.isNotEmpty)
                         ? CachedNetworkImage(
                             imageUrl: profilePhotoUrl,
                             fit: BoxFit.cover,
@@ -148,15 +271,17 @@ class RbxAppHeader extends ConsumerWidget {
                             errorWidget: (_, __, ___) => Image.asset(
                               AppAssets.profileAvatar,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
-                                  const Icon(Icons.person, color: AppColors.primary),
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person,
+                                  color: AppColors.primary),
                             ),
                           )
                         : Image.asset(
                             AppAssets.profileAvatar,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.person, color: AppColors.primary),
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person,
+                                color: AppColors.primary),
                           ),
                   ),
                 ),

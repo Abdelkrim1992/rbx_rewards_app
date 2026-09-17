@@ -11,6 +11,10 @@ class UserProfile {
 
   final int totalSpent;
   final DateTime? createdAt;
+  final String? referralCode;
+  final String? referredBy;
+  final int referralCount;
+  final int referralEarnings;
 
   UserProfile({
     required this.id,
@@ -24,6 +28,10 @@ class UserProfile {
     this.dailyRewardClaimedAt,
     this.totalSpent = 0,
     this.createdAt,
+    this.referralCode,
+    this.referredBy,
+    this.referralCount = 0,
+    this.referralEarnings = 0,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -43,6 +51,10 @@ class UserProfile {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
+      referralCode: json['referral_code'] as String?,
+      referredBy: json['referred_by'] as String?,
+      referralCount: json['referral_count'] as int? ?? 0,
+      referralEarnings: json['referral_earnings'] as int? ?? 0,
     );
   }
 
@@ -58,6 +70,10 @@ class UserProfile {
     DateTime? dailyRewardClaimedAt,
     int? totalSpent,
     DateTime? createdAt,
+    String? referralCode,
+    String? referredBy,
+    int? referralCount,
+    int? referralEarnings,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -71,6 +87,10 @@ class UserProfile {
       dailyRewardClaimedAt: dailyRewardClaimedAt ?? this.dailyRewardClaimedAt,
       totalSpent: totalSpent ?? this.totalSpent,
       createdAt: createdAt ?? this.createdAt,
+      referralCode: referralCode ?? this.referralCode,
+      referredBy: referredBy ?? this.referredBy,
+      referralCount: referralCount ?? this.referralCount,
+      referralEarnings: referralEarnings ?? this.referralEarnings,
     );
   }
 }

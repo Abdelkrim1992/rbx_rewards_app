@@ -1208,7 +1208,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   DateTime? _gameStartTime;
 
   // Confetti / Coin claim animation state
-  bool _showCoinClaimAnimation = false;
+  final bool _showCoinClaimAnimation = false;
   bool _hasClaimedReward = false;
   bool _handledGameOver = false;
   int _originalCoinsEarned = 0;
@@ -1351,9 +1351,12 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.goldRbxCoin,
+      multiplier: 4,
       onSuccess: (coins) async {
         if (!mounted) return;
-        final isDouble = (coins == baseAmt * 2);
+        final multiplier = coins > baseAmt
+            ? (coins / baseAmt).round().clamp(1, 4)
+            : 1;
         final duration = _gameStartTime != null
             ? DateTime.now().difference(_gameStartTime!).inSeconds
             : 1;
@@ -1365,7 +1368,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             durationSeconds: duration.clamp(1, 3600),
             sessionId: _sessionId ?? ref.read(gameServiceProvider).generateSessionId(),
             originalScore: baseAmt,
-            multiplier: isDouble ? 2 : 1,
+            multiplier: multiplier,
           );
           if (!mounted) return;
           if (result.success || result.queued) {

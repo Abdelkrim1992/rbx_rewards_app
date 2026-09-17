@@ -35,11 +35,11 @@ class MegaChestMilestoneNotifier extends StateNotifier<int> {
     } catch (_) {}
   }
 
-  Future<bool> claimReward() async {
+  Future<bool> claimReward({int baseReward = 1000}) async {
     if (!_mounted) return false;
     
-    // Credit 1,000 coins via coinProvider
-    await _ref.read(coinProvider.notifier).credit(1000, 'mega_chest');
+    // Credit coins via coinProvider
+    await _ref.read(coinProvider.notifier).credit(baseReward, 'mega_chest');
     
     // Update the milestone
     final nextMilestone = state + 1;

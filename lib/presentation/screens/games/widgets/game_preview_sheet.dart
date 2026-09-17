@@ -9,6 +9,8 @@ class GamePreviewSheet extends StatelessWidget {
   final int earnedToday;
   final int totalCap;
   final int remainingCap;
+  /// Actual per-round payout to display on the CTA (e.g. +31 RBX).
+  final int? rewardAmount;
   final VoidCallback onStartGame;
 
   const GamePreviewSheet({
@@ -17,6 +19,7 @@ class GamePreviewSheet extends StatelessWidget {
     required this.earnedToday,
     required this.totalCap,
     required this.remainingCap,
+    this.rewardAmount,
     required this.onStartGame,
   });
 
@@ -26,6 +29,7 @@ class GamePreviewSheet extends StatelessWidget {
     required int earnedToday,
     required int totalCap,
     required int remainingCap,
+    int? rewardAmount,
     required VoidCallback onStartGame,
   }) {
     return showModalBottomSheet(
@@ -37,6 +41,7 @@ class GamePreviewSheet extends StatelessWidget {
         earnedToday: earnedToday,
         totalCap: totalCap,
         remainingCap: remainingCap,
+        rewardAmount: rewardAmount,
         onStartGame: onStartGame,
       ),
     );
@@ -44,7 +49,8 @@ class GamePreviewSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isBlocked = remainingCap <= 0;
+    // Repeatable games in the soft-cap economy are NEVER hard-blocked.
+    const isBlocked = false;
     final progress = totalCap > 0 ? (earnedToday / totalCap).clamp(0.0, 1.0) : 0.0;
 
     return Container(
@@ -394,17 +400,15 @@ class GamePreviewSheet extends StatelessWidget {
           InteractiveButton(
             height: 50,
             borderRadius: 16,
-            icon: isBlocked
-                ? Icons.lock_clock_rounded
-                : Icons.play_arrow_rounded,
+            icon: Icons.play_arrow_rounded,
             iconSize: 20,
             iconSpacing: 8,
-            text: isBlocked
-                ? 'Daily Limit Reached (Resets Tonight)'
-                : 'Play Now (+$remainingCap RBX Max)',
+            text: game.category != GameCategory.instant
+                ? 'Play Now (Up to +${rewardAmount ?? 31} Coins)'
+                : 'Play Now (+${rewardAmount ?? 48} Coins per round)',
             fontSize: 14,
             fontWeight: FontWeight.w800,
-            onTap: isBlocked ? null : onStartGame,
+            onTap: onStartGame,
           ),
         ],
       ),

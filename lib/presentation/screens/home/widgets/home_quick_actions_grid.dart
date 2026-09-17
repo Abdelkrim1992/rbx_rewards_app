@@ -8,6 +8,11 @@ class HomeQuickActionsGrid extends StatelessWidget {
   final VoidCallback onScratchTap;
   final VoidCallback onWatchAdTap;
   final bool isOnline;
+  /// Dynamic reward badge shown on the Watch & Earn card (e.g. '+50 RBX').
+  /// Driven by coin_distributions.base_reward for 'ad' in the database.
+  final int watchEarnCoins;
+  /// Whether the user has hit the daily Watch & Earn cap.
+  final bool isWatchEarnCapped;
 
   const HomeQuickActionsGrid({
     super.key,
@@ -16,10 +21,20 @@ class HomeQuickActionsGrid extends StatelessWidget {
     required this.onScratchTap,
     required this.onWatchAdTap,
     this.isOnline = true,
+    this.watchEarnCoins = 50,
+    this.isWatchEarnCapped = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final watchBadge = isWatchEarnCapped ? 'Capped' : '+$watchEarnCoins RBX';
+    final watchBadgeColor = isWatchEarnCapped
+        ? const Color(0xFFF1F5F9)
+        : const Color(0xFFFFE4E6);
+    final watchBadgeTextColor = isWatchEarnCapped
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFFE11D48);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
       child: Column(
@@ -69,10 +84,10 @@ class HomeQuickActionsGrid extends StatelessWidget {
                 fallbackIcon: Icons.play_circle_fill_rounded,
                 fallbackIconColor: const Color(0xFFE52E71),
                 title: 'Watch & Earn',
-                badge: '+50 RBX',
-                badgeColor: const Color(0xFFFFE4E6),
-                badgeTextColor: const Color(0xFFE11D48),
-                onTap: isOnline ? onWatchAdTap : null,
+                badge: watchBadge,
+                badgeColor: watchBadgeColor,
+                badgeTextColor: watchBadgeTextColor,
+                onTap: isOnline && !isWatchEarnCapped ? onWatchAdTap : null,
               ),
             ],
           ),

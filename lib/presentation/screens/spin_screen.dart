@@ -15,6 +15,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/game_prefs.dart';
 import '../../core/utils/reward_helper.dart';
+import '../../business/sound_service.dart';
 
 class SpinScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
@@ -35,19 +36,23 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   bool _isProcessing = false;
   int _extraSpinsRemaining = GamePrefs.maxExtraSpinsPerDay;
 
-  final List<_WheelSegment> segments = const [
-    _WheelSegment(label: '5', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
-    _WheelSegment(label: '8', sublabel: 'RBX', color: Color(0xFF7B3FE4)),
-    _WheelSegment(label: '10', sublabel: 'RBX', color: Color(0xFFB370FF)),
-    _WheelSegment(label: '20', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
-    _WheelSegment(
-        label: 'JACKPOT',
-        sublabel: '25 RBX!',
-        color: Color.fromARGB(255, 160, 122, 16)),
-    _WheelSegment(label: '15', sublabel: 'RBX', color: Color(0xFF8847F5)),
-  ];
+  List<_WheelSegment> get segments {
+    final jackpotReward = ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
+    return [
+      const _WheelSegment(label: '5', sublabel: 'RBX', color: Color(0xFF9B5CFF)),
+      const _WheelSegment(label: '8', sublabel: 'RBX', color: Color(0xFF7B3FE4)),
+      const _WheelSegment(label: '10', sublabel: 'RBX', color: Color(0xFFB370FF)),
+      const _WheelSegment(label: '20', sublabel: 'RBX', color: Color(0xFF6A2FD8)),
+      _WheelSegment(
+          label: 'JACKPOT',
+          sublabel: '$jackpotReward RBX!',
+          color: const Color.fromARGB(255, 160, 122, 16)),
+      const _WheelSegment(label: '15', sublabel: 'RBX', color: Color(0xFF8847F5)),
+    ];
+  }
 
   Timer? _countdownTimer;
+  int _lastPeg = 0;
 
   @override
   void initState() {
@@ -56,6 +61,17 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       vsync: this,
       duration: const Duration(milliseconds: 3500),
     );
+
+    _controller.addListener(() {
+      if (_isSpinning) {
+        const segmentAngle = (2 * pi) / 6;
+        final peg = (_animation.value / segmentAngle).floor();
+        if (peg != _lastPeg) {
+          _lastPeg = peg;
+          SoundService.instance.playWheelTick();
+        }
+      }
+    });
 
     _pulseController = AnimationController(
       vsync: this,
@@ -128,6 +144,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final freeSpins = ref.read(spinProvider).spinsRemaining;
     final isSpinBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('spin') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
     if (_isSpinning || _isProcessing || freeSpins == 0 || isSpinBlocked) return;
+    SoundService.instance.playButton();
     final random = Random();
     final targetSegment = _pickWeightedSegment(random);
     final baseRotations = 2 + random.nextInt(6);
@@ -135,6 +152,8 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final targetAngle = baseRotations * 2 * pi +
         targetSegment * segmentAngle +
         segmentAngle / 2;
+
+    _lastPeg = (_animation.value / segmentAngle).floor();
 
     _animation = Tween<double>(
       begin: _animation.value,
@@ -160,6 +179,10 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
       if (!mounted) return;
 
+      if (prize == 'JACKPOT') {
+        SoundService.instance.playJackpot();
+      }
+
       setState(() {
         _isSpinning = false;
       });
@@ -171,7 +194,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   int _prizeToCoins(String prize) {
     switch (prize) {
       case 'JACKPOT':
-        return 25;
+        return ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
       default:
         return int.tryParse(prize) ?? 5;
     }
@@ -198,6 +221,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       quickPlacement: AdPlacement.spinExtra,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.spinWheelIcon,
+      multiplier: 4,
       onSuccess: (coins) async {
         if (!mounted) return;
         final result = await ref.read(spinProvider.notifier).spin();

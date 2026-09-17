@@ -11,6 +11,7 @@ import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../core/utils/reward_helper.dart';
+import '../../business/sound_service.dart';
 
 class TapTapGameScreen extends ConsumerStatefulWidget {
   const TapTapGameScreen({super.key});
@@ -256,12 +257,19 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
         _coinsEarned = 0;
       });
     } else {
-      final baseCoins = (_score * 0.5).ceil().clamp(0, 15); // 1 coin per 2 taps, max 15 base
-      int totalCoins = baseCoins;
-      if (_maxCombo > 10) {
-        final comboBonus = (_maxCombo * 0.5).round();
-        totalCoins = (baseCoins + comboBonus).clamp(0, 15); // Combo bonus, still capped at 15
+      final capService = ref.read(dailyCapServiceProvider);
+      final maxReward = capService.getBaseReward('tap_tap', fallback: 15);
+      // Dynamic action calculation: 1 base coin per 20 points + combo tier bonus
+      final baseCoins = (_score / 20).floor().clamp(1, maxReward);
+      int comboBonus = 0;
+      if (_maxCombo >= 30) {
+        comboBonus = 4;
+      } else if (_maxCombo >= 15) {
+        comboBonus = 2;
+      } else if (_maxCombo >= 5) {
+        comboBonus = 1;
       }
+      final totalCoins = (baseCoins + comboBonus).clamp(1, maxReward);
       
       setState(() {
         _isGameOver = true;
@@ -309,6 +317,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
     // Trigger squash & stretch animation
     _crystalPressController.reset();
     _crystalPressController.forward();
+    SoundService.instance.playBubble();
 
     // Tap calculations
     _timeElapsedSinceLastTap = 0.0;
@@ -939,7 +948,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
             ],
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 30),
 
           // Big Launch Button
           GestureDetector(
@@ -958,6 +967,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                   ),
                 ],
               ),
+
               child: const Center(
                 child: Text(
                   'Start 3D Rush!',
@@ -999,8 +1009,11 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.tapTapGame,
+      multiplier: 4,
       onSuccess: (coins) async {
-        final multiplier = coins > _originalCoinsEarned ? 2 : 1;
+        final multiplier = coins > _originalCoinsEarned
+            ? (coins / _originalCoinsEarned).round().clamp(1, 4)
+            : 1;
         final duration = _gameStartTime != null
             ? DateTime.now().difference(_gameStartTime!).inSeconds
             : 1;

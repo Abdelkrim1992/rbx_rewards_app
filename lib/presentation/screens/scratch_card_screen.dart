@@ -15,6 +15,7 @@ import '../../widgets/quit_confirmation_dialog.dart';
 import '../../widgets/ad_reward_dialog.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
+import '../../business/sound_service.dart';
 
 class ScratchCardScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
@@ -106,9 +107,21 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     _scratcherKey.currentState?.reset(duration: const Duration(milliseconds: 300));
   }
 
+  int _lastScratchSoundTime = 0;
+
+  void _onScratchMove() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastScratchSoundTime > 220) {
+      _lastScratchSoundTime = now;
+      SoundService.instance.playScratch();
+    }
+  }
+
   Future<void> _handleScratchWin() async {
     if (_isScratched || _isProcessing) return;
     
+    SoundService.instance.playJackpot();
+
     setState(() {
       _isScratched = true;
       _hasStartedScratching = false;
@@ -127,6 +140,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
       quickPlacement: AdPlacement.scratchCard,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.goldRbxCoin,
+      multiplier: 4,
       onSuccess: (coins) async {
         await ref.read(coinProvider.notifier).credit(coins, 'scratch');
         await GamePrefs.decrementScratchesRemaining();
@@ -176,6 +190,13 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     final isFeaturesCapReached = capService.isFeaturesCapReached;
     final isScratchBlocked = isScratchCapReached || isFeaturesCapReached;
 
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
+    final isCompact = screenWidth < 360;
+    final isShort = screenHeight < 680;
+    final horizontalPadding = isCompact ? 12.0 : 16.0;
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -189,7 +210,12 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
             children: [
               // Nav bar
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  12,
+                  horizontalPadding,
+                  0,
+                ),
                 child: SizedBox(
                   height: 44,
                   child: Stack(
@@ -200,26 +226,34 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                         child: GestureDetector(
                           onTap: _handleBack,
                           child: Container(
-                            width: 44,
-                            height: 44,
+                            width: isCompact ? 38 : 44,
+                            height: isCompact ? 38 : 44,
                             decoration: BoxDecoration(
                               color: AppColors.primarySoft,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.arrow_back_ios_new,
                               color: AppColors.purple,
-                              size: 18,
+                              size: isCompact ? 16 : 18,
                             ),
                           ),
                         ),
                       ),
-                      const Text(
-                        'Scratch & Win',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF131326),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isCompact ? 48 : 64,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Scratch & Win',
+                            style: TextStyle(
+                              fontSize: isCompact ? 18 : 20,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF131326),
+                            ),
+                          ),
                         ),
                       ),
                       Align(
@@ -228,7 +262,10 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                           builder: (context, ref, child) {
                             final coinBalance = ref.watch(coinProvider);
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCompact ? 8 : 10,
+                                vertical: isCompact ? 4 : 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primarySoft,
                                 borderRadius: BorderRadius.circular(20),
@@ -238,14 +275,14 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                 children: [
                                   Image.asset(
                                     AppAssets.goldRbxCoin,
-                                    width: 18,
-                                    height: 18,
+                                    width: isCompact ? 16 : 18,
+                                    height: isCompact ? 16 : 18,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     coinBalance.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 14,
+                                    style: TextStyle(
+                                      fontSize: isCompact ? 13 : 14,
                                       fontWeight: FontWeight.bold,
                                       color: AppColors.primaryText,
                                     ),
@@ -260,12 +297,16 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: isCompact ? 12 : 20),
 
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
-                  child: Column(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      child: Column(
                     children: [
                       // Scratches Left Indicator / Countdown Banner
                       if (!_isLoadingLimit) ...[
@@ -273,32 +314,38 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCompact ? 12 : 16,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFF0F5),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: const Color(0xFFFFD4E5)),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.timer_outlined,
-                                    size: 18,
-                                    color: Color(0xFFFF52A2),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    isScratchBlocked
-                                        ? 'Daily Scratch Cap Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}'
-                                        : 'Limit Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFFF52A2),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.timer_outlined,
+                                      size: 18,
+                                      color: Color(0xFFFF52A2),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isScratchBlocked
+                                          ? 'Daily Scratch Cap Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}'
+                                          : 'Limit Reached • Resets in ${_formatDuration(_getEffectiveCooldown(isScratchBlocked))}',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: isCompact ? 13 : 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFFF52A2),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -306,42 +353,51 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCompact ? 12 : 16,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFFFF0F5),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: const Color(0xFFFFD4E5)),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.play_circle_outline,
-                                    size: 18,
-                                    color: Color(0xFFFF52A2),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '0 Scratches Left • Watch ad below for extra scratch',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFFF52A2),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.play_circle_outline,
+                                      size: 18,
+                                      color: Color(0xFFFF52A2),
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '0 Scratches Left • Watch ad below for extra scratch',
+                                      style: GoogleFonts.outfit(
+                                        fontSize: isCompact ? 12 : 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFFF52A2),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ] else ...[
                           Padding(
                             padding: const EdgeInsets.only(bottom: 12.0),
-                            child: Text(
-                              'Free Scratches: $_scratchesRemaining',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF131326),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Free Scratches: $_scratchesRemaining',
+                                style: TextStyle(
+                                  fontSize: isCompact ? 14 : 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF131326),
+                                ),
                               ),
                             ),
                           ),
@@ -350,7 +406,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
 
                       // Scratch Card Container
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(isCompact ? 12 : 16),
                         decoration: BoxDecoration(
                           color: AppColors.primarySoft,
                           borderRadius: BorderRadius.circular(24),
@@ -364,84 +420,91 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                         ),
                         child: Column(
                           children: [
-                            const Text(
+                            Text(
                               'Scratch below to reveal!',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: isCompact ? 15 : 16,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: isCompact ? 12 : 16),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: IgnorePointer(
                                 ignoring: _scratchesRemaining <= 0 || _isLoadingLimit || isScratchBlocked,
-                                child: Scratcher(
-                                  key: _scratcherKey,
-                                  brushSize: 40,
-                                  threshold: 50,
-                                  color: AppColors.primaryLight,
-                                  image: Image.asset(
-                                    AppAssets.dailyRewardImage,
-                                    fit: BoxFit.cover,
-                                  ),
-                                  onChange: (value) {
-                                    if (value > 0 && !_hasStartedScratching) {
-                                      setState(() {
-                                        _hasStartedScratching = true;
-                                      });
-                                    }
-                                  },
-                                onThreshold: () {
-                                  _handleScratchWin();
-                                },
-                                child: Container(
-                                  height: 250,
-                                  width: double.infinity,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        AppAssets.goldRbxCoin,
-                                        width: 80,
-                                        height: 80,
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        '$_rewardAmount RBX',
-                                        style: const TextStyle(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w900,
-                                          color: AppColors.primaryText,
+                                child: Listener(
+                                  onPointerMove: (_) => _onScratchMove(),
+                                  child: Scratcher(
+                                    key: _scratcherKey,
+                                    brushSize: isCompact ? 34 : 40,
+                                    threshold: 50,
+                                    color: AppColors.primaryLight,
+                                    image: Image.asset(
+                                      AppAssets.dailyRewardImage,
+                                      fit: BoxFit.cover,
+                                    ),
+                                    onChange: (value) {
+                                      _onScratchMove();
+                                      if (value > 0 && !_hasStartedScratching) {
+                                        setState(() {
+                                          _hasStartedScratching = true;
+                                        });
+                                      }
+                                    },
+                                    onThreshold: () {
+                                      _handleScratchWin();
+                                    },
+                                    child: Container(
+                                    height: isCompact ? 210 : (isShort ? 230 : 250),
+                                    width: double.infinity,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Image.asset(
+                                          AppAssets.goldRbxCoin,
+                                          width: isCompact ? 64 : 80,
+                                          height: isCompact ? 64 : 80,
                                         ),
-                                      ),
-                                      const Text(
-                                        'You Won!',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.secondaryText,
+                                        SizedBox(height: isCompact ? 8 : 12),
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            '$_rewardAmount RBX',
+                                            style: TextStyle(
+                                              fontSize: isCompact ? 26 : 32,
+                                              fontWeight: FontWeight.w900,
+                                              color: AppColors.primaryText,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                        Text(
+                                          'You Won!',
+                                          style: TextStyle(
+                                            fontSize: isCompact ? 14 : 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.secondaryText,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+                    ),
 
-                      const SizedBox(height: 24),
+                      SizedBox(height: isCompact ? 16 : 24),
 
                       // Watch Ad button for extra scratch
                       InteractiveButton(
-                        height: 52,
+                        height: isCompact ? 48 : 52,
                         gradient: (_extraScratchesRemaining <= 0 || isScratchBlocked)
                             ? null
                             : AppColors.primaryGradient,
@@ -520,77 +583,89 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                   },
                                 );
                               },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _extraScratchesRemaining <= 0
-                                  ? Icons.check_circle_outline
-                                  : (isScratchBlocked ? Icons.lock : Icons.play_circle_fill),
-                              color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
-                                  ? const Color(0xFF868A9F)
-                                  : Colors.white,
-                              size: 22,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  _extraScratchesRemaining <= 0
+                                      ? Icons.check_circle_outline
+                                      : (isScratchBlocked ? Icons.lock : Icons.play_circle_fill),
+                                  color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                                      ? const Color(0xFF868A9F)
+                                      : Colors.white,
+                                  size: isCompact ? 18 : 22,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _extraScratchesRemaining <= 0
+                                      ? 'Extra Scratches Limit Reached (0/${GamePrefs.maxExtraScratchesPerDay})'
+                                      : isScratchBlocked
+                                          ? 'Daily Scratch Cap Reached'
+                                          : 'Watch Ad for Extra Scratch ($_extraScratchesRemaining/${GamePrefs.maxExtraScratchesPerDay} left)',
+                                  style: TextStyle(
+                                    fontSize: isCompact ? 13 : 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
+                                        ? const Color(0xFF868A9F)
+                                        : Colors.white,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _extraScratchesRemaining <= 0
-                                  ? 'Extra Scratches Limit Reached (0/${GamePrefs.maxExtraScratchesPerDay})'
-                                  : isScratchBlocked
-                                      ? 'Daily Scratch Cap Reached'
-                                      : 'Watch Ad for Extra Scratch ($_extraScratchesRemaining/${GamePrefs.maxExtraScratchesPerDay} left)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: (_extraScratchesRemaining <= 0 || isScratchBlocked)
-                                    ? const Color(0xFF868A9F)
-                                    : Colors.white,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: isCompact ? 16 : 24),
 
                       // How to Play Section
-                      const Align(
+                      Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
                           'How to Play',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: isCompact ? 16 : 17,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF131326),
+                            color: const Color(0xFF131326),
                           ),
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const _HowToStep(
+                      _HowToStep(
                         icon: Icons.touch_app,
                         title: 'Scratch the Card',
                         description: 'Use your finger to scratch away the cover and reveal what\'s underneath.',
-                        color: Color(0xFF9B5CFF),
+                        color: const Color(0xFF9B5CFF),
+                        isCompact: isCompact,
                       ),
                       const SizedBox(height: 8),
-                      const _HowToStep(
+                      _HowToStep(
                         icon: Icons.monetization_on,
                         title: 'Reveal the Prize',
-                        description: 'Match the hidden symbols to win up to 50 RBX instantly.',
-                        color: Color(0xFF6B4BF4),
+                        description: 'Match the hidden symbols to win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX instantly.',
+                        color: const Color(0xFF6B4BF4),
+                        isCompact: isCompact,
                       ),
                       const SizedBox(height: 8),
-                      const _HowToStep(
+                      _HowToStep(
                         icon: Icons.play_circle_outline,
                         title: 'Get More Cards',
                         description: 'Watch a short video to get another scratch card.',
-                        color: Color(0xFF4A2BC2),
+                        color: const Color(0xFF4A2BC2),
+                        isCompact: isCompact,
                       ),
                       const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
+            ),
+          ),
             ],
           ),
         ),
@@ -604,18 +679,24 @@ class _HowToStep extends StatelessWidget {
   final String title;
   final String description;
   final Color color;
+  final bool isCompact;
 
   const _HowToStep({
     required this.icon,
     required this.title,
     required this.description,
     required this.color,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconBoxSize = isCompact ? 40.0 : 48.0;
+    final iconSize = isCompact ? 20.0 : 24.0;
+    final spacing = isCompact ? 12.0 : 16.0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -631,34 +712,34 @@ class _HowToStep extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: iconBoxSize,
+            height: iconBoxSize,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: color, size: iconSize),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: TextStyle(
+                    fontSize: isCompact ? 14 : 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF131326),
+                    color: const Color(0xFF131326),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF868A9F),
-                    height: 1.4,
+                  style: TextStyle(
+                    fontSize: isCompact ? 11.5 : 12,
+                    color: const Color(0xFF868A9F),
+                    height: 1.35,
                   ),
                 ),
               ],

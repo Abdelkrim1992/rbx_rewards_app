@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
+import 'package:rbx_rewards/models/reward_config.dart';
 import 'package:rbx_rewards/widgets/streak_saver_sheet.dart';
 
 void main() {
@@ -56,19 +57,23 @@ void main() {
       expect(preserved.dailyRewardClaimedAt, initialTime);
     });
 
-    test('Daily streak reward calculation formula', () {
-      // Days 1-6 formula: 10 + (dayNum * 5), Day 7: 100
-      int calculateReward(int day) {
-        return day == 7 ? 100 : 10 + (day * 5);
-      }
+    test('Daily streak escalating reward schedule (Days 1 to 7)', () {
+      expect(RewardConfig.getDailyStreakBaseReward(1), 10);
+      expect(RewardConfig.getDailyStreakBaseReward(2), 15);
+      expect(RewardConfig.getDailyStreakBaseReward(3), 20);
+      expect(RewardConfig.getDailyStreakBaseReward(4), 25);
+      expect(RewardConfig.getDailyStreakBaseReward(5), 30);
+      expect(RewardConfig.getDailyStreakBaseReward(6), 40);
+      expect(RewardConfig.getDailyStreakBaseReward(7), 75);
 
-      expect(calculateReward(1), 15);
-      expect(calculateReward(2), 20);
-      expect(calculateReward(3), 25);
-      expect(calculateReward(4), 30);
-      expect(calculateReward(5), 35);
-      expect(calculateReward(6), 40);
-      expect(calculateReward(7), 100);
+      // Premium x3 schedule
+      expect(RewardConfig.getDailyStreakPremiumReward(1), 30);
+      expect(RewardConfig.getDailyStreakPremiumReward(2), 45);
+      expect(RewardConfig.getDailyStreakPremiumReward(3), 60);
+      expect(RewardConfig.getDailyStreakPremiumReward(4), 75);
+      expect(RewardConfig.getDailyStreakPremiumReward(5), 90);
+      expect(RewardConfig.getDailyStreakPremiumReward(6), 120);
+      expect(RewardConfig.getDailyStreakPremiumReward(7), 225);
     });
   });
 
@@ -97,7 +102,7 @@ void main() {
       expect(find.text('Keep Day 5'), findsOneWidget);
       expect(find.text('Unlock Day 6 (+40)'), findsOneWidget);
       expect(find.text('Start Over'), findsOneWidget);
-      expect(find.text('Day 1 (+15 RBX)'), findsOneWidget);
+      expect(find.text('Day 1 (+10 RBX)'), findsOneWidget);
 
       // Tap Save Streak
       await tester.tap(find.text('Save Streak (Watch Video)'));

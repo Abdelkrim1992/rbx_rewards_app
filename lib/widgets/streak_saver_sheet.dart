@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import '../models/reward_config.dart';
 import 'interactive_button.dart';
 
 /// Modal bottom sheet presented when a user's consecutive day streak is broken.
@@ -153,8 +153,8 @@ class StreakSaverSheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(
                               Icons.shield_rounded,
                               size: 16,
@@ -211,8 +211,8 @@ class StreakSaverSheet extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(
                               Icons.restart_alt_rounded,
                               size: 16,
@@ -240,9 +240,9 @@ class StreakSaverSheet extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Day 1 (+15 RBX)',
-                          style: TextStyle(
+                        Text(
+                          'Day 1 (+${RewardConfig.getDailyStreakBaseReward(1)} RBX)',
+                          style: const TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF64748B),
@@ -264,9 +264,9 @@ class StreakSaverSheet extends StatelessWidget {
                 colors: [Color(0xFFFF8A00), Color(0xFFE52E71)],
               ),
               onTap: isLoading ? null : onSaveWithAd,
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(
                     Icons.play_circle_fill_rounded,
                     color: Colors.white,

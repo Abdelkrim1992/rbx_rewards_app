@@ -220,6 +220,7 @@ class _TabPillItem extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 icon,
@@ -227,24 +228,28 @@ class _TabPillItem extends StatelessWidget {
                   fontSize: isSelected ? 14 : 13,
                 ),
               ),
-              const SizedBox(width: 5),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  letterSpacing: -0.1,
-                  color: isSelected
-                      ? AppColors.primary
-                      : const Color(0xFF94A3B8),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.0,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    letterSpacing: -0.1,
+                    color: isSelected
+                        ? AppColors.primary
+                        : const Color(0xFF94A3B8),
+                  ),
                 ),
               ),
               if (badgeText != null) ...[
-                const SizedBox(width: 6),
+                const SizedBox(width: 4),
                 _TabBadge(text: badgeText!, isSelected: isSelected),
               ],
               if (hasActionAlert) ...[
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 const _AlertDot(),
               ],
             ],

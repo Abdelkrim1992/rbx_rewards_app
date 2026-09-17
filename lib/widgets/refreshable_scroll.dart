@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../presentation/providers/user_provider.dart';
+import '../presentation/providers/providers.dart';
 
 class RefreshableScrollView extends ConsumerWidget {
   final EdgeInsetsGeometry? padding;
@@ -21,6 +22,11 @@ class RefreshableScrollView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: onRefresh ?? () async {
         ref.invalidate(userProfileStreamProvider);
+        try {
+          final capService = ref.read(dailyCapServiceProvider);
+          await capService.load();
+          await capService.refreshLimits();
+        } catch (_) {}
       },
       child: SingleChildScrollView(
         key: key,
@@ -48,6 +54,11 @@ class RefreshableListView extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(userProfileStreamProvider);
+        try {
+          final capService = ref.read(dailyCapServiceProvider);
+          await capService.load();
+          await capService.refreshLimits();
+        } catch (_) {}
       },
       child: ListView(
         key: key,

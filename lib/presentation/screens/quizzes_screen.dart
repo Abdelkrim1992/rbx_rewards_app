@@ -238,7 +238,11 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
-    final coins = (_correctCount * 2).clamp(0, 20); // 2 coins per correct, max 20 base
+    final capService = ref.read(dailyCapServiceProvider);
+    final maxReward = capService.getBaseReward('quiz', fallback: 15);
+    // Dynamic action calculation: proportional to correct answers (up to 15 base coins)
+    final perCorrect = (maxReward / _sessionQuestions.length);
+    final coins = (_correctCount * perCorrect).round().clamp(0, maxReward);
     setState(() {
       _originalCoinsEarned = coins;
       _coinsEarned = coins;
@@ -270,6 +274,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.quizMasterGame,
+      multiplier: 4,
       onSuccess: (coins) async {
         try {
           await ref.read(coinProvider.notifier).credit(coins, 'quiz');
@@ -562,7 +567,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                       ),
                     )
                   : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
+                      padding: const EdgeInsets.fromLTRB(AppLayout.screenPadding, 0, AppLayout.screenPadding, AppLayout.sectionSpacing),
                       itemCount: _categories.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (ctx, i) {

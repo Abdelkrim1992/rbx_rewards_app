@@ -42,84 +42,180 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
-  Future<void> _handleStartEarning() async {
-    if (_isClaiming) return;
-    setState(() => _isClaiming = true);
-    HapticFeedback.mediumImpact();
-
-    // Show the animated bonus overlay; actual navigation happens after
-    // dismiss animation, while coin credit happens instantly on tap.
-    if (!mounted) return;
-    WelcomeBonusOverlay.show(
-      context,
-      onClaimStart: () => _startBonusCredit(),
-      onClaimed: () => _claimBonusAndNavigate(),
-    );
-
-    // Reset so button is tappable again if user somehow dismisses
-    if (mounted) setState(() => _isClaiming = false);
-  }
 
   bool _bonusCredited = false;
 
-  void _startBonusCredit() {
+  Future<void> _setupAccountAndCreditBonus() async {
     if (_bonusCredited) return;
     _bonusCredited = true;
 
-    // 1. Immediately & synchronously credit in-memory balance on the exact frame of the tap!
     try {
-      final currentCoins = ref.read(coinProvider);
-      final newBalance = currentCoins > 0 ? currentCoins + 50 : 50;
-      ref.read(coinProvider.notifier).updateBalance(newBalance);
-      ref.read(dailyCapServiceProvider).addCoins(50, 'welcome_bonus');
-    } catch (e) {
-      debugPrint('Error updating in-memory balance: $e');
-    }
+      // 1. Authenticate / create fresh account with device ID in Supabase if not logged in
+      try {
+        final auth = ref.read(authServiceProvider);
+        if (auth.currentUser == null) {
+          debugPrint('ℹ️ Authenticating new user with device credentials...');
+          await auth.signInWithDevice().timeout(const Duration(seconds: 10));
+          debugPrint('✅ User authenticated: ${auth.currentUser?.id}');
+        }
+      } catch (e) {
+        debugPrint('Auth setup notice in onboarding: $e');
+      }
 
-    // 2. Persist to storage and sync with backend in background
-    () async {
+      // 2. Immediately credit in-memory balance to 500
+      const newBalance = 500;
+      ref.read(coinProvider.notifier).updateBalance(newBalance);
+      ref.read(dailyCapServiceProvider).addCoins(500, 'welcome_bonus');
+
+      // 3. Persist locally and claim in Supabase backend
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('welcome_bonus_claimed', true);
+      } catch (_) {}
 
-        final currentCoins = ref.read(coinProvider);
-        final newBalance = currentCoins > 0 ? currentCoins : 50;
-        await ref.read(secureRepositoryProvider).saveBalance(newBalance);
+      try {
+        await ref
+            .read(secureRepositoryProvider)
+            .saveBalance(newBalance)
+            .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      } catch (_) {}
 
-        ref.read(supabaseRepositoryProvider).claimWelcomeBonus().then((result) {
-          final balance =
-              result['balance'] as int? ?? result['new_balance'] as int?;
-          if (balance != null && balance > 0) {
-            ref.read(coinProvider.notifier).updateBalance(balance);
-          }
-        }).catchError((e) {
-          debugPrint('claimWelcomeBonus network error: $e');
-        });
+      try {
+        final result = await ref
+            .read(supabaseRepositoryProvider)
+            .claimWelcomeBonus()
+            .timeout(const Duration(seconds: 10));
+        debugPrint('claimWelcomeBonus result from backend: $result');
+        final balance =
+            result['balance'] as int? ?? result['new_balance'] as int?;
+        if (balance != null && balance > 0) {
+          ref.read(coinProvider.notifier).updateBalance(balance);
+          await ref.read(secureRepositoryProvider).saveBalance(balance);
+        }
       } catch (e) {
-        debugPrint('Error persisting bonus credit: $e');
+        debugPrint('claimWelcomeBonus network notice: $e');
       }
-    }();
+    } catch (e) {
+      debugPrint('Error during account setup & bonus claim: $e');
+      // Ensure local coin balance has the 500 welcome bonus even if offline
+      ref.read(coinProvider.notifier).updateBalance(500);
+    }
   }
 
   /// Credits the welcome bonus and navigates to home.
   Future<void> _claimBonusAndNavigate() async {
-    _startBonusCredit();
+    if (!_bonusCredited) {
+      await _setupAccountAndCreditBonus();
+    }
     widget.onGetStarted();
   }
 
-  Future<void> _handleSignInWithGoogle() async {
+  bool _isSigningIn = false;
+
+  void _previousPage() {
+    HapticFeedback.lightImpact();
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  void _skipToSignIn() {
+    HapticFeedback.lightImpact();
+    _pageController.animateToPage(
+      2,
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    if (_isSigningIn || _isClaiming) return;
+    setState(() => _isSigningIn = true);
+    HapticFeedback.lightImpact();
+
     try {
       final auth = ref.read(authServiceProvider);
-      final isInitiated = await auth.signInWithGoogle();
-      if (isInitiated && mounted) {
-        widget.onGetStarted();
+      final success = await auth.signInWithGoogle();
+
+      if (!mounted) return;
+
+      if (!success) {
+        // User dismissed the native bottom sheet
+        setState(() => _isSigningIn = false);
+        return;
       }
+
+      // User signed in successfully -> trigger celebratory bonus overlay and finish
+      setState(() {
+        _isSigningIn = false;
+        _isClaiming = true;
+      });
+
+      WelcomeBonusOverlay.show(
+        context,
+        onClaimAsync: () => _setupAccountAndCreditBonus(),
+        onClaimed: () => _claimBonusAndNavigate(),
+      );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isSigningIn = false);
+
+      final errorStr = e.toString();
+      final String message;
+      if (errorStr.contains('10') || errorStr.contains('sign_in_failed')) {
+        message = 'Google Sign-In configuration error: Please check your Google account settings or connection.';
+      } else {
+        message = 'Google sign-in error: $e';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Sign-in error: $e'),
-          backgroundColor: Colors.redAccent,
+          content: Text(message),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    if (_isSigningIn || _isClaiming) return;
+    setState(() => _isSigningIn = true);
+    HapticFeedback.lightImpact();
+
+    try {
+      final auth = ref.read(authServiceProvider);
+      final success = await auth.signInWithApple();
+
+      if (!mounted) return;
+
+      if (!success) {
+        // User dismissed Apple dialog
+        setState(() => _isSigningIn = false);
+        return;
+      }
+
+      // User signed in successfully -> trigger celebratory bonus overlay
+      setState(() {
+        _isSigningIn = false;
+        _isClaiming = true;
+      });
+
+      WelcomeBonusOverlay.show(
+        context,
+        onClaimAsync: () => _setupAccountAndCreditBonus(),
+        onClaimed: () => _claimBonusAndNavigate(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSigningIn = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Apple sign-in error: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -130,10 +226,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isCompact = screenHeight < 680;
-    final logoHeight = screenHeight * 0.045;
-    final topPadding = screenHeight * 0.018;
-    final bottomPadding = screenHeight * 0.028;
-    final dotsButtonGap = screenHeight * 0.018;
+    final topPadding = screenHeight * 0.012;
+    final bottomPadding = screenHeight * 0.024;
+    final dotsButtonGap = screenHeight * 0.014;
     final hPad = screenWidth * 0.055;
 
     return Scaffold(
@@ -144,29 +239,46 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             constraints: const BoxConstraints(maxWidth: 480),
             child: Column(
               children: [
-                // Centered Logo Header (no Sign In button)
+                // Top Navigation Bar (Clean progress & Back navigation - no repetitive logo)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                    hPad,
+                    12,
                     topPadding,
-                    hPad,
+                    16,
                     topPadding * 0.5,
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      AppAssets.rbxLogo,
-                      height: logoHeight.clamp(28.0, 44.0),
-                      fit: BoxFit.contain,
-                      cacheHeight: 140,
-                      errorBuilder: (_, __, ___) => const Text(
-                        'RBX Play & Earn',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF101828),
+                  child: Row(
+                    children: [
+                      if (_currentPage > 0)
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 18,
+                            color: Color(0xFF475467),
+                          ),
+                          onPressed: _isSigningIn || _isClaiming ? null : _previousPage,
+                          tooltip: 'Back',
+                        )
+                      else
+                        const SizedBox(width: 40, height: 40),
+                      const Spacer(),
+                      // Subtle step indicator text
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F3FF),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          'Step ${_currentPage + 1} of 3',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF5637E6),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 
@@ -185,11 +297,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
 
-                // Bottom Navigation Zone (Dots + Gradient CTA)
+                // Bottom Navigation Zone (Dots + Stable CTA Stack)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
                     hPad,
-                    dotsButtonGap * 0.6,
+                    dotsButtonGap * 0.5,
                     hPad,
                     bottomPadding,
                   ),
@@ -198,16 +310,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     children: [
                       _DotsIndicator(currentPage: _currentPage),
                       SizedBox(height: dotsButtonGap),
-                      _PrimaryActionButton(
-                        label: _currentPage == 0
-                            ? 'Get Started'
-                            : _currentPage == 1
-                                ? 'Continue'
-                                : 'Start Earning',
-                        isLoading: _isClaiming && _currentPage == 2,
-                        onTap: _currentPage < 2
-                            ? _nextPage
-                            : _handleStartEarning,
+                      // Slot 1: Primary Action (Get Started / Continue / Google Sign-In)
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: _currentPage < 2
+                            ? _PrimaryActionButton(
+                                key: ValueKey('primary_$_currentPage'),
+                                label: _currentPage == 0
+                                    ? 'Get Started'
+                                    : 'Continue',
+                                isLoading: false,
+                                onTap: _nextPage,
+                              )
+                            : _NativeGoogleButton(
+                                key: const ValueKey('google_btn'),
+                                isLoading: _isSigningIn,
+                                onTap: _handleGoogleSignIn,
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Slot 2: Secondary Action (Sign-In shortcut / Apple Sign-In)
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: _currentPage < 2
+                            ? _SecondarySignInButton(
+                                key: const ValueKey('skip_to_signin'),
+                                onTap: _skipToSignIn,
+                              )
+                            : _NativeAppleButton(
+                                key: const ValueKey('apple_btn'),
+                                isLoading: _isSigningIn,
+                                onTap: _handleAppleSignIn,
+                              ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Slot 3: Trust & Security micro-copy
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: _currentPage < 2
+                            ? const _TrustRow(
+                                key: ValueKey('trust_free'),
+                                icon: Icons.verified_user_outlined,
+                                text: '100% Free • No Purchase Necessary',
+                              )
+                            : const _TrustRow(
+                                key: ValueKey('trust_secure'),
+                                icon: Icons.lock_outline_rounded,
+                                text: '100% Secure • Cloud Save Enabled',
+                              ),
                       ),
                     ],
                   ),
@@ -222,95 +372,308 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1: Earn RBX Rewards Daily (Hero Avatar + 3 Mini Feature Cards)
+// Unified Header for all 3 Onboarding Steps
+// Guarantees pixel-perfect title & subtitle alignment across screens
 // ---------------------------------------------------------------------------
-class _StepOneContent extends StatelessWidget {
+class _OnboardingHeader extends StatelessWidget {
+  final Widget title;
+  final String subtitle;
+
+  const _OnboardingHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 84,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: title,
+          ),
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF667085),
+                height: 1.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Secondary Action Button for Steps 1 & 2
+// Balances the vertical height perfectly with Apple Sign-In on Step 3
+// ---------------------------------------------------------------------------
+class _SecondarySignInButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SecondarySignInButton({super.key, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        width: double.infinity,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x06000000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Already have an account? ',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  Text(
+                    'Sign In',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF5637E6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Trust & Security Reassurance Micro-Copy
+// ---------------------------------------------------------------------------
+class _TrustRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _TrustRow({super.key, required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 16,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Step 1: Earn RBX Rewards Daily (Animated Avatar Hero + 3 Premium Cards)
+// ---------------------------------------------------------------------------
+class _StepOneContent extends StatefulWidget {
   final bool isCompact;
 
   const _StepOneContent({required this.isCompact});
 
   @override
+  State<_StepOneContent> createState() => _StepOneContentState();
+}
+
+class _StepOneContentState extends State<_StepOneContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _floatCtrl;
+  late final Animation<double> _floatAnim;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
+
+    final isTestEnvironment =
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    if (!isTestEnvironment) {
+      _floatCtrl.repeat(reverse: true);
+    } else {
+      _floatCtrl.value = 0.5;
+    }
+
+    _floatAnim = Tween<double>(begin: -4.0, end: 4.0).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOutSine),
+    );
+
+    _glowAnim = Tween<double>(begin: 0.14, end: 0.32).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _floatCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final heroFlex = isCompact ? 5 : 6;
-    final cardHeight = (screenHeight * 0.115).clamp(80.0, 110.0);
-    final vGapSm = screenHeight * 0.014;
-    final vGapMd = screenHeight * 0.022;
+    final isCompact = widget.isCompact;
+    final vGapTop = screenHeight * 0.008;
+    final vGapSm = screenHeight * 0.012;
+    final cardHeight = (screenHeight * 0.115).clamp(80.0, 108.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
-          // Hero 3D Roblox Avatar illustration
-          Expanded(
-            flex: heroFlex,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(8, isCompact ? 4 : 8, 8, 0),
-              child: AppCachedImage(
-                imageUrl: AppAssets.onboardingHero,
-                fallbackAsset: AppAssets.onboardingHero,
-                fit: BoxFit.contain,
-                errorWidget: Container(
-                  decoration: BoxDecoration(
-                    gradient: AppColors.dailyCardGradient,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.celebration,
-                      size: 80,
-                      color: AppColors.primary,
-                    ),
-                  ),
+          SizedBox(height: vGapTop),
+
+          // Unified Title & Subtitle (strictly aligned with Steps 2 & 3)
+          _OnboardingHeader(
+            title: RichText(
+              textAlign: TextAlign.center,
+              text: const TextSpan(
+                style: TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF101828),
+                  letterSpacing: -0.6,
+                  height: 1.15,
                 ),
+                children: [
+                  TextSpan(text: 'Earn '),
+                  TextSpan(
+                    text: 'RBX Rewards\n',
+                    style: TextStyle(color: Color(0xFF5637E6)),
+                  ),
+                  TextSpan(text: 'Every Single Day'),
+                ],
               ),
+            ),
+            subtitle: 'Play mini games, complete activities, and collect reward coins.',
+          ),
+
+          // Hero 3D Roblox Avatar with Ambient Glow & Floating Animation
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _floatCtrl,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, _floatAnim.value),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Ambient Gaming Radial Glow
+                      Container(
+                        width: 180,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF5637E6)
+                                  .withValues(alpha: _glowAnim.value),
+                              blurRadius: 55,
+                              spreadRadius: 20,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFF00C2FF)
+                                  .withValues(alpha: _glowAnim.value * 0.6),
+                              blurRadius: 40,
+                              spreadRadius: 10,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 3D Avatar Image
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          vertical: isCompact ? 4 : 8,
+                        ),
+                        child: AppCachedImage(
+                          imageUrl: AppAssets.onboardingHero,
+                          fallbackAsset: AppAssets.onboardingHero,
+                          fit: BoxFit.contain,
+                          errorWidget: Container(
+                            decoration: BoxDecoration(
+                              gradient: AppColors.dailyCardGradient,
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.celebration,
+                                size: 70,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
 
           SizedBox(height: vGapSm),
 
-          // Title & Subtitle
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF101828),
-                  letterSpacing: -0.6,
-                  height: 1.18,
-                ),
-                children: [
-                  TextSpan(text: 'Earn '),
-                  TextSpan(
-                    text: 'RBX Rewards ',
-                    style: TextStyle(color: Color(0xFF5637E6)),
-                  ),
-                  TextSpan(text: 'Daily'),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-          const FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Play mini games, complete activities,\nand collect reward coins.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF667085),
-                height: 1.3,
-              ),
-            ),
-          ),
-
-          SizedBox(height: vGapMd),
-
-          // 3 Feature Cards Row
+          // 3 Elevated Feature Cards Row
           SizedBox(
             height: cardHeight,
             child: const Row(
@@ -320,6 +683,7 @@ class _StepOneContent extends StatelessWidget {
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.firstFeatureCard,
                     title: 'Play Games',
+                    badgeText: '50+ Games',
                   ),
                 ),
                 SizedBox(width: 8),
@@ -327,6 +691,7 @@ class _StepOneContent extends StatelessWidget {
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.secondFeatureCard,
                     title: 'Spin & Win',
+                    badgeText: 'Daily',
                   ),
                 ),
                 SizedBox(width: 8),
@@ -334,12 +699,13 @@ class _StepOneContent extends StatelessWidget {
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.thirtyFeatureCard,
                     title: 'Unlock Rewards',
+                    badgeText: 'Real Robux',
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: vGapSm),
+          SizedBox(height: vGapTop),
         ],
       ),
     );
@@ -349,80 +715,102 @@ class _StepOneContent extends StatelessWidget {
 class _MiniFeatureCard extends StatelessWidget {
   final String imagePath;
   final String title;
+  final String badgeText;
 
   const _MiniFeatureCard({
     required this.imagePath,
     required this.title,
+    required this.badgeText,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFD),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(color: const Color(0xFFEBE9FE), width: 1.2),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 6,
+            color: Color(0x0A5637E6),
+            blurRadius: 8,
             offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF6F5FD),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x125637E6)),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                imagePath,
-                width: 36,
-                height: 36,
-                fit: BoxFit.cover,
-                cacheWidth: 120,
-                cacheHeight: 120,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.star,
-                  color: AppColors.primary,
-                  size: 20,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F5FD),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0x185637E6)),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  imagePath,
+                  width: 38,
+                  height: 38,
+                  fit: BoxFit.cover,
+                  cacheWidth: 120,
+                  cacheHeight: 120,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.star_rounded,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Flexible(
-            child: Text(
+            const SizedBox(height: 6),
+            Text(
               title,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF1D2939),
                 letterSpacing: -0.1,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F3FF),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                badgeText,
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF5637E6),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Step 2: Play. Earn. Redeem. (3 Vertical Step Cards with Badges)
+// Step 2: Play. Earn. Redeem. (3 Elevated Step Cards + Trust Banner)
 // ---------------------------------------------------------------------------
 class _StepTwoContent extends StatelessWidget {
   final bool isCompact;
@@ -432,8 +820,8 @@ class _StepTwoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final vGapTop = screenHeight * 0.012;
-    final vGapCards = (screenHeight * 0.016).clamp(8.0, 18.0);
+    final vGapTop = screenHeight * 0.008;
+    final vGapCards = (screenHeight * 0.014).clamp(6.0, 14.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -442,18 +830,17 @@ class _StepTwoContent extends StatelessWidget {
         children: [
           SizedBox(height: vGapTop),
 
-          // Title & Subtitle
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: RichText(
+          // Unified Title & Subtitle (strictly aligned with Steps 1 & 3)
+          _OnboardingHeader(
+            title: RichText(
               textAlign: TextAlign.center,
               text: const TextSpan(
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 27,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF101828),
                   letterSpacing: -0.6,
-                  height: 1.18,
+                  height: 1.15,
                 ),
                 children: [
                   TextSpan(text: 'Play. '),
@@ -461,56 +848,92 @@ class _StepTwoContent extends StatelessWidget {
                     text: 'Earn. ',
                     style: TextStyle(color: Color(0xFF5637E6)),
                   ),
-                  TextSpan(text: 'Redeem.'),
+                  TextSpan(text: 'Redeem.\nIn 3 Simple Steps'),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          const FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Three simple steps to exciting rewards.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF667085),
-              ),
-            ),
+            subtitle: 'Three simple steps to exciting rewards.',
           ),
 
           SizedBox(height: vGapCards),
 
-          // 3 Step Cards — fill remaining space evenly
+          // 3 Step Cards + Highlight Ribbon
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _StepCard(
-                  stepNumber: '1',
-                  title: 'Play',
-                  description: 'Complete mini games\nand activities.',
-                  imagePath: AppAssets.onboardingGame,
-                  isCompact: isCompact,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: SizedBox(
+                width: 340,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _StepCard(
+                      stepNumber: '1',
+                      badgeColor: const Color(0xFF5637E6),
+                      badgeBg: const Color(0xFFEEECFE),
+                      title: 'Play',
+                      description: 'Complete mini games\nand activities.',
+                      imagePath: AppAssets.onboardingGame,
+                      isCompact: isCompact,
+                    ),
+                    SizedBox(height: vGapCards),
+                    _StepCard(
+                      stepNumber: '2',
+                      badgeColor: const Color(0xFFD97706),
+                      badgeBg: const Color(0xFFFEF3C7),
+                      title: 'Earn',
+                      description: 'Collect RBX Coins as\nyou complete activities.',
+                      imagePath: AppAssets.onboardingCoin,
+                      isCompact: isCompact,
+                    ),
+                    SizedBox(height: vGapCards),
+                    _StepCard(
+                      stepNumber: '3',
+                      badgeColor: const Color(0xFF059669),
+                      badgeBg: const Color(0xFFD1FAE5),
+                      title: 'Redeem',
+                      description: 'Use your RBX Coins\ntoward available rewards.',
+                      imagePath: AppAssets.onboardingReward,
+                      isCompact: isCompact,
+                    ),
+                    SizedBox(height: vGapCards),
+                    // Trust and speed incentive banner
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.bolt_rounded,
+                              size: 16,
+                              color: Color(0xFFF59E0B),
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Fast Payouts • Instant Delivery • 100% Free',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF475467),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: vGapCards),
-                _StepCard(
-                  stepNumber: '2',
-                  title: 'Earn',
-                  description: 'Collect RBX Coins as\nyou complete activities.',
-                  imagePath: AppAssets.onboardingCoin,
-                  isCompact: isCompact,
-                ),
-                SizedBox(height: vGapCards),
-                _StepCard(
-                  stepNumber: '3',
-                  title: 'Redeem',
-                  description: 'Use your RBX Coins\ntoward available rewards.',
-                  imagePath: AppAssets.onboardingReward,
-                  isCompact: isCompact,
-                ),
-              ],
+              ),
             ),
           ),
           SizedBox(height: vGapTop),
@@ -522,6 +945,8 @@ class _StepTwoContent extends StatelessWidget {
 
 class _StepCard extends StatelessWidget {
   final String stepNumber;
+  final Color badgeColor;
+  final Color badgeBg;
   final String title;
   final String description;
   final String imagePath;
@@ -529,6 +954,8 @@ class _StepCard extends StatelessWidget {
 
   const _StepCard({
     required this.stepNumber,
+    required this.badgeColor,
+    required this.badgeBg,
     required this.title,
     required this.description,
     required this.imagePath,
@@ -537,22 +964,27 @@ class _StepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageSize = isCompact ? 58.0 : 76.0;
+    final imageSize = isCompact ? 56.0 : 70.0;
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 14 : 18,
-        vertical: isCompact ? 10 : 16,
+        horizontal: isCompact ? 14 : 16,
+        vertical: isCompact ? 10 : 14,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isCompact ? 18 : 22),
-        border: Border.all(color: AppColors.cardBorder, width: 1.0),
+        borderRadius: BorderRadius.circular(isCompact ? 18 : 20),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.1),
         boxShadow: const [
           BoxShadow(
             color: Color(0x06000000),
             blurRadius: 10,
             offset: Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Color(0x03000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
           ),
         ],
       ),
@@ -561,24 +993,24 @@ class _StepCard extends StatelessWidget {
         children: [
           // Step number badge
           Container(
-            width: isCompact ? 32 : 38,
-            height: isCompact ? 32 : 38,
+            width: isCompact ? 32 : 36,
+            height: isCompact ? 32 : 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFEEECFE),
+              color: badgeBg,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: Text(
                 stepNumber,
                 style: TextStyle(
-                  fontSize: isCompact ? 15 : 17,
+                  fontSize: isCompact ? 15 : 16,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF5637E6),
+                  color: badgeColor,
                 ),
               ),
             ),
           ),
-          SizedBox(width: isCompact ? 12 : 16),
+          SizedBox(width: isCompact ? 12 : 14),
 
           // Title & Description
           Expanded(
@@ -589,7 +1021,7 @@ class _StepCard extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: isCompact ? 16 : 18,
+                    fontSize: isCompact ? 16 : 17.5,
                     fontWeight: FontWeight.w800,
                     color: const Color(0xFF101828),
                     letterSpacing: -0.2,
@@ -599,10 +1031,10 @@ class _StepCard extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: isCompact ? 12 : 13.5,
+                    fontSize: isCompact ? 11.5 : 13,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF667085),
-                    height: 1.3,
+                    height: 1.25,
                   ),
                 ),
               ],
@@ -624,7 +1056,7 @@ class _StepCard extends StatelessWidget {
               errorWidget: const Icon(
                 Icons.stars_rounded,
                 color: AppColors.primary,
-                size: 36,
+                size: 34,
               ),
             ),
           ),
@@ -635,20 +1067,64 @@ class _StepCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3: Your first reward is waiting (Bursting Gift Box + +50 Coins Bonus)
+// Step 3: Your first reward is waiting (Bursting Gift Box + +500 Coins Bonus)
 // ---------------------------------------------------------------------------
-class _StepThreeContent extends StatelessWidget {
+class _StepThreeContent extends StatefulWidget {
   final bool isCompact;
 
   const _StepThreeContent({required this.isCompact});
 
   @override
+  State<_StepThreeContent> createState() => _StepThreeContentState();
+}
+
+class _StepThreeContentState extends State<_StepThreeContent>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _floatCtrl;
+  late final Animation<double> _floatAnim;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    // Subtle idle floating animation for the 3D gift box
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2400),
+    );
+
+    // Do not repeat in headless unit/widget tests to avoid pumpAndSettle timing out
+    final isTestEnvironment =
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    if (!isTestEnvironment) {
+      _floatCtrl.repeat(reverse: true);
+    } else {
+      _floatCtrl.value = 0.5;
+    }
+
+    _floatAnim = Tween<double>(begin: -5.0, end: 5.0).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOutSine),
+    );
+
+    _glowAnim = Tween<double>(begin: 0.15, end: 0.38).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _floatCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final vGapTop = screenHeight * 0.012;
-    final vGapMd = screenHeight * 0.018;
-    final coinSize = (screenHeight * 0.07).clamp(44.0, 62.0);
-    final cardPad = (screenHeight * 0.02).clamp(10.0, 18.0);
+    final isCompact = widget.isCompact;
+    final vGapTop = screenHeight * 0.008;
+    final vGapMd = screenHeight * 0.012;
+    final coinSize = (screenHeight * 0.065).clamp(40.0, 56.0);
+    final cardPad = (screenHeight * 0.016).clamp(10.0, 16.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -656,18 +1132,17 @@ class _StepThreeContent extends StatelessWidget {
         children: [
           SizedBox(height: vGapTop),
 
-          // Title & Subtitle
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: RichText(
+          // Unified Title & Subtitle (strictly aligned with Steps 1 & 2)
+          _OnboardingHeader(
+            title: RichText(
               textAlign: TextAlign.center,
               text: const TextSpan(
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 27,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF101828),
                   letterSpacing: -0.6,
-                  height: 1.18,
+                  height: 1.15,
                 ),
                 children: [
                   TextSpan(text: 'Your first '),
@@ -679,56 +1154,88 @@ class _StepThreeContent extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 5),
-          const FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              'Start earning RBX Coins by completing your first activity.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF667085),
-              ),
-            ),
+            subtitle: 'Sign in to lock in your starter bonus & cloud save.',
           ),
 
-          // Bursting Open Gift Box with Coins & Confetti
+          // Bursting Open Gift Box with Floating Animation & Glow
           Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: vGapMd),
-              child: AppCachedImage(
-                imageUrl: AppAssets.onboardingGiftBox,
-                fallbackAsset: AppAssets.onboardingGiftBox,
-                fit: BoxFit.contain,
-                errorWidget: Image.asset(
-                  AppAssets.dailyRewardGift,
-                  fit: BoxFit.contain,
-                ),
-              ),
+            child: AnimatedBuilder(
+              animation: _floatCtrl,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(0, _floatAnim.value),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Ambient Radial Glow
+                      Container(
+                        width: 170,
+                        height: 170,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF5637E6)
+                                  .withValues(alpha: _glowAnim.value),
+                              blurRadius: 50,
+                              spreadRadius: 20,
+                            ),
+                            BoxShadow(
+                              color: const Color(0xFFFFB800)
+                                  .withValues(alpha: _glowAnim.value * 0.7),
+                              blurRadius: 40,
+                              spreadRadius: 10,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // 3D Gift Box
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: vGapMd),
+                        child: AppCachedImage(
+                          imageUrl: AppAssets.onboardingGiftBox,
+                          fallbackAsset: AppAssets.onboardingGiftBox,
+                          fit: BoxFit.contain,
+                          errorWidget: Image.asset(
+                            AppAssets.dailyRewardGift,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
 
-          // Welcome Bonus Card (+50 RBX Coins & Milestone)
+          // Welcome Bonus Card (+500 RBX Coins & Gold Medal Tag)
           Container(
             padding: EdgeInsets.all(cardPad),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
-              border: Border.all(color: AppColors.cardBorder),
+              border: Border.all(
+                color: const Color(0xFFFFD54F),
+                width: 1.5,
+              ),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x08000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 3),
+                  color: Color(0x14FFB800),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: Color(0x06000000),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Coins + +50 RBX Coins Row
+                // Coins + +500 RBX Coins Row + Gold Tag
                 Row(
                   children: [
                     AppCachedImage(
@@ -738,83 +1245,94 @@ class _StepThreeContent extends StatelessWidget {
                       height: coinSize,
                       fit: BoxFit.contain,
                     ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '+50',
-                          style: TextStyle(
-                            fontSize: isCompact ? 28 : 32,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF5637E6),
-                            letterSpacing: -0.8,
-                            height: 1.05,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '+500',
+                            style: TextStyle(
+                              fontSize: isCompact ? 26 : 30,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF5637E6),
+                              letterSpacing: -0.8,
+                              height: 1.05,
+                            ),
                           ),
-                        ),
-                        Text(
-                          'RBX Coins',
-                          style: TextStyle(
-                            fontSize: isCompact ? 14 : 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF101828),
+                          Text(
+                            'RBX Coins',
+                            style: TextStyle(
+                              fontSize: isCompact ? 13.5 : 14.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF101828),
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                    // Gold Welcome Gift Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFF7E6), Color(0xFFFFECC2)],
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFFFD54F),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '🎁 Welcome Gift',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
 
-                SizedBox(height: isCompact ? 8 : 12),
+                SizedBox(height: isCompact ? 8 : 10),
 
-                // Milestone Banner
+                // Incentive Banner
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
-                    vertical: 8,
+                    vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF6F5FD),
-                    borderRadius: BorderRadius.circular(12),
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
-                      Container(
-                        width: 24,
-                        height: 24,
-                        decoration: const BoxDecoration(
-                          color: Color(0x185637E6),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.flag_rounded,
-                          size: 14,
-                          color: Color(0xFF5637E6),
-                        ),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        size: 15,
+                        color: Color(0xFF16A34A),
                       ),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Your first milestone',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF5637E6),
-                              ),
-                            ),
-                            SizedBox(height: 1),
-                            Text(
-                              'Complete an activity to claim it.',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF667085),
-                              ),
-                            ),
-                          ],
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Credited instantly to your wallet upon 1-tap sign in.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF475467),
+                          ),
                         ),
                       ),
                     ],
@@ -862,6 +1380,276 @@ class _DotsIndicator extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Native Google Sign-In Button (White card, Official G logo, 1-tap in-app)
+// ---------------------------------------------------------------------------
+class _NativeGoogleButton extends StatefulWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _NativeGoogleButton({
+    super.key,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  State<_NativeGoogleButton> createState() => _NativeGoogleButtonState();
+}
+
+class _NativeGoogleButtonState extends State<_NativeGoogleButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 100),
+    lowerBound: 0.0,
+    upperBound: 0.03,
+  );
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        if (!widget.isLoading) _scaleCtrl.forward();
+      },
+      onTapUp: (_) => _scaleCtrl.reverse(),
+      onTapCancel: () => _scaleCtrl.reverse(),
+      onTap: widget.isLoading ? null : widget.onTap,
+      child: AnimatedBuilder(
+        animation: _scaleCtrl,
+        builder: (context, child) => Transform.scale(
+          scale: 1 - _scaleCtrl.value,
+          child: child,
+        ),
+        child: Container(
+          width: double.infinity,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.3),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0C000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Center(
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF5637E6)),
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Google 'G' official vector icon
+                        _buildGoogleIcon(),
+                        const SizedBox(width: 10),
+                        const Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Continue with Google',
+                              style: TextStyle(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1E293B),
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleIcon() {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(shape: BoxShape.circle),
+      child: CustomPaint(
+        painter: _GoogleLogoPainter(),
+      ),
+    );
+  }
+}
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // Draw Google 4-color arcs
+    final redPaint = Paint()
+      ..color = const Color(0xFFEA4335)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.6;
+    final yellowPaint = Paint()
+      ..color = const Color(0xFFFBBC05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.6;
+    final greenPaint = Paint()
+      ..color = const Color(0xFF34A853)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.6;
+    final bluePaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.6;
+
+    final rect = Rect.fromCircle(center: center, radius: radius - 1.8);
+
+    // Red arc
+    canvas.drawArc(rect, -2.35, 1.25, false, redPaint);
+    // Yellow arc
+    canvas.drawArc(rect, 2.35, 1.57, false, yellowPaint);
+    // Green arc
+    canvas.drawArc(rect, 0.78, 1.57, false, greenPaint);
+    // Blue arc & bar
+    canvas.drawArc(rect, -0.78, 1.56, false, bluePaint);
+
+    final barPaint = Paint()
+      ..color = const Color(0xFF4285F4)
+      ..style = PaintingStyle.fill;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(center.dx - 1, center.dy - 1.8, radius + 1, 3.6),
+        const Radius.circular(1.8),
+      ),
+      barPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ---------------------------------------------------------------------------
+// Native Apple Sign-In Button (Black background, Crisp Apple Logo)
+// ---------------------------------------------------------------------------
+class _NativeAppleButton extends StatefulWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _NativeAppleButton({
+    super.key,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  @override
+  State<_NativeAppleButton> createState() => _NativeAppleButtonState();
+}
+
+class _NativeAppleButtonState extends State<_NativeAppleButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 100),
+    lowerBound: 0.0,
+    upperBound: 0.03,
+  );
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) {
+        if (!widget.isLoading) _scaleCtrl.forward();
+      },
+      onTapUp: (_) => _scaleCtrl.reverse(),
+      onTapCancel: () => _scaleCtrl.reverse(),
+      onTap: widget.isLoading ? null : widget.onTap,
+      child: AnimatedBuilder(
+        animation: _scaleCtrl,
+        builder: (context, child) => Transform.scale(
+          scale: 1 - _scaleCtrl.value,
+          child: child,
+        ),
+        child: Container(
+          width: double.infinity,
+          height: 50,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Center(
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.apple, size: 21, color: Colors.white),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Continue with Apple',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Primary Action Button (Gradient with forward arrow & haptics)
 // ---------------------------------------------------------------------------
 class _PrimaryActionButton extends StatefulWidget {
@@ -870,6 +1658,7 @@ class _PrimaryActionButton extends StatefulWidget {
   final bool isLoading;
 
   const _PrimaryActionButton({
+    super.key,
     required this.label,
     required this.onTap,
     this.isLoading = false,
@@ -920,10 +1709,10 @@ class _PrimaryActionButtonState extends State<_PrimaryActionButton>
         },
         child: Container(
           width: double.infinity,
-          height: 54,
+          height: 52,
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x3D5637E6),

@@ -22,7 +22,7 @@ Deno.serve(async (req: Request) => {
   if (!amount || amount <= 0) {
     return errorResponse("Invalid amount", 400);
   }
-  const validSources = ['in_app', 'game', 'daily_reward', 'spin', 'chest', 'ad', 'survey', 'scratch', 'quiz', 'redeem'];
+  const validSources = ['in_app', 'game', 'daily_reward', 'spin', 'chest', 'ad', 'watch_video', 'mega_chest', 'mega_chest_double', 'survey', 'scratch', 'quiz', 'redeem'];
   if (!source || typeof source !== "string") {
     return errorResponse("source required", 400);
   }
@@ -76,12 +76,6 @@ Deno.serve(async (req: Request) => {
     if (rpcError) {
       console.error("Credit coins RPC error:", rpcError);
       return errorResponse(rpcError.message, 500);
-    }
-
-    // Sync weekly leaderboard and invalidate user profile cache (non-blocking)
-    if (userRow) {
-      redis.zadd("leaderboard:weekly", { score: userRow.total_earned, member: uid }).catch(() => {});
-      redis.del("leaderboard:compiled:weekly:50").catch(() => {});
     }
 
     // Invalidate the user profile cache so the next fetch gets the fresh balance

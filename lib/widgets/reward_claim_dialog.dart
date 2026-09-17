@@ -4,10 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/ad_models.dart';
+import '../business/sound_service.dart';
 import '../presentation/providers/ad_provider.dart';
 import '../presentation/providers/coin_provider.dart';
+import '../presentation/providers/providers.dart';
 import '../presentation/providers/reward_catalog_provider.dart';
 import '../theme/app_theme.dart';
+import 'coin_fly_overlay.dart';
 import 'interactive_button.dart';
 import 'reward_box.dart';
 
@@ -25,6 +28,9 @@ class RewardClaimDialog extends ConsumerStatefulWidget {
   final String? heroAsset;
   final Widget? customHero;
 
+  final int? multiplier;
+  final int? premiumReward;
+
   const RewardClaimDialog({
     super.key,
     required this.title,
@@ -35,6 +41,8 @@ class RewardClaimDialog extends ConsumerStatefulWidget {
     this.onCancel,
     this.heroAsset,
     this.customHero,
+    this.multiplier,
+    this.premiumReward,
   });
 
   @override
@@ -97,9 +105,17 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   Future<void> _handleRegularClaim() async {
     if (_isClaiming || _isLoadingAd) return;
     setState(() => _isClaiming = true);
+    SoundService.instance.playButton();
     HapticFeedback.lightImpact();
 
     try {
+      final renderBox = context.findRenderObject() as RenderBox?;
+      final origin = renderBox != null && renderBox.hasSize
+          ? renderBox.localToGlobal(Offset(renderBox.size.width / 2, renderBox.size.height / 2))
+          : Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
+
+      CoinFlyOverlay.spawn(context, fromPosition: origin, coinCount: 10);
+
       await widget.onClaimCompleted(widget.baseReward);
       if (mounted) {
         Navigator.of(context).pop();
@@ -109,13 +125,25 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
     }
   }
 
+  int _getBoostedReward() {
+    if (widget.premiumReward != null) {
+      return widget.premiumReward!;
+    }
+    final capService = ref.read(dailyCapServiceProvider);
+    return capService.calculateAdBonusReward(
+      widget.baseReward,
+      multiplier: widget.multiplier,
+    );
+  }
+
   Future<void> _handleDoubleClaim() async {
     if (_isClaiming || _isLoadingAd) return;
+    SoundService.instance.playButton();
     final adNotifier = ref.read(adProvider.notifier);
 
     if (!adNotifier.canShowOptionalAd) {
       setState(() {
-        _infoBanner = 'Daily video limit reached. Granting base reward!';
+        _infoBanner = 'No video available right now. Granting base reward!';
       });
       await Future.delayed(const Duration(milliseconds: 1200));
       await _handleRegularClaim();
@@ -144,19 +172,21 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   }
 
   Future<void> _onAdRewardEarned() async {
-    final doubleAmount = widget.baseReward * 2;
+    final boostedAmount = _getBoostedReward();
     if (!mounted) return;
+
+    SoundService.instance.playJackpot();
 
     setState(() {
       _isLoadingAd = false;
       _isDoubled = true;
-      _infoBanner = '2X MULTIPLIER ACTIVATED! 🎉';
+      _infoBanner = 'BONUS BOOST ACTIVATED! 🎉';
     });
 
-    // Roll odometer from base to 2X
+    // Roll odometer from base to boosted amount
     _odometerAnimation = IntTween(
       begin: widget.baseReward,
-      end: doubleAmount,
+      end: boostedAmount,
     ).animate(CurvedAnimation(
       parent: _odometerController,
       curve: Curves.easeOutBack,
@@ -166,8 +196,15 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
     HapticFeedback.heavyImpact();
     await _odometerController.forward();
 
-    // Award doubled points
-    await widget.onClaimCompleted(doubleAmount);
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final origin = renderBox != null && renderBox.hasSize
+        ? renderBox.localToGlobal(Offset(renderBox.size.width / 2, renderBox.size.height / 2))
+        : Offset(MediaQuery.of(context).size.width / 2, MediaQuery.of(context).size.height / 2);
+
+    CoinFlyOverlay.spawn(context, fromPosition: origin, coinCount: 14);
+
+    // Award boosted points
+    await widget.onClaimCompleted(boostedAmount);
 
     // Keep celebration visible briefly before pop
     await Future.delayed(const Duration(milliseconds: 900));
@@ -191,53 +228,74 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final isCompact = screenWidth < 360 || screenHeight < 680;
+
     return PopScope(
       canPop: !_isClaiming && !_isLoadingAd,
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 380),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x2E6035EE),
-                blurRadius: 28,
-                offset: Offset(0, 12),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: Stack(
-              children: [
-                _buildTopAura(),
-                _buildCloseButton(),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 26, 22, 22),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildHeroIcon(),
-                      const SizedBox(height: 14),
-                      _buildTitleSection(),
-                      const SizedBox(height: 12),
-                      _buildOdometerDisplay(),
-                      if (_infoBanner != null) ...[
-                        const SizedBox(height: 8),
-                        _buildInfoBanner(),
-                      ],
-                      const SizedBox(height: 18),
-                      const GoalProgressCard(),
-                      const SizedBox(height: 20),
-                      _buildActionButtons(),
-                    ],
+        insetPadding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 16 : 20,
+          vertical: isCompact ? 16 : 24,
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 380,
+              maxHeight: screenHeight * 0.92,
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x2E6035EE),
+                    blurRadius: 28,
+                    offset: Offset(0, 12),
                   ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(28),
+                child: Stack(
+                  children: [
+                    _buildTopAura(),
+                    _buildCloseButton(),
+                    SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(
+                        isCompact ? 18 : 22,
+                        isCompact ? 22 : 26,
+                        isCompact ? 18 : 22,
+                        isCompact ? 18 : 22,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildHeroIcon(isCompact),
+                          SizedBox(height: isCompact ? 10 : 14),
+                          _buildTitleSection(isCompact),
+                          SizedBox(height: isCompact ? 10 : 12),
+                          _buildOdometerDisplay(),
+                          if (_infoBanner != null) ...[
+                            const SizedBox(height: 8),
+                            _buildInfoBanner(),
+                          ],
+                          SizedBox(height: isCompact ? 14 : 18),
+                          const GoalProgressCard(),
+                          SizedBox(height: isCompact ? 16 : 20),
+                          _buildActionButtons(isCompact),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -297,13 +355,14 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
     return AppAssets.onboardingCoin;
   }
 
-  Widget _buildHeroIcon() {
+  Widget _buildHeroIcon(bool isCompact) {
     if (widget.customHero != null) return widget.customHero!;
 
     final asset = _resolveHeroAsset();
+    final size = isCompact ? 76.0 : 96.0;
     return Container(
-      width: 96,
-      height: 96,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: const Color(0xFFF6F3FF),
         shape: BoxShape.circle,
@@ -316,14 +375,14 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(isCompact ? 10 : 12),
       child: Center(
         child: Image.asset(
           asset,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
+          errorBuilder: (_, __, ___) => Icon(
             Icons.stars_rounded,
-            size: 46,
+            size: isCompact ? 36 : 46,
             color: AppColors.primary,
           ),
         ),
@@ -331,17 +390,20 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
     );
   }
 
-  Widget _buildTitleSection() {
+  Widget _buildTitleSection(bool isCompact) {
     return Column(
       children: [
-        Text(
-          widget.title.toUpperCase(),
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
-            letterSpacing: 0.5,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            widget.title.toUpperCase(),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: isCompact ? 16 : 18,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F172A),
+              letterSpacing: 0.5,
+            ),
           ),
         ),
         if (widget.subtitle != null) ...[
@@ -349,9 +411,9 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
           Text(
             widget.subtitle!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF64748B),
+            style: TextStyle(
+              fontSize: isCompact ? 12 : 13,
+              color: const Color(0xFF64748B),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -380,11 +442,11 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(bool isCompact) {
     if (_isDoubled) {
-      return const SizedBox(
-        height: 52,
-        child: Center(
+      return SizedBox(
+        height: isCompact ? 46 : 52,
+        child: const Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -404,48 +466,55 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
       );
     }
 
-    final doubleReward = widget.baseReward * 2;
+    final boostedReward = _getBoostedReward();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Primary 2X Double-Up CTA matching the app's signature button style (spin_screen.dart)
+        // Primary Video Ad Bonus CTA matching Phase 6 layout
         ScaleTransition(
           scale: _pulseAnimation,
           child: InteractiveButton(
-            height: 52,
+            height: isCompact ? 48 : 52,
             gradient: AppColors.primaryGradient,
             borderRadius: 16,
             isLoading: _isLoadingAd,
             onTap: (_isClaiming || _isLoadingAd) ? null : _handleDoubleClaim,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.play_circle_fill,
-                  color: Colors.white,
-                  size: 22,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.play_circle_fill,
+                      color: Colors.white,
+                      size: isCompact ? 20 : 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'CLAIM +$boostedReward RBX',
+                      style: TextStyle(
+                        fontSize: isCompact ? 14 : 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'DOUBLE TO +$doubleReward RBX',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: isCompact ? 8 : 12),
 
-        // Secondary Regular Claim CTA
+        // Secondary Regular Quick Claim CTA
         SizedBox(
           width: double.infinity,
-          height: 42,
+          height: isCompact ? 38 : 42,
           child: TextButton(
             onPressed: (_isClaiming || _isLoadingAd) ? null : _handleRegularClaim,
             style: TextButton.styleFrom(
@@ -463,11 +532,14 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
                       valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF64748B)),
                     ),
                   )
-                : Text(
-                    'Collect +${widget.baseReward} RBX Only',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                : FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Quick Claim (+${widget.baseReward} RBX)',
+                      style: TextStyle(
+                        fontSize: isCompact ? 13 : 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
           ),
@@ -537,14 +609,18 @@ class GoalProgressCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            remaining > 0
-                ? '$remaining RBX away from reward'
-                : 'Goal reached! Ready to redeem',
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF64748B),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              remaining > 0
+                  ? '$remaining RBX away from reward'
+                  : 'Goal reached! Ready to redeem',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF64748B),
+              ),
             ),
           ),
         ],

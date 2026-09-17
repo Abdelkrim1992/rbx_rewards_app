@@ -8,6 +8,8 @@ class GamesSpotlightBanner extends StatelessWidget {
   final int earnedToday;
   final int totalCap;
   final int remainingCap;
+  /// Actual per-round payout to display (e.g. +31 RBX). Defaults to 31.
+  final int rewardAmount;
   final VoidCallback onPlayTap;
 
   const GamesSpotlightBanner({
@@ -16,12 +18,14 @@ class GamesSpotlightBanner extends StatelessWidget {
     required this.earnedToday,
     required this.totalCap,
     required this.remainingCap,
+    this.rewardAmount = 31,
     required this.onPlayTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isBlocked = remainingCap <= 0;
+    // Repeatable games in the soft-cap economy are NEVER hard-blocked.
+    const isBlocked = false;
     final progress = totalCap > 0 ? (earnedToday / totalCap).clamp(0.0, 1.0) : 0.0;
 
     return Padding(
@@ -119,7 +123,7 @@ class GamesSpotlightBanner extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                'Up to +$totalCap RBX',
+                                'Up to +$rewardAmount',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,

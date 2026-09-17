@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../business/sound_service.dart';
 import '../theme/app_theme.dart';
 
 /// Full-screen animated welcome bonus overlay.
@@ -12,6 +13,9 @@ class WelcomeBonusOverlay extends StatefulWidget {
   /// Called immediately when the user taps "Claim" (before dismiss animation begins).
   final VoidCallback? onClaimStart;
 
+  /// Optional async callback to set up account & credit bonus while showing loading spinner on the button.
+  final Future<void> Function()? onClaimAsync;
+
   /// Called after the user taps "Claim" and the dismiss animation completes.
   final VoidCallback onClaimed;
 
@@ -19,6 +23,7 @@ class WelcomeBonusOverlay extends StatefulWidget {
     super.key,
     required this.onClaimed,
     this.onClaimStart,
+    this.onClaimAsync,
   });
 
   /// Inserts the overlay into the nearest [Overlay] and returns the entry.
@@ -27,11 +32,13 @@ class WelcomeBonusOverlay extends StatefulWidget {
     BuildContext context, {
     required VoidCallback onClaimed,
     VoidCallback? onClaimStart,
+    Future<void> Function()? onClaimAsync,
   }) {
     late final OverlayEntry entry;
     entry = OverlayEntry(
       builder: (_) => WelcomeBonusOverlay(
         onClaimStart: onClaimStart,
+        onClaimAsync: onClaimAsync,
         onClaimed: () {
           entry.remove();
           onClaimed();
@@ -179,6 +186,8 @@ class _WelcomeBonusOverlayState extends State<WelcomeBonusOverlay>
     _coinCtrl.forward();
     _particleCtrl.forward();
     HapticFeedback.mediumImpact();
+    // Play welcome bonus fanfare as the coin bursts onto screen.
+    SoundService.instance.playWelcomeBonus();
     await Future.delayed(const Duration(milliseconds: 520));
     if (!mounted) return;
     _textCtrl.forward();
@@ -195,6 +204,16 @@ class _WelcomeBonusOverlayState extends State<WelcomeBonusOverlay>
     setState(() => _isClaiming = true);
     HapticFeedback.heavyImpact();
     widget.onClaimStart?.call();
+
+    if (widget.onClaimAsync != null) {
+      try {
+        await widget.onClaimAsync!();
+      } catch (e) {
+        debugPrint('Bonus claim error in overlay: $e');
+      }
+    }
+
+    if (!mounted) return;
     await _dismissCtrl.forward();
     if (!mounted) return;
     await _bgCtrl.reverse();
@@ -270,9 +289,9 @@ class _WelcomeBonusOverlayState extends State<WelcomeBonusOverlay>
                                   ],
                                 ).createShader(bounds),
                                 child: const Text(
-                                  '+50',
+                                  '+500',
                                   style: TextStyle(
-                                    fontSize: 80,
+                                    fontSize: 76,
                                     fontWeight: FontWeight.w900,
                                     color: Colors.white,
                                     letterSpacing: -3,
@@ -505,12 +524,12 @@ class _ClaimButtonState extends State<_ClaimButton>
                   ),
                 )
               else ...[
-                Flexible(
+                const Flexible(
                   child: Text(
-                    '🎉  Claim My 50 Coins!',
+                    '🎉  Claim My 500 Coins!',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,

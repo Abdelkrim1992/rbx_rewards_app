@@ -57,23 +57,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify step 3
-    expect(find.text('Start Earning'), findsOneWidget);
-    expect(find.text('+50'), findsOneWidget);
-
-    // Complete onboarding
-    await tester.tap(find.text('Start Earning'));
-    for (int i = 0; i < 6; i++) {
-      await tester.pump(const Duration(milliseconds: 300));
-    }
-
-    final claimOverlayBtn = find.textContaining('Claim My 50 Coins');
-    if (claimOverlayBtn.evaluate().isNotEmpty) {
-      await tester.tap(claimOverlayBtn);
-      for (int i = 0; i < 8; i++) {
-        await tester.pump(const Duration(milliseconds: 300));
-      }
-    }
-
-    expect(find.text('Start Earning'), findsNothing);
+    expect(find.text('Continue with Google'), findsOneWidget);
+    expect(find.text('Continue with Apple'), findsOneWidget);
+    expect(find.text('+500'), findsOneWidget);
+    expect(find.text('🎁 Welcome Gift'), findsOneWidget);
   });
 }

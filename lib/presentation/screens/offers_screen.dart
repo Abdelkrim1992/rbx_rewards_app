@@ -21,6 +21,26 @@ class OffersScreen extends ConsumerStatefulWidget {
 
 class _OffersScreenState extends ConsumerState<OffersScreen> {
   bool _isRefreshing = false;
+  late final ScrollController _scrollController;
+  bool _isScrolled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        final scrolled = _scrollController.hasClients && _scrollController.offset > 12;
+        if (scrolled != _isScrolled) {
+          setState(() => _isScrolled = scrolled);
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleRefresh() async {
     if (_isRefreshing) return;
@@ -85,20 +105,25 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBody: true,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
+            // Top App Header (Fixed & Sticky)
+            RbxAppHeader(
+              onNavTap: widget.onNavTap,
+              isScrolled: _isScrolled,
+            ),
+
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(bottom: 20, top: 2),
+                controller: _scrollController,
+                padding: const EdgeInsets.only(
+                    top: 2, bottom: AppLayout.sectionSpacing),
                 onRefresh: _handleRefresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RbxAppHeader(onNavTap: widget.onNavTap),
-
                     // Section heading
                     const RbxScreenTitle(
                       title: 'Premium Offerwalls',
@@ -190,8 +215,6 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 120),
                   ],
                 ),
               ),

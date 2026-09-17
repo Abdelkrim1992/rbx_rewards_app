@@ -6,7 +6,6 @@ import 'package:rbx_rewards/main.dart';
 import 'package:rbx_rewards/presentation/providers/user_provider.dart';
 import 'package:rbx_rewards/presentation/providers/coin_provider.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
-import 'package:rbx_rewards/widgets/welcome_bonus_overlay.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,9 +63,9 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    // 7. Step 3: Verify 'Your first reward is waiting' & +50 bonus elements
+    // 7. Step 3: Verify 'Your first reward is waiting' & +500 bonus elements
     expect(find.text('Start Earning'), findsOneWidget);
-    expect(find.text('+50'), findsOneWidget);
+    expect(find.text('+500'), findsOneWidget);
     expect(find.text('Your first milestone'), findsOneWidget);
 
     // 8. Tap 'Start Earning' -> shows welcome bonus overlay if enabled, then transitions to HomeScreen
@@ -75,19 +74,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    final claimOverlayBtn = find.textContaining('Claim My 50 Coins');
+    final claimOverlayBtn = find.textContaining('Claim My 500 Coins');
     if (claimOverlayBtn.evaluate().isNotEmpty) {
       await tester.tap(claimOverlayBtn);
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 15; i++) {
         await tester.pump(const Duration(milliseconds: 300));
       }
     }
 
-    // 9. Verify transition to HomeScreen and immediate 50 coins balance
+    // 9. Verify transition to HomeScreen and immediate 500 coins balance
     expect(find.text('Start Earning'), findsNothing);
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('50'), findsWidgets);
-    expect(container.read(coinProvider), 50);
+    expect(find.text('500'), findsWidgets);
+    expect(container.read(coinProvider), 500);
 
     // 10. Verify SharedPreferences has persisted completion and bonus claim
     expect(prefs.getBool('onboarding_completed'), true);

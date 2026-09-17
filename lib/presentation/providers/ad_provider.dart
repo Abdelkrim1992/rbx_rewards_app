@@ -179,11 +179,12 @@ class AdNotifier extends Notifier<AdStateModel> {
       onAdDismissed: () {
         state = state.copyWith(isShowingAd: false);
         onAdDismissed?.call();
+        if (!completer.isCompleted) completer.complete(null);
       },
       onAdFailedToShow: (error) async {
         _updatePlacementStatus(placement, AdLoadStatus.failed, isShowing: false);
         onAdFailed?.call(error.message);
-        completer.complete(null);
+        if (!completer.isCompleted) completer.complete(null);
       },
     );
 
@@ -233,11 +234,12 @@ class AdNotifier extends Notifier<AdStateModel> {
       onAdDismissed: () {
         state = state.copyWith(isShowingAd: false);
         onAdDismissed?.call();
+        if (!completer.isCompleted) completer.complete(null);
       },
       onAdFailedToShow: (error) async {
         _updatePlacementStatus(placement, AdLoadStatus.failed, isShowing: false);
         await onAdFailed?.call(error.message);
-        completer.complete(null);
+        if (!completer.isCompleted) completer.complete(null);
       },
     );
 

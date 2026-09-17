@@ -36,6 +36,8 @@ import 'presentation/providers/coin_provider.dart';
 import 'business/lucky_bonus_service.dart';
 import 'business/tapjoy_service.dart';
 import 'business/pubscale_service.dart';
+import 'business/sound_service.dart';
+import 'business/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -70,6 +72,15 @@ Future<ProviderContainer> _initStorageAndServices() async {
     await hiveRepo.init();
   } catch (e) {
     debugPrint('❌ Hive init failed: $e');
+  }
+
+  try {
+    await SoundService.instance.init();
+    await NotificationService.instance.init();
+    await NotificationService.instance.scheduleDailyQuestsReminder();
+    await NotificationService.instance.scheduleStreakReminder();
+  } catch (e) {
+    debugPrint('Sound/Notification startup init note: $e');
   }
 
   return ProviderContainer(
@@ -395,6 +406,15 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   }
 
   Future<void> _onGetStarted() async {
+    // Fail-safe: Ensure user account is authenticated before entering the app
+    final auth = ref.read(authServiceProvider);
+    if (auth.currentUser == null) {
+      try {
+        await auth.signInWithDevice();
+      } catch (e) {
+        debugPrint('Device sign-in during onGetStarted fallback: $e');
+      }
+    }
     await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
   }
 
@@ -418,6 +438,15 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(onboardingCompletedProvider, (previous, next) {
+      if (!next && (previous == true || previous == null)) {
+        setState(() {
+          _currentTab = 0;
+          _showSpin = false;
+        });
+      }
+    });
+
     final onboardingCompleted = ref.watch(onboardingCompletedProvider);
 
     Widget destination;

@@ -37,13 +37,28 @@ class GamesScreen extends ConsumerStatefulWidget {
 class _GamesScreenState extends ConsumerState<GamesScreen> {
   GameCategory _selectedCategory = GameCategory.all;
   bool _isRefreshing = false;
+  late final ScrollController _scrollController;
+  bool _isScrolled = false;
 
   late final List<GameItemData> _allGames;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()
+      ..addListener(() {
+        final scrolled = _scrollController.hasClients && _scrollController.offset > 12;
+        if (scrolled != _isScrolled) {
+          setState(() => _isScrolled = scrolled);
+        }
+      });
     _allGames = _buildGamesList();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   List<GameItemData> _buildGamesList() {
@@ -205,6 +220,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
       ref.invalidate(userProfileStreamProvider);
       final capService = ref.read(dailyCapServiceProvider);
       await capService.load();
+      await capService.refreshLimits();
       await Future.delayed(const Duration(milliseconds: 600));
     } catch (e) {
       debugPrint('Error refreshing games: $e');
@@ -252,6 +268,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
     final earned = capService.getEarnedToday(game.capKey);
     final total = capService.getCategoryCap(game.capKey);
     final remaining = capService.getRemainingCap(game.capKey);
+    final reward = capService.getPremiumReward(game.capKey);
 
     GamePreviewSheet.show(
       context: context,
@@ -259,6 +276,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
       earnedToday: earned,
       totalCap: total,
       remainingCap: remaining,
+      rewardAmount: reward,
       onStartGame: () {
         Navigator.of(context).pop();
         _launchGame(game);
@@ -297,20 +315,25 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBody: true,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
+            // Top App Header (Fixed & Sticky)
+            RbxAppHeader(
+              onNavTap: widget.onNavTap,
+              isScrolled: _isScrolled,
+            ),
+
             Expanded(
               child: RefreshableScrollView(
-                padding: const EdgeInsets.only(top: 2, bottom: 100),
+                controller: _scrollController,
+                padding: const EdgeInsets.only(
+                    top: 2, bottom: AppLayout.sectionSpacing),
                 onRefresh: _handleRefresh,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    RbxAppHeader(onNavTap: widget.onNavTap),
-
                     // Section Heading with Leaderboard Action
                     RbxScreenTitle(
                       title: 'Play & Earn',
@@ -334,6 +357,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                       earnedToday: spotlightEarned,
                       totalCap: spotlightTotal,
                       remainingCap: spotlightRemaining,
+                      rewardAmount: capService.getPremiumReward(spotlightGame.capKey),
                       onPlayTap: () => _launchGame(spotlightGame),
                     ),
                     const SizedBox(height: AppLayout.sectionSpacing),
@@ -376,6 +400,7 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                             earnedToday: earned,
                             totalCap: total,
                             remainingCap: remaining,
+                            rewardAmount: capService.getPremiumReward(game.capKey),
                             onTap: () => _showGamePreview(game),
                             onQuickPlay: () => _launchGame(game),
                           );
@@ -460,8 +485,6 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 120),
                   ],
                 ),
               ),

@@ -18,14 +18,14 @@ Future<void> showGameRewardChoice({
   required Future<void> Function(int coins) onSuccess,
   Function()? onCancel,
   String? description,
+  String? heroAsset,
   IconData? icon,
   Color? iconBgColor,
   Color? iconColor,
   Gradient? premiumGradient,
   Color? quickTextColor,
   Color? quickBorderColor,
-  bool enableQuickAd = false,
-  String? heroAsset,
+  int multiplier = 4,
 }) async {
   final gameKey = featureName.toLowerCase().replaceAll(' ', '_');
   await GamePrefs.incrementGamePlayCount(gameKey);
@@ -39,6 +39,7 @@ Future<void> showGameRewardChoice({
     quickPlacement: quickPlacement,
     premiumPlacement: premiumPlacement,
     heroAsset: heroAsset,
+    multiplier: multiplier,
     onSuccess: onSuccess,
     onCancel: onCancel,
   );
@@ -63,7 +64,7 @@ Future<void> showPlayAgainVideoAd({
         title: 'REWARDED VIDEO AD',
         subtitle: 'Ad Completed! Ready to play!',
         buttonText: 'PLAY AGAIN',
-        onRewardGranted: () {
+        onRewardGranted: () async {
           adNotifier.recordOptionalAdWatched();
         },
       ),
@@ -97,7 +98,7 @@ Future<void> showPlayAgainVideoAd({
             title: 'REWARDED VIDEO AD',
             subtitle: 'Ad Completed! Ready to play!',
             buttonText: 'PLAY AGAIN',
-            onRewardGranted: () {
+            onRewardGranted: () async {
               adNotifier.recordOptionalAdWatched();
             },
           ),

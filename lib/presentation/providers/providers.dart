@@ -15,6 +15,11 @@ import '../../business/ad_tracker_service.dart';
 import '../../business/badge_service.dart';
 import '../../business/daily_cap_service.dart';
 import '../../business/anti_cheat_service.dart';
+import '../../business/sound_service.dart';
+import '../../business/notification_service.dart';
+
+final soundServiceProvider = Provider((ref) => SoundService.instance);
+final notificationServiceProvider = Provider((ref) => NotificationService.instance);
 
 final supabaseRepositoryProvider = Provider((ref) => SupabaseRepository());
 final hiveRepositoryProvider = Provider((ref) => HiveRepository());
@@ -66,4 +71,6 @@ final profileServiceProvider = Provider((ref) {
 final adServiceProvider = Provider((ref) => AdService());
 final adTrackerServiceProvider = Provider((ref) => AdTrackerService());
 final badgeServiceProvider = Provider((ref) => BadgeService());
-final dailyCapServiceProvider = Provider((ref) => DailyCapService(ref.watch(supabaseRepositoryProvider)));
+final dailyCapServiceProvider = ChangeNotifierProvider<DailyCapService>(
+  (ref) => DailyCapService(ref.watch(supabaseRepositoryProvider)),
+);
