@@ -3,9 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rbx_rewards/main.dart';
+import 'package:rbx_rewards/business/auth_service.dart';
+import 'package:rbx_rewards/presentation/providers/providers.dart';
 import 'package:rbx_rewards/presentation/providers/user_provider.dart';
 import 'package:rbx_rewards/presentation/providers/coin_provider.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
+
+class _TestAuthService extends AuthService {
+  _TestAuthService({required super.secure});
+
+  @override
+  Future<bool> signInWithGoogle() async => true;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +33,9 @@ void main() {
 
     final container = ProviderContainer(
       overrides: [
+        authServiceProvider.overrideWith(
+          (ref) => _TestAuthService(secure: ref.watch(secureRepositoryProvider)),
+        ),
         userProfileStreamProvider.overrideWith((ref) => Stream.value(UserProfile(
               id: 'first_install_uid',
               coins: 0,
@@ -64,12 +76,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // 7. Step 3: Verify 'Your first reward is waiting' & +500 bonus elements
-    expect(find.text('Start Earning'), findsOneWidget);
+    expect(find.byKey(const ValueKey('google_btn')), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.text('+500'), findsOneWidget);
-    expect(find.text('Your first milestone'), findsOneWidget);
+    expect(find.text('🎁 Welcome Gift'), findsOneWidget);
 
-    // 8. Tap 'Start Earning' -> shows welcome bonus overlay if enabled, then transitions to HomeScreen
-    await tester.tap(find.text('Start Earning'));
+    // 8. Tap 'Continue with Google' -> shows welcome bonus overlay if enabled, then transitions to HomeScreen
+    await tester.tap(find.byKey(const ValueKey('google_btn')));
     for (int i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 300));
     }
@@ -83,7 +96,7 @@ void main() {
     }
 
     // 9. Verify transition to HomeScreen and immediate 500 coins balance
-    expect(find.text('Start Earning'), findsNothing);
+    expect(find.byKey(const ValueKey('google_btn')), findsNothing);
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('500'), findsWidgets);
     expect(container.read(coinProvider), 500);

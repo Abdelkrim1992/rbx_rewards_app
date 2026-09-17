@@ -32,6 +32,7 @@ class NotificationService {
 
   static const String prefKey = 'pref_notifications_enabled';
 
+  static const int welcomeNotificationId = 1000;
   static const int chestReadyNotificationId = 1001;
   static const int dailyQuestsNotificationId = 1002;
   static const int streakReminderNotificationId = 1003;
@@ -113,6 +114,7 @@ class NotificationService {
 
   /// Requests notification permissions for Android 13+ and iOS.
   Future<bool> requestPermissions() async {
+    if (_isTestMode) return true;
     try {
       // Android 13+ permission request
       final androidImplementation =
@@ -137,7 +139,9 @@ class NotificationService {
         return granted ?? false;
       }
     } catch (e) {
-      debugPrint('NotificationService: Permission request note: $e');
+      if (!_isTestMode) {
+        debugPrint('NotificationService: Permission request note: $e');
+      }
     }
     return true;
   }
@@ -177,6 +181,54 @@ class NotificationService {
         presentSound: true,
       ),
     );
+  }
+
+  /// Displays an immediate high-satisfaction welcome notification upon user sign-in.
+  Future<void> showWelcomeNotification({String? userName}) async {
+    if (!_notificationsEnabled) return;
+
+    try {
+      final name = userName != null && userName.trim().isNotEmpty
+          ? ' ${userName.trim()}'
+          : '';
+      await _notificationsPlugin.show(
+        welcomeNotificationId,
+        '🎉 Welcome to RBX Rewards$name!',
+        'Your 500 RBX Welcome Bonus is active! Complete daily tasks to earn more.',
+        _notificationDetails(),
+      );
+    } catch (e) {
+      if (!_isTestMode) {
+        debugPrint('NotificationService: showWelcomeNotification error: $e');
+      }
+    }
+  }
+
+  /// Handles complete post-sign-in notification integration:
+  /// 1. Prompts for OS notification permissions (Android 13+ and iOS)
+  /// 2. Enables notifications preference
+  /// 3. Delivers an immediate welcome bonus notification
+  /// 4. Schedules daily retention loops (Quests at 13:00, Streak at 20:00)
+  Future<bool> onUserSignedIn({String? displayName}) async {
+    if (!_initialized) {
+      await init();
+    }
+
+    try {
+      final granted = await requestPermissions();
+      if (granted) {
+        await setNotificationsEnabled(true);
+      }
+      await showWelcomeNotification(userName: displayName);
+      await scheduleDailyQuestsReminder();
+      await scheduleStreakReminder();
+      return granted;
+    } catch (e) {
+      if (!_isTestMode) {
+        debugPrint('NotificationService: onUserSignedIn error: $e');
+      }
+      return false;
+    }
   }
 
   /// 1. Mystery Chest Ready Alert: Scheduled exactly 3 hours after user opens a chest.

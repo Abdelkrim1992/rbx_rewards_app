@@ -116,7 +116,32 @@ void main() {
       await expectLater(service.requestPermissions(), completes);
     });
 
+    test('showWelcomeNotification delivers welcome notification without throwing', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      await expectLater(service.showWelcomeNotification(userName: 'Alex'), completes);
+      await expectLater(service.showWelcomeNotification(), completes);
+    });
+
+    test('showWelcomeNotification immediately no-ops when notifications are disabled', () async {
+      final service = NotificationService.testInstance(enabled: false);
+      expect(service.isNotificationsEnabled, isFalse);
+
+      await expectLater(service.showWelcomeNotification(userName: 'Alex'), completes);
+    });
+
+    test('onUserSignedIn coordinates permission request, welcome notification, and retention schedules', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      final result = await service.onUserSignedIn(displayName: 'TestPlayer');
+      expect(result, isTrue);
+      expect(service.isNotificationsEnabled, isTrue);
+    });
+
     test('Constant identifiers match specifications', () {
+      expect(NotificationService.welcomeNotificationId, 1000);
       expect(NotificationService.chestReadyNotificationId, 1001);
       expect(NotificationService.dailyQuestsNotificationId, 1002);
       expect(NotificationService.streakReminderNotificationId, 1003);

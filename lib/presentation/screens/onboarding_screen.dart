@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
 import '../../widgets/welcome_bonus_overlay.dart';
+import '../../business/notification_service.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 
@@ -146,7 +147,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         return;
       }
 
-      // User signed in successfully -> trigger celebratory bonus overlay and finish
+      // User signed in successfully with Google -> request notification permission & deliver welcome notification
+      final user = auth.currentUser;
+      final rawName = user?.userMetadata?['full_name'] ??
+          user?.userMetadata?['name'] ??
+          user?.email?.split('@').first;
+      final displayName = rawName is String ? rawName : null;
+      await NotificationService.instance.onUserSignedIn(displayName: displayName);
+
+      // Trigger celebratory bonus overlay and finish
       setState(() {
         _isSigningIn = false;
         _isClaiming = true;
@@ -195,6 +204,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         setState(() => _isSigningIn = false);
         return;
       }
+
+      final user = auth.currentUser;
+      final rawName = user?.userMetadata?['full_name'] ??
+          user?.userMetadata?['name'] ??
+          user?.email?.split('@').first;
+      final displayName = rawName is String ? rawName : null;
+      await NotificationService.instance.onUserSignedIn(displayName: displayName);
 
       // User signed in successfully -> trigger celebratory bonus overlay
       setState(() {
