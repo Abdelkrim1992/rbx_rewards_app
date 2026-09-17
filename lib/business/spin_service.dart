@@ -34,10 +34,25 @@ class SpinService {
       );
     }
 
-    final data = await _remote.callEdgeFunction('use-spin', body: {});
-    final result = SpinResult.fromJson(data);
-    await _secure.saveSpinState(result.spinsRemaining, result.cooldownEnd);
-    return result;
+    try {
+      final data = await _remote.callEdgeFunction('use-spin', body: {});
+      final result = SpinResult.fromJson(data);
+      await _secure.saveSpinState(result.spinsRemaining, result.cooldownEnd);
+      return result;
+    } catch (_) {
+      final spins = await _secure.getSpinFreeSpins();
+      final newSpins = spins > 0 ? spins - 1 : 0;
+      int? cooldownEnd;
+      if (newSpins == 0) {
+        cooldownEnd = DateTime.now().add(const Duration(hours: 24)).millisecondsSinceEpoch;
+      }
+      await _secure.saveSpinState(newSpins, cooldownEnd);
+      return SpinResult(
+        spinsRemaining: newSpins,
+        cooldownEnd: cooldownEnd,
+        coinsEarned: 0,
+      );
+    }
   }
 
   Future<SpinState> getSpinState() async {

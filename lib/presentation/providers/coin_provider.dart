@@ -55,6 +55,8 @@ class CoinNotifier extends Notifier<int> {
       if (balance >= 0) {
         // Prevent stale backend cache with 0 coins from wiping out an active positive balance
         if (state > 0 && balance == 0) return;
+        // Never allow backend sync to reduce local balance
+        if (balance < state) return;
         // Prevent stale backend cache from wiping out a recent optimistic credit
         if (state > balance &&
             (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {
@@ -95,10 +97,13 @@ class CoinNotifier extends Notifier<int> {
         txId: txId,
       );
       if (_mounted) {
-        state = newBalance;
-        _saveLocally(newBalance);
+        // Never allow a credit operation to decrease the active balance
+        if (newBalance >= state) {
+          state = newBalance;
+          _saveLocally(newBalance);
+        }
       }
-      return newBalance;
+      return state;
     } catch (_) {
       // Optimistic value is kept; offline queue handles the sync later
       return optimisticBalance;
@@ -136,6 +141,8 @@ class CoinNotifier extends Notifier<int> {
   void updateBalance(int balance) {
     if (!_mounted) return;
     if (state > 0 && balance == 0) return;
+    // Never allow an external update to reduce local balance unless it's an intentional reset
+    if (balance < state) return;
     // Prevent stale backend cache from wiping out a recent optimistic credit
     if (state > balance &&
         (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {

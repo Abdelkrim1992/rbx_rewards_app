@@ -214,7 +214,10 @@ class _FeatureTopBarState extends ConsumerState<FeatureTopBar>
                           ),
                           const SizedBox(width: 5),
                           TweenAnimationBuilder<int>(
-                            tween: IntTween(begin: _previousCoins, end: coins),
+                            tween: IntTween(
+                              begin: _previousCoins > coins ? coins : _previousCoins,
+                              end: coins,
+                            ),
                             duration: const Duration(milliseconds: 500),
                             curve: Curves.easeOutCubic,
                             onEnd: () {

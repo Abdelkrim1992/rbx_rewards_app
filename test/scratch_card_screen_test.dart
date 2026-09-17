@@ -64,14 +64,12 @@ void main() {
       });
     }
 
-    testWidgets('ScratchCardScreen renders countdown limit banner without overflow on 320x568',
+    testWidgets('ScratchCardScreen renders refill banner and watch ad overlay without overflow on 320x568 when 0 scratches left',
         (WidgetTester tester) async {
       final todayStr = DateTime.now().toIso8601String().substring(0, 10);
       SharedPreferences.setMockInitialValues({
         'scratch_free_date': todayStr,
         'scratch_free_remaining': 0,
-        'extra_scratches_date': todayStr,
-        'extra_scratches_remaining': 0,
       });
 
       tester.view.physicalSize = const Size(320, 568);
@@ -85,7 +83,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.textContaining('Resets in'), findsOneWidget);
+      expect(find.textContaining('0 Scratches Left'), findsOneWidget);
+      expect(find.text('WATCH VIDEO TO SCRATCH'), findsOneWidget);
+      expect(find.text('Watch Video for Free Scratch'), findsOneWidget);
     });
 
     testWidgets('ScratchCardScreen renders 0 scratches / watch ad banner without overflow on 320x568',

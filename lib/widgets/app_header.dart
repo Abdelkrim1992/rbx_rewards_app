@@ -482,7 +482,10 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
                         ),
                         const SizedBox(width: 5),
                         TweenAnimationBuilder<int>(
-                          tween: IntTween(begin: _previousCoins, end: coins),
+                          tween: IntTween(
+                            begin: _previousCoins > coins ? coins : _previousCoins,
+                            end: coins,
+                          ),
                           duration: const Duration(milliseconds: 600),
                           curve: Curves.easeOutCubic,
                           onEnd: () {

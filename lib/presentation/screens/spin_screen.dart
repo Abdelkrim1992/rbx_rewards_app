@@ -141,6 +141,62 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     return 0;
   }
 
+  Future<void> _watchAdForExtraSpin() async {
+    if (_isProcessing || _isSpinning) return;
+    setState(() {
+      _isProcessing = true;
+    });
+
+    await ref.read(adProvider.notifier).showOptionalAd(
+      AdPlacement.spinExtra,
+      onReward: (amount) async {
+        if (!mounted) return;
+        await ref.read(spinProvider.notifier).addFreeSpinLocal();
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      },
+      onAdDismissed: () {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      },
+      onAdFailed: (error) async {
+        if (mounted) {
+          final isDevMode = ref.read(adServiceProvider).developerModeEnabled;
+          if (isDevMode || kDebugMode) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AdRewardDialog(
+                onRewardGranted: () async {
+                  await ref.read(spinProvider.notifier).addFreeSpinLocal();
+                },
+              ),
+            ).then((_) {
+              if (mounted) {
+                setState(() {
+                  _isProcessing = false;
+                });
+              }
+            });
+          } else {
+            setState(() {
+              _isProcessing = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error)),
+            );
+          }
+        }
+      },
+    );
+  }
+
   Future<void> _spin() async {
     final freeSpins = ref.read(spinProvider).spinsRemaining;
     final isSpinBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('spin') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
@@ -167,6 +223,9 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       _isSpinning = true;
       _isProcessing = true;
     });
+
+    // Deduct spin usage immediately upon playing
+    ref.read(spinProvider.notifier).spin();
 
     _pulseController.stop();
 
@@ -220,10 +279,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       multiplier: 4,
       onSuccess: (coins) async {
         if (!mounted) return;
-        final result = await ref.read(spinProvider.notifier).spin();
-        if (result != null) {
-          await ref.read(coinProvider.notifier).credit(coins, 'spin');
-        }
+        await ref.read(coinProvider.notifier).credit(coins, 'spin');
       },
     );
   }
@@ -389,18 +445,18 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                         ),
                                       ),
                                     ),
-
                                     // Center SPIN button (Fixed, not rotating)
                                     GestureDetector(
-                                      onTap: (isSpinBlocked || _isProcessing || _isSpinning || freeSpins == 0) ? null : _spin,
+                                      onTap: (_isProcessing || _isSpinning)
+                                          ? null
+                                          : (freeSpins == 0 ? _watchAdForExtraSpin : _spin),
                                       child: AnimatedBuilder(
                                         animation: _pulseAnimation,
                                         builder: (context, child) {
                                           return Transform.scale(
-                                            scale:
-                                                _isSpinning || _isProcessing || (freeSpins == 0) || isSpinBlocked
-                                                    ? 1.0
-                                                    : _pulseAnimation.value,
+                                            scale: _isSpinning || _isProcessing
+                                                ? 1.0
+                                                : _pulseAnimation.value,
                                             child: child,
                                           );
                                         },
@@ -448,26 +504,26 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                                           letterSpacing: 1,
                                                         ),
                                                       )
-                                                    : (isSpinBlocked || freeSpins == 0)
-                                                        ? Column(
+                                                    : freeSpins == 0
+                                                        ? const Column(
                                                             mainAxisAlignment:
                                                                 MainAxisAlignment.center,
                                                             children: [
+                                                              Icon(
+                                                                Icons.play_circle_fill,
+                                                                size: 24,
+                                                                color: AppColors.primary,
+                                                              ),
+                                                              SizedBox(height: 2),
                                                               Text(
-                                                                _formatDuration(effectiveCooldown),
-                                                                style: const TextStyle(
-                                                                  fontSize: 12,
+                                                                'FREE SPIN',
+                                                                style: TextStyle(
+                                                                  fontSize: 10,
                                                                   fontWeight:
                                                                       FontWeight.w900,
-                                                                  color: Colors.grey,
+                                                                  color: AppColors.primary,
                                                                   letterSpacing: 0.5,
                                                                 ),
-                                                              ),
-                                                              const SizedBox(height: 2),
-                                                              const Icon(
-                                                                Icons.lock_clock,
-                                                                size: 14,
-                                                                color: Colors.grey,
                                                               ),
                                                             ],
                                                           )
@@ -544,153 +600,88 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 8),
-                      // Free spins info / 24h Limit Countdown Banner
-                      if (isSpinBlocked || freeSpins == 0) ...[
+                      // Free spins info / Ad Refill Status Pill
+                      if (freeSpins == 0) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF0F5),
+                            color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFFFD4E5)),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.timer_outlined,
-                                size: 18,
-                                color: Color(0xFFFF52A2),
+                              Icon(
+                                Icons.smart_display_rounded,
+                                size: 17,
+                                color: AppColors.primary,
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: 6),
                               Text(
-                                isSpinBlocked
-                                    ? 'Daily Limit Reached • Resets in ${_formatDuration(effectiveCooldown)}'
-                                    : 'Limit Reached • Resets in ${_formatDuration(effectiveCooldown)}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
+                                '0 Free Spins Left • Watch Video to Refill',
+                                style: TextStyle(
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFFFF52A2),
+                                  color: Color(0xFF475569),
                                 ),
                               ),
                             ],
                           ),
                         ),
                       ] else ...[
-                        Text(
-                          'Free Spins: $freeSpins',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF131326),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F3FF),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFDDD6FE)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.stars_rounded,
+                                size: 17,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Free Spins: $freeSpins',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                       const SizedBox(height: 10),
-                      // Watch Ad button with daily 8-spin cap
+                      // Rewarded Video Refill Button
                       InteractiveButton(
                         height: 52,
-                        gradient: (_extraSpinsRemaining <= 0 || isSpinBlocked)
-                            ? null
-                            : AppColors.primaryGradient,
-                        backgroundColor: (_extraSpinsRemaining <= 0 || isSpinBlocked)
-                            ? const Color(0xFFF1F2F8)
-                            : null,
-                        textColor: (_extraSpinsRemaining <= 0 || isSpinBlocked)
-                            ? const Color(0xFF868A9F)
-                            : Colors.white,
-                        onTap: (_isProcessing || _isSpinning || _extraSpinsRemaining <= 0 || isSpinBlocked)
-                            ? null
-                            : () async {
-                                setState(() {
-                                  _isProcessing = true;
-                                });
-                                // Show rewarded ad
-                                await ref.read(adProvider.notifier).showOptionalAd(
-                                  AdPlacement.spinExtra,
-                                  onReward: (amount) async {
-                                    if (!mounted) return;
-                                    await GamePrefs.decrementExtraSpinsRemaining();
-                                    final updated = await GamePrefs.getExtraSpinsRemaining();
-                                    if (mounted) {
-                                      setState(() {
-                                        _extraSpinsRemaining = updated;
-                                      });
-                                    }
-                                    // Award the free spin after the ad is successfully watched
-                                    await ref.read(spinProvider.notifier).addFreeSpinLocal();
-                                  },
-                                  onAdDismissed: () {
-                                    if (mounted) {
-                                      setState(() {
-                                        _isProcessing = false;
-                                      });
-                                    }
-                                  },
-                                  onAdFailed: (error) async {
-                                    if (mounted) {
-                                      final isDevMode = ref.read(adServiceProvider).developerModeEnabled;
-                                      if (isDevMode || kDebugMode) {
-                                        showDialog(
-                                          context: context,
-                                          barrierDismissible: false,
-                                          builder: (context) => AdRewardDialog(
-                                            onRewardGranted: () async {
-                                              await GamePrefs.decrementExtraSpinsRemaining();
-                                              final updated = await GamePrefs.getExtraSpinsRemaining();
-                                              if (mounted) {
-                                                setState(() {
-                                                  _extraSpinsRemaining = updated;
-                                                });
-                                              }
-                                              await ref.read(spinProvider.notifier).addFreeSpinLocal();
-                                            },
-                                          ),
-                                        ).then((_) {
-                                          if (mounted) {
-                                            setState(() {
-                                              _isProcessing = false;
-                                            });
-                                          }
-                                        });
-                                      } else {
-                                        setState(() {
-                                          _isProcessing = false;
-                                        });
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text(error)),
-                                        );
-                                      }
-                                    }
-                                  },
-                                );
-                              },
-                        child: Row(
+                        gradient: AppColors.primaryGradient,
+                        textColor: Colors.white,
+                        isLoading: _isProcessing && !_isSpinning,
+                        onTap: (_isProcessing || _isSpinning) ? null : _watchAdForExtraSpin,
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _extraSpinsRemaining <= 0
-                                  ? Icons.check_circle_outline
-                                  : (isSpinBlocked ? Icons.lock : Icons.play_circle_fill),
-                              color: (_extraSpinsRemaining <= 0 || isSpinBlocked)
-                                  ? const Color(0xFF868A9F)
-                                  : Colors.white,
+                              Icons.play_circle_fill,
+                              color: Colors.white,
                               size: 22,
                             ),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
-                              _extraSpinsRemaining <= 0
-                                  ? 'Extra Spins Limit Reached (0/${GamePrefs.maxExtraSpinsPerDay})'
-                                  : isSpinBlocked
-                                      ? 'Daily Spin Cap Reached'
-                                      : 'Watch Ad for Extra Spin ($_extraSpinsRemaining/${GamePrefs.maxExtraSpinsPerDay} left)',
+                              'Watch Video for Free Spin',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: (_extraSpinsRemaining <= 0 || isSpinBlocked)
-                                    ? const Color(0xFF868A9F)
-                                    : Colors.white,
+                                color: Colors.white,
                                 letterSpacing: 0.3,
                               ),
                             ),
