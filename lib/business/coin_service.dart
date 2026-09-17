@@ -135,6 +135,9 @@ class CoinService {
         msg.contains('insufficient') ||
         msg.contains('cap reached') ||
         msg.contains('unique_violation') ||
+        msg.contains('validation failed') ||
+        msg.contains('unknown game') ||
+        msg.contains('400') ||
         msg.contains('23505'); // Postgres unique violation code
   }
 }

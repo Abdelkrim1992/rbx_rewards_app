@@ -58,11 +58,33 @@ void main() {
 
         // Verify key widgets
         expect(find.text('Scratch & Win'), findsOneWidget);
+        expect(find.text('Daily Scratch Goal'), findsOneWidget);
         expect(find.text('Scratch below to reveal!'), findsOneWidget);
-        expect(find.text('How to Play'), findsOneWidget);
-        expect(find.text('Scratch the Card'), findsOneWidget);
+        expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
       });
     }
+
+    testWidgets('ScratchCardScreen opens How to Play bottom sheet when (?) icon is tapped',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          child: ScratchCardScreen(onBack: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How to Play Scratch & Win'), findsOneWidget);
+      expect(find.text('Scratch the Card'), findsOneWidget);
+      expect(find.text('Got It!'), findsOneWidget);
+
+      await tester.tap(find.text('Got It!'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How to Play Scratch & Win'), findsNothing);
+    });
 
     testWidgets('ScratchCardScreen renders refill banner and watch ad overlay without overflow on 320x568 when 0 scratches left',
         (WidgetTester tester) async {

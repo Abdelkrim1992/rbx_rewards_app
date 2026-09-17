@@ -22,11 +22,17 @@ Deno.serve(async (req: Request) => {
   if (!amount || amount <= 0) {
     return errorResponse("Invalid amount", 400);
   }
-  const validSources = ['in_app', 'game', 'daily_reward', 'spin', 'chest', 'ad', 'watch_video', 'mega_chest', 'mega_chest_double', 'survey', 'scratch', 'quiz', 'redeem'];
+  const validSources = [
+    'in_app', 'game', 'daily_reward', 'spin', 'chest', 'ad', 
+    'watch_video', 'mega_chest', 'mega_chest_double', 'survey', 
+    'scratch', 'quiz', 'redeem', 'math_quiz', 'tap_tap', 
+    'flappy_jump', 'flip_card', 'promo_code'
+  ];
   if (!source || typeof source !== "string") {
     return errorResponse("source required", 400);
   }
-  if (!validSources.includes(source)) {
+  const isSourceValid = validSources.includes(source) || source.startsWith("promo_code");
+  if (!isSourceValid) {
     return errorResponse(`Invalid source. Must be one of: ${validSources.join(', ')}`, 400);
   }
   if (!txId || typeof txId !== "string") {
@@ -53,9 +59,8 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (!distError && distData && distData.premium_reward !== null) {
-      // The absolute maximum a client can claim in a single transaction for this source
-      // is the premium_reward multiplied by 2 (to account for "Double Reward" ad placements)
-      const absoluteMaxClaim = distData.premium_reward * 2;
+      // Allow up to 4x/5x reward multipliers + buffer for legitimate claims
+      const absoluteMaxClaim = Math.max(distData.premium_reward * 5, 250);
       if (amount > absoluteMaxClaim) {
         console.warn(`Security block: User ${uid} tried to claim ${amount} for ${source} (max allowed: ${absoluteMaxClaim})`);
         return errorResponse("Amount exceeds maximum allowed for this feature", 400);

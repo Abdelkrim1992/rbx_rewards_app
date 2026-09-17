@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show User;
 import '../../theme/app_theme.dart';
 import '../../widgets/app_cached_image.dart';
 import '../../widgets/welcome_bonus_overlay.dart';
 import '../../business/notification_service.dart';
 import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
+import '../providers/user_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   final VoidCallback onGetStarted;
@@ -51,16 +53,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _bonusCredited = true;
 
     try {
-      // 1. Authenticate / create fresh account with device ID in Supabase if not logged in
-      try {
-        final auth = ref.read(authServiceProvider);
-        if (auth.currentUser == null) {
-          debugPrint('ℹ️ Authenticating new user with device credentials...');
-          await auth.signInWithDevice().timeout(const Duration(seconds: 10));
-          debugPrint('✅ User authenticated: ${auth.currentUser?.id}');
-        }
-      } catch (e) {
-        debugPrint('Auth setup notice in onboarding: $e');
+      // 1. Verify authenticated user is present before claiming backend bonus
+      final auth = ref.read(authServiceProvider);
+      if (auth.currentUser == null) {
+        debugPrint('ℹ️ No active auth user during bonus setup (test or offline mode). Proceeding with local grant.');
       }
 
       // 2. Immediately credit in-memory balance to 500
@@ -103,11 +99,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  /// Credits the welcome bonus and navigates to home.
+  /// Credits the welcome bonus, marks onboarding complete, and navigates to home.
   Future<void> _claimBonusAndNavigate() async {
     if (!_bonusCredited) {
       await _setupAccountAndCreditBonus();
     }
+    await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
     widget.onGetStarted();
   }
 
@@ -130,6 +127,65 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  /// Handles user account restoration for returning users or triggers welcome bonus for new accounts
+  Future<void> _onSignInSuccess(User? user) async {
+    final rawName = user?.userMetadata?['full_name'] ??
+        user?.userMetadata?['name'] ??
+        user?.email?.split('@').first;
+    final displayName = rawName is String ? rawName : null;
+    await NotificationService.instance.onUserSignedIn(displayName: displayName);
+
+    // Check if user already exists in database (returning user)
+    Map<String, dynamic> userData = {};
+    try {
+      userData = await ref
+          .read(supabaseRepositoryProvider)
+          .getUserData()
+          .timeout(const Duration(seconds: 4), onTimeout: () => <String, dynamic>{});
+    } catch (e) {
+      debugPrint('getUserData check error on sign-in: $e');
+    }
+
+    final bool hasClaimedBonus =
+        userData['welcome_bonus_claimed'] as bool? ?? false;
+    final int existingBalance = userData['balance'] as int? ?? 0;
+    final int gamesPlayed = userData['games_played'] as int? ?? 0;
+
+    if (hasClaimedBonus || existingBalance > 0 || gamesPlayed > 0) {
+      debugPrint('👋 Returning user detected (${user?.email}). Restoring balance: $existingBalance');
+      ref.read(coinProvider.notifier).updateBalance(existingBalance);
+      await ref.read(secureRepositoryProvider).saveBalance(existingBalance);
+      await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);
+
+      if (!mounted) return;
+      setState(() => _isSigningIn = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Welcome back, ${displayName ?? 'Player'}! Your progress has been restored.'),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      widget.onGetStarted();
+      return;
+    }
+
+    // New user -> show the celebratory 500 welcome bonus overlay
+    if (!mounted) return;
+    setState(() {
+      _isSigningIn = false;
+      _isClaiming = true;
+    });
+
+    WelcomeBonusOverlay.show(
+      context,
+      onClaimAsync: () => _setupAccountAndCreditBonus(),
+      onClaimed: () => _claimBonusAndNavigate(),
+    );
+  }
+
   Future<void> _handleGoogleSignIn() async {
     if (_isSigningIn || _isClaiming) return;
     setState(() => _isSigningIn = true);
@@ -147,25 +203,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         return;
       }
 
-      // User signed in successfully with Google -> request notification permission & deliver welcome notification
-      final user = auth.currentUser;
-      final rawName = user?.userMetadata?['full_name'] ??
-          user?.userMetadata?['name'] ??
-          user?.email?.split('@').first;
-      final displayName = rawName is String ? rawName : null;
-      await NotificationService.instance.onUserSignedIn(displayName: displayName);
-
-      // Trigger celebratory bonus overlay and finish
-      setState(() {
-        _isSigningIn = false;
-        _isClaiming = true;
-      });
-
-      WelcomeBonusOverlay.show(
-        context,
-        onClaimAsync: () => _setupAccountAndCreditBonus(),
-        onClaimed: () => _claimBonusAndNavigate(),
-      );
+      await _onSignInSuccess(auth.currentUser);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSigningIn = false);
@@ -205,24 +243,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         return;
       }
 
-      final user = auth.currentUser;
-      final rawName = user?.userMetadata?['full_name'] ??
-          user?.userMetadata?['name'] ??
-          user?.email?.split('@').first;
-      final displayName = rawName is String ? rawName : null;
-      await NotificationService.instance.onUserSignedIn(displayName: displayName);
-
-      // User signed in successfully -> trigger celebratory bonus overlay
-      setState(() {
-        _isSigningIn = false;
-        _isClaiming = true;
-      });
-
-      WelcomeBonusOverlay.show(
-        context,
-        onClaimAsync: () => _setupAccountAndCreditBonus(),
-        onClaimed: () => _claimBonusAndNavigate(),
-      );
+      await _onSignInSuccess(auth.currentUser);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSigningIn = false);

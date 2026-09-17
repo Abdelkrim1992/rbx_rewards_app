@@ -1030,7 +1030,11 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
           if (!mounted) return;
           if (result.success || result.queued) {
             final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            if (result.newBalance != null && result.newBalance! > 0) {
+              ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+            } else {
+              await ref.read(coinProvider.notifier).credit(earned, 'tap_tap');
+            }
             ref.read(dailyCapServiceProvider).addCoins(earned, 'tap_tap');
 
             if (mounted) {
@@ -1076,7 +1080,11 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
       );
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        if (result.newBalance != null && result.newBalance! > 0) {
+          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+        } else {
+          await ref.read(coinProvider.notifier).credit(earned, 'tap_tap');
+        }
         ref.read(dailyCapServiceProvider).addCoins(earned, 'tap_tap');
         if (mounted) {
           setState(() {

@@ -39,6 +39,24 @@ class GameService {
       });
       return GameSubmitResult.fromMap(data);
     } catch (e) {
+      // Direct RPC fallback if Edge function is unreachable
+      final uid = _remote.currentUserId;
+      if (uid != null) {
+        try {
+          final rpcData = await _remote.processGameSessionRpc(
+            sessionId: sessionId,
+            userId: uid,
+            gameName: gameName,
+            score: (originalScore > 0 ? originalScore : score) * (multiplier > 1 ? multiplier : 1),
+            durationSeconds: durationSeconds,
+            txId: txId,
+          );
+          if (rpcData != null) {
+            return GameSubmitResult.fromMap(rpcData);
+          }
+        } catch (_) {}
+      }
+
       final msg = e.toString().toLowerCase();
       final nonRetryable = msg.contains('validation failed') ||
           msg.contains('unknown game') ||

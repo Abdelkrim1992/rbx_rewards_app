@@ -224,7 +224,11 @@ class AuthService {
       );
 
       if (response.user != null) {
-        await _ensurePublicUserRow(response.user!);
+        await _ensurePublicUserRow(
+          response.user!,
+          emailOverride: googleUser.email,
+          nameOverride: googleUser.displayName,
+        );
         return true;
       }
       return false;
@@ -269,7 +273,20 @@ class AuthService {
       );
 
       if (response.user != null) {
-        await _ensurePublicUserRow(response.user!);
+        String? appleName;
+        if (credential.givenName != null || credential.familyName != null) {
+          final parts = [credential.givenName, credential.familyName]
+              .where((s) => s != null && s.isNotEmpty)
+              .toList();
+          if (parts.isNotEmpty) {
+            appleName = parts.join(' ');
+          }
+        }
+        await _ensurePublicUserRow(
+          response.user!,
+          emailOverride: credential.email,
+          nameOverride: appleName,
+        );
         return true;
       }
       return false;
@@ -286,19 +303,32 @@ class AuthService {
     }
   }
 
-  /// Fail-safe to ensure a public.users row exists for social auth users
-  Future<void> _ensurePublicUserRow(User user) async {
+  /// Fail-safe to ensure a public.users row exists for social auth users, saving their verified email
+  Future<void> _ensurePublicUserRow(
+    User user, {
+    String? emailOverride,
+    String? nameOverride,
+  }) async {
     try {
-      final displayName = user.userMetadata?['full_name'] as String? ??
+      final email = (emailOverride != null && emailOverride.isNotEmpty)
+          ? emailOverride
+          : user.email;
+      final displayName = nameOverride ??
+          user.userMetadata?['full_name'] as String? ??
           user.userMetadata?['name'] as String? ??
-          user.email?.split('@').first ??
+          email?.split('@').first ??
           'Player${Random().nextInt(900000) + 100000}';
 
-      await _client.from('users').upsert({
+      final Map<String, dynamic> rowData = {
         'id': user.id,
         'display_name': displayName,
-      }, onConflict: 'id');
-      debugPrint('✅ Verified public.users row exists for user ${user.id}');
+      };
+      if (email != null && email.isNotEmpty) {
+        rowData['email'] = email;
+      }
+
+      await _client.from('users').upsert(rowData, onConflict: 'id');
+      debugPrint('✅ Verified public.users row exists for user ${user.id} (email: $email)');
     } catch (e) {
       debugPrint('Fail-safe public.users upsert notice: $e');
     }

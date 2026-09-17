@@ -216,6 +216,104 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     }
   }
 
+  void _showHowToPlay(BuildContext context) {
+    final maxPrize = ref.read(dailyCapServiceProvider).getRewardLimits('scratch').$2;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primarySoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.help_outline_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'How to Play Scratch & Win',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const _HowToStep(
+                  icon: Icons.touch_app,
+                  title: 'Scratch the Card',
+                  description: 'Use your finger to scratch away the cover and reveal the prize.',
+                  color: Color(0xFF9B5CFF),
+                ),
+                const SizedBox(height: 10),
+                _HowToStep(
+                  icon: Icons.monetization_on,
+                  title: 'Reveal the Prize',
+                  description: 'Match symbols to win up to $maxPrize RBX instantly.',
+                  color: const Color(0xFF6B4BF4),
+                ),
+                const SizedBox(height: 10),
+                const _HowToStep(
+                  icon: Icons.play_circle_outline,
+                  title: 'Unlimited Cards',
+                  description: 'Watch a short video to refill your scratch cards whenever you want.',
+                  color: const Color(0xFF4A2BC2),
+                ),
+                const SizedBox(height: 20),
+                InteractiveButton(
+                  height: 48,
+                  gradient: AppColors.primaryGradient,
+                  textColor: Colors.white,
+                  onTap: () => Navigator.pop(context),
+                  child: const Center(
+                    child: Text(
+                      'Got It!',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
@@ -236,130 +334,195 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Unified Feature Top Bar
+              // Unified Feature Top Bar with Info (?) modal button
               FeatureTopBar(
                 title: 'Scratch & Win',
                 onBack: _handleBack,
                 isBackEnabled: !_isProcessing,
+                onInfoTap: () => _showHowToPlay(context),
               ),
-              SizedBox(height: isCompact ? 12 : 20),
+              const SizedBox(height: 6),
 
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                      child: Column(
-                    children: [
-                      // Scratches Left Indicator / Ad Refill Status Pill
-                      if (!_isLoadingLimit) ...[
-                        if (_scratchesRemaining <= 0) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 12 : 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.smart_display_rounded,
-                                      size: 17,
-                                      color: AppColors.primary,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      '0 Scratches Left • Watch Video to Refill',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF475569),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+              // Daily Streak / Milestone Progress Banner
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAF5FF),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFF3E8FF)),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.local_fire_department_rounded,
+                              color: Color(0xFFF59E0B),
+                              size: 20,
                             ),
-                          ),
-                        ] else ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 12 : 16,
-                                vertical: 8,
+                            const SizedBox(width: 6),
+                            Text(
+                              'Daily Scratch Goal',
+                              style: TextStyle(
+                                fontSize: isCompact ? 12 : 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF6B21A8),
                               ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5F3FF),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFDDD6FE)),
-                              ),
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.stars_rounded,
-                                      size: 17,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Free Scratches: $_scratchesRemaining',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-
-                      // Scratch Card Container
-                      Container(
-                        padding: EdgeInsets.all(isCompact ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: AppColors.primarySoft,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
                             ),
                           ],
                         ),
-                        child: Column(
+                        const SizedBox(width: 12),
+                        Row(
                           children: [
+                            for (int i = 0; i < GamePrefs.maxScratchesPerDay; i++) ...[
+                              Container(
+                                width: 9,
+                                height: 9,
+                                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: (GamePrefs.maxScratchesPerDay - _scratchesRemaining) > i
+                                      ? AppColors.primary
+                                      : const Color(0xFFD8B4FE),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.card_giftcard_rounded,
+                              color: AppColors.primary,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Scratches Left Indicator / Ad Refill Status Pill
+              if (!_isLoadingLimit) ...[
+                if (_scratchesRemaining <= 0) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 12 : 16,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.smart_display_rounded,
+                              size: 17,
+                              color: AppColors.primary,
+                            ),
+                            SizedBox(width: 6),
                             Text(
-                              _scratchesRemaining <= 0
-                                  ? 'Watch video below to scratch!'
-                                  : 'Scratch below to reveal!',
+                              '0 Scratches Left • Watch Video to Refill',
                               style: TextStyle(
-                                fontSize: isCompact ? 15 : 16,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 12 : 16,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F3FF),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFDDD6FE)),
+                      ),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.stars_rounded,
+                              size: 17,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Free Scratches: $_scratchesRemaining',
+                              style: const TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.primary,
                               ),
                             ),
-                            SizedBox(height: isCompact ? 12 : 16),
-                            ClipRRect(
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+
+              // Centered Hero Scratch Card (Expands cleanly without any scroll conflict)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: 420,
+                        maxHeight: isShort ? 250 : 310,
+                      ),
+                      padding: EdgeInsets.all(isCompact ? 12 : 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.15),
+                            blurRadius: 24,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            _scratchesRemaining <= 0
+                                ? 'Watch video below to scratch!'
+                                : 'Scratch below to reveal!',
+                            style: TextStyle(
+                              fontSize: isCompact ? 15 : 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          SizedBox(height: isCompact ? 10 : 14),
+                          Expanded(
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: Stack(
                                 children: [
@@ -388,8 +551,8 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                           _handleScratchWin();
                                         },
                                         child: Container(
-                                          height: isCompact ? 210 : (isShort ? 230 : 250),
                                           width: double.infinity,
+                                          height: double.infinity,
                                           decoration: const BoxDecoration(
                                             color: Colors.white,
                                           ),
@@ -398,10 +561,10 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                             children: [
                                               Image.asset(
                                                 AppAssets.goldRbxCoin,
-                                                width: isCompact ? 64 : 80,
-                                                height: isCompact ? 64 : 80,
+                                                width: isCompact ? 60 : 76,
+                                                height: isCompact ? 60 : 76,
                                               ),
-                                              SizedBox(height: isCompact ? 8 : 12),
+                                              SizedBox(height: isCompact ? 6 : 10),
                                               FittedBox(
                                                 fit: BoxFit.scaleDown,
                                                 child: Text(
@@ -416,7 +579,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                               Text(
                                                 'You Won!',
                                                 style: TextStyle(
-                                                  fontSize: isCompact ? 14 : 16,
+                                                  fontSize: isCompact ? 13 : 15,
                                                   fontWeight: FontWeight.w600,
                                                   color: AppColors.secondaryText,
                                                 ),
@@ -484,94 +647,92 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                 ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: isCompact ? 16 : 24),
-
-                      // Watch Ad button for extra scratch
-                      InteractiveButton(
-                        height: isCompact ? 48 : 52,
-                        gradient: AppColors.primaryGradient,
-                        textColor: Colors.white,
-                        isLoading: _isProcessing && !_hasActiveScratch,
-                        onTap: _isProcessing ? null : _watchAdForExtraScratch,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.play_circle_fill,
-                                  color: Colors.white,
-                                  size: isCompact ? 18 : 22,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _scratchesRemaining <= 0
-                                      ? 'Watch Video for Free Scratch'
-                                      : 'Watch Video for Extra Scratch',
-                                  style: TextStyle(
-                                    fontSize: isCompact ? 13 : 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                        ),
+                        ],
                       ),
-                      SizedBox(height: isCompact ? 16 : 24),
-
-                      // How to Play Section
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'How to Play',
-                          style: TextStyle(
-                            fontSize: isCompact ? 16 : 17,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF131326),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      _HowToStep(
-                        icon: Icons.touch_app,
-                        title: 'Scratch the Card',
-                        description: 'Use your finger to scratch away the cover and reveal what\'s underneath.',
-                        color: const Color(0xFF9B5CFF),
-                        isCompact: isCompact,
-                      ),
-                      const SizedBox(height: 8),
-                      _HowToStep(
-                        icon: Icons.monetization_on,
-                        title: 'Reveal the Prize',
-                        description: 'Match the hidden symbols to win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX instantly.',
-                        color: const Color(0xFF6B4BF4),
-                        isCompact: isCompact,
-                      ),
-                      const SizedBox(height: 8),
-                      _HowToStep(
-                        icon: Icons.play_circle_outline,
-                        title: 'Get More Cards',
-                        description: 'Watch a short video to get another scratch card.',
-                        color: const Color(0xFF4A2BC2),
-                        isCompact: isCompact,
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+              const SizedBox(height: 8),
+
+              // Live Recent Win / Jackpot Info Ticker
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Jackpot: Win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX!',
+                          style: TextStyle(
+                            fontSize: isCompact ? 11.5 : 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Fixed Bottom Action Button Dock (Always in thumb zone)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  0,
+                  horizontalPadding,
+                  isCompact ? 12 : 18,
+                ),
+                child: InteractiveButton(
+                  height: isCompact ? 48 : 52,
+                  gradient: AppColors.primaryGradient,
+                  textColor: Colors.white,
+                  isLoading: _isProcessing && !_hasActiveScratch,
+                  onTap: _isProcessing ? null : _watchAdForExtraScratch,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.play_circle_fill,
+                            color: Colors.white,
+                            size: isCompact ? 18 : 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _scratchesRemaining <= 0
+                                ? 'Watch Video for Free Scratch'
+                                : 'Watch Video for Extra Scratch',
+                            style: TextStyle(
+                              fontSize: isCompact ? 13 : 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),

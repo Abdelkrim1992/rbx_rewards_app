@@ -296,7 +296,11 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
           if (!mounted) return;
           if (result.success || result.queued) {
             final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            if (result.newBalance != null && result.newBalance! > 0) {
+              ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+            } else {
+              await ref.read(coinProvider.notifier).credit(earned, 'flip_card');
+            }
             ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
 
             if (mounted) {
@@ -342,7 +346,11 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       );
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        if (result.newBalance != null && result.newBalance! > 0) {
+          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+        } else {
+          await ref.read(coinProvider.notifier).credit(earned, 'flip_card');
+        }
         ref.read(dailyCapServiceProvider).addCoins(earned, 'flip_card');
         if (mounted) {
           setState(() {

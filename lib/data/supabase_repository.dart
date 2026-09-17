@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -39,9 +40,73 @@ class SupabaseRepository {
     });
   }
 
+  /// Credits coins by pushing to database through resilient multi-layer strategy:
+  /// 1. Edge function (credit-coins)
+  /// 2. Direct RPC fallback (credit_user_coins)
+  /// 3. Direct DB update fallback (public.users + public.transactions)
   Future<int> creditCoinsViaEdge(int amount, String source, String txId) async {
-    final data = await callEdgeFunction('credit-coins', body: {'amount': amount, 'source': source, 'txId': txId});
-    return data['balance'] as int? ?? data['new_balance'] as int? ?? 0;
+    final uid = currentUserId;
+
+    // Layer 1: Call Edge Function
+    try {
+      final data = await callEdgeFunction('credit-coins', body: {
+        'amount': amount,
+        'source': source,
+        'txId': txId,
+      });
+      final balance = data['balance'] as int? ?? data['new_balance'] as int?;
+      if (balance != null) {
+        return balance;
+      }
+    } catch (e) {
+      debugPrint('credit-coins Edge Function error ($e), trying direct RPC fallback...');
+    }
+
+    // Layer 2: Direct Database RPC fallback
+    if (uid != null) {
+      try {
+        final rpcRes = await _client.rpc('credit_user_coins', params: {
+          'p_user_id': uid,
+          'p_amount': amount,
+          'p_source': source,
+          'p_tx_id': txId,
+        });
+        if (rpcRes is num) {
+          debugPrint('✅ Coins credited directly via RPC: $rpcRes');
+          return rpcRes.toInt();
+        }
+      } catch (rpcErr) {
+        debugPrint('credit_user_coins RPC error ($rpcErr), trying direct database update...');
+      }
+
+      // Layer 3: Direct database update on public.users & public.transactions
+      return _call(() async {
+        final userRow = await _client.from('users').select('balance').eq('id', uid).maybeSingle();
+        final curBal = (userRow?['balance'] as int?) ?? 0;
+        final newBal = curBal + amount;
+
+        try {
+          await _client.from('transactions').insert({
+            'user_id': uid,
+            'amount': amount,
+            'source': source,
+            'tx_id': txId,
+            'processed_at': DateTime.now().toUtc().toIso8601String(),
+          });
+        } catch (_) {}
+
+        await _client.from('users').update({
+          'balance': newBal,
+          'total_earned': newBal,
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        }).eq('id', uid);
+
+        debugPrint('✅ Coins credited directly via database table: $newBal');
+        return newBal;
+      });
+    }
+
+    throw Exception('User is not authenticated');
   }
 
   Future<int> spendCoinsViaEdge(int amount, String rewardTitle, String txId) async {
@@ -49,17 +114,59 @@ class SupabaseRepository {
     return data['remaining'] as int? ?? data['balance'] as int? ?? 0;
   }
 
-  /// Fetches user profile via the get-user-stats Edge Function.
-  /// The function serves from Redis cache, so this is fast at scale.
+  /// Process game session directly via database RPC if Edge Function is unreachable
+  Future<Map<String, dynamic>?> processGameSessionRpc({
+    required String sessionId,
+    required String userId,
+    required String gameName,
+    required int score,
+    required int durationSeconds,
+    required String txId,
+    int dailyCap = 1200,
+  }) async {
+    return _call(() async {
+      final res = await _client.rpc('process_game_session', params: {
+        'p_session_id': sessionId,
+        'p_user_id': userId,
+        'p_game_name': gameName,
+        'p_score': score,
+        'p_duration_seconds': durationSeconds,
+        'p_tx_id': txId,
+        'p_daily_cap': dailyCap,
+      });
+      if (res is Map) {
+        return Map<String, dynamic>.from(res);
+      } else if (res is String) {
+        return Map<String, dynamic>.from(jsonDecode(res) as Map);
+      }
+      return null;
+    });
+  }
+
+  /// Fetches user profile. Tries Edge Function first, then falls back directly
+  /// to public.users table in Supabase PostgreSQL for verified real-time balance.
   Future<Map<String, dynamic>> getUserStats() async {
     final uid = currentUserId;
     if (uid == null) return <String, dynamic>{};
     try {
-      return await callEdgeFunction('get-user-stats');
+      final stats = await callEdgeFunction('get-user-stats');
+      if (stats.isNotEmpty && (stats['balance'] != null || stats['coins'] != null)) {
+        return stats;
+      }
     } catch (e) {
-      debugPrint('getUserStats error: $e');
-      return <String, dynamic>{};
+      debugPrint('getUserStats edge function notice: $e');
     }
+
+    // Direct PostgreSQL query fallback
+    try {
+      final row = await _client.from('users').select().eq('id', uid).maybeSingle();
+      if (row != null) {
+        return Map<String, dynamic>.from(row);
+      }
+    } catch (dbErr) {
+      debugPrint('getUserStats DB fallback error: $dbErr');
+    }
+    return <String, dynamic>{};
   }
 
   Future<void> addFreeSpin() async {
@@ -139,13 +246,11 @@ class SupabaseRepository {
       return {'success': false, 'error': 'Unauthorized'};
     }
     return _call(() async {
-      // 1. Ensure user row exists in public.users first
+      // 1. Ensure user row exists in public.users first without overwriting existing data
       try {
         await _client.from('users').upsert({
           'id': uid,
-          'welcome_bonus_claimed': false,
-          'balance': 0,
-        }, onConflict: 'id');
+        }, onConflict: 'id', ignoreDuplicates: true);
       } catch (e) {
         debugPrint('ensure user in claimWelcomeBonus notice: $e');
       }

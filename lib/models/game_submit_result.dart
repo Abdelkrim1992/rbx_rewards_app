@@ -3,12 +3,14 @@ class GameSubmitResult {
   final String? error;
   final bool queued;
   final int coinsEarned;
+  final int? newBalance;
 
   GameSubmitResult({
     required this.success,
     this.error,
     this.queued = false,
     this.coinsEarned = 0,
+    this.newBalance,
   });
 
   factory GameSubmitResult.fromMap(Map<String, dynamic> map) {
@@ -17,6 +19,7 @@ class GameSubmitResult {
       error: map['error'] as String?,
       queued: map['queued'] as bool? ?? false,
       coinsEarned: map['credited'] as int? ?? map['coins_earned'] as int? ?? 0,
+      newBalance: map['balance'] as int?,
     );
   }
 }

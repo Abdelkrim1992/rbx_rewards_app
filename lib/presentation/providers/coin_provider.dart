@@ -21,12 +21,16 @@ class CoinNotifier extends Notifier<int> {
     });
 
     // Step 1: Show cached local balance immediately (instant, no network needed)
-    // Step 2: Fetch authoritative balance from backend in background
-    // Use Future.microtask to avoid using ref.read directly inside the build method
+    // Step 2: Flush pending offline queue if any
+    // Step 3: Fetch authoritative balance from backend in background
     Future.microtask(() {
       if (_mounted) {
         _loadFromLocal();
-        _syncFromBackend();
+        ref.read(coinServiceProvider).flushPendingQueue().then((_) {
+          if (_mounted) _syncFromBackend();
+        }).catchError((_) {
+          if (_mounted) _syncFromBackend();
+        });
         ref.read(dailyCapServiceProvider).load();
       }
     });
@@ -35,6 +39,7 @@ class CoinNotifier extends Notifier<int> {
   }
 
   /// Load balance from device secure storage. Fast and offline-capable.
+  /// Shows cached data immediately upon app startup.
   void _loadFromLocal() {
     ref.read(secureRepositoryProvider).getBalance().then((cached) {
       if (!_mounted) return;
@@ -45,8 +50,8 @@ class CoinNotifier extends Notifier<int> {
     }).catchError((_) {});
   }
 
-  /// Fetch the authoritative balance from the backend Edge Function (Redis-backed).
-  /// This is the single source of truth — overwrites any cached value.
+  /// Fetch the authoritative balance from the backend Edge Function / Postgres DB.
+  /// This is the single source of truth — saves to cache and updates state.
   void _syncFromBackend() {
     ref.read(supabaseRepositoryProvider).getUserStats().then((data) {
       if (!_mounted) return;
@@ -55,15 +60,13 @@ class CoinNotifier extends Notifier<int> {
       if (balance >= 0) {
         // Prevent stale backend cache with 0 coins from wiping out an active positive balance
         if (state > 0 && balance == 0) return;
-        // Never allow backend sync to reduce local balance
-        if (balance < state) return;
-        // Prevent stale backend cache from wiping out a recent optimistic credit
+        // Prevent stale backend response from wiping out a recent in-flight credit
         if (state > balance &&
             (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {
           return;
         }
         state = balance;
-        // Persist to local cache so next startup shows correct value instantly
+        // Persist authoritative balance to local cache so next startup shows correct value instantly
         ref.read(secureRepositoryProvider).saveBalance(balance);
       }
     }).catchError((e) {
@@ -73,8 +76,8 @@ class CoinNotifier extends Notifier<int> {
     });
   }
 
-  /// Add coins to the balance. Updates state immediately (optimistic),
-  /// then syncs to the backend. UI never waits for the network.
+  /// Add coins to the balance. Pushes FIRST to database, then upon confirmation
+  /// caches to local storage and updates state.
   Future<int> credit(int amount, String source) async {
     if (!_mounted) return 0;
     
@@ -86,27 +89,37 @@ class CoinNotifier extends Notifier<int> {
 
     final txId = UuidGenerator.generateV4();
     _lastCreditTime = DateTime.now().millisecondsSinceEpoch;
-    final optimisticBalance = state + allowedAmount;
-    state = optimisticBalance; // immediate UI update
-    _saveLocally(optimisticBalance);
     
     try {
+      // 1. Push to database FIRST
       final newBalance = await ref.read(coinServiceProvider).creditCoins(
         allowedAmount,
         source: source,
         txId: txId,
       );
+      
+      // 2. Cache locally and update state ONLY AFTER database confirmation
       if (_mounted) {
-        // Never allow a credit operation to decrease the active balance
+        // Never allow a credit operation to decrease active balance
         if (newBalance >= state) {
           state = newBalance;
           _saveLocally(newBalance);
+        } else {
+          final safeBalance = state + allowedAmount;
+          state = safeBalance;
+          _saveLocally(safeBalance);
         }
       }
       return state;
     } catch (_) {
-      // Optimistic value is kept; offline queue handles the sync later
-      return optimisticBalance;
+      // Offline / network fallback: CoinService already enqueued the tx
+      // and saved to local secure cache.
+      final cached = await ref.read(secureRepositoryProvider).getBalance();
+      if (_mounted) {
+        state = cached > 0 ? cached : (state + allowedAmount);
+        _saveLocally(state);
+      }
+      return state;
     }
   }
 
@@ -136,14 +149,25 @@ class CoinNotifier extends Notifier<int> {
     }
   }
 
+  /// Sets the authoritative balance confirmed directly by the database
+  /// (e.g. from game_service session submission, Supabase RPC, or backend response),
+  /// caching it to local storage immediately.
+  void setAuthoritativeBalance(int newBalance) {
+    if (!_mounted) return;
+    if (newBalance <= 0 && state > 0) return;
+    _lastCreditTime = DateTime.now().millisecondsSinceEpoch;
+    state = newBalance;
+    _saveLocally(newBalance);
+  }
+
   /// Called externally when a trusted source (e.g. backend webhook, offerwall)
-  /// provides the authoritative balance. Always overwrites local state.
+  /// provides the authoritative balance. Overwrites local state and updates cache.
   void updateBalance(int balance) {
     if (!_mounted) return;
     if (state > 0 && balance == 0) return;
     // Never allow an external update to reduce local balance unless it's an intentional reset
     if (balance < state) return;
-    // Prevent stale backend cache from wiping out a recent optimistic credit
+    // Prevent stale backend cache from wiping out a recent in-flight credit
     if (state > balance &&
         (DateTime.now().millisecondsSinceEpoch - _lastCreditTime < 10000)) {
       return;

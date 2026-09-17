@@ -289,7 +289,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       if (!mounted) return false;
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : targetCoins;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        if (result.newBalance != null && result.newBalance! > 0) {
+          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+        } else {
+          await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+        }
         ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
 
         if (mounted) {
@@ -367,7 +371,11 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       );
       if (result.success || result.queued) {
         final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-        ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+        if (result.newBalance != null && result.newBalance! > 0) {
+          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+        } else {
+          await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+        }
         ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
         if (mounted) {
           setState(() {

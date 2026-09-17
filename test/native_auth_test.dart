@@ -120,7 +120,7 @@ void main() {
       expect(find.text('Link Google Account'), findsNothing);
 
       // Verify Logout button is present
-      final logoutFinder = find.text('Logout');
+      final logoutFinder = find.textContaining('Logout');
       await tester.ensureVisible(logoutFinder);
       await tester.pumpAndSettle();
       expect(logoutFinder, findsOneWidget);

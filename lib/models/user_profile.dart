@@ -1,5 +1,6 @@
 class UserProfile {
   final String id;
+  final String? email;
   final int coins;
   final int totalEarned;
   final int consecutiveDays;
@@ -18,6 +19,7 @@ class UserProfile {
 
   UserProfile({
     required this.id,
+    this.email,
     required this.coins,
     required this.totalEarned,
     required this.consecutiveDays,
@@ -37,6 +39,7 @@ class UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
       id: json['id'] as String? ?? '',
+      email: json['email'] as String?,
       coins: json['balance'] as int? ?? json['coins'] as int? ?? 0,
       totalEarned: json['total_earned'] as int? ?? 0,
       consecutiveDays: json['consecutive_days'] as int? ?? 0,
@@ -60,6 +63,7 @@ class UserProfile {
 
   UserProfile copyWith({
     String? id,
+    String? email,
     int? coins,
     int? totalEarned,
     int? consecutiveDays,
@@ -77,6 +81,7 @@ class UserProfile {
   }) {
     return UserProfile(
       id: id ?? this.id,
+      email: email ?? this.email,
       coins: coins ?? this.coins,
       totalEarned: totalEarned ?? this.totalEarned,
       consecutiveDays: consecutiveDays ?? this.consecutiveDays,

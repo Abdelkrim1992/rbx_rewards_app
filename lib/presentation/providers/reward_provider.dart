@@ -79,7 +79,7 @@ class DailyRewardCooldownNotifier extends StateNotifier<Duration> {
 
         // Update coin balance to authoritative newBalance returned by backend
         if (result.newBalance > 0) {
-          _ref.read(coinProvider.notifier).updateBalance(result.newBalance);
+          _ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance);
         } else {
           final current = _ref.read(coinProvider);
           _ref.read(coinProvider.notifier).updateBalance(current + result.amount);

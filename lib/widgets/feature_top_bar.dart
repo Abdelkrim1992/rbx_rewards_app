@@ -15,6 +15,7 @@ class FeatureTopBar extends ConsumerStatefulWidget {
   final bool isBackEnabled;
   final Widget? centerWidget;
   final Widget? trailing;
+  final VoidCallback? onInfoTap;
 
   /// Global key for the in-feature coin balance pill to receive flying coin particles
   static GlobalKey? get balanceBadgeKey => _activeState?._badgeKey;
@@ -33,6 +34,7 @@ class FeatureTopBar extends ConsumerStatefulWidget {
     this.isBackEnabled = true,
     this.centerWidget,
     this.trailing,
+    this.onInfoTap,
   });
 
   @override
@@ -178,65 +180,94 @@ class _FeatureTopBarState extends ConsumerState<FeatureTopBar>
             Align(
               alignment: Alignment.centerRight,
               child: widget.trailing ??
-                  ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Container(
-                      key: _badgeKey,
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: AppColors.cardBorder,
-                          width: 1.2,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.onInfoTap != null) ...[
+                        GestureDetector(
+                          onTap: widget.onInfoTap,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            width: isCompact ? 30 : 34,
+                            height: isCompact ? 30 : 34,
+                            decoration: BoxDecoration(
+                              color: AppColors.primarySoft,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.cardBorder.withValues(alpha: 0.6),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.help_outline_rounded,
+                              color: AppColors.primary,
+                              size: isCompact ? 16 : 18,
+                            ),
+                          ),
                         ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x06000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            AppAssets.goldCoin,
-                            width: 18,
-                            height: 18,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.monetization_on_rounded,
-                              color: Color(0xFFFFB000),
-                              size: 18,
+                        const SizedBox(width: 6),
+                      ],
+                      ScaleTransition(
+                        scale: _scaleAnimation,
+                        child: Container(
+                          key: _badgeKey,
+                          height: 34,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: AppColors.cardBorder,
+                              width: 1.2,
                             ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x06000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 1),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 5),
-                          TweenAnimationBuilder<int>(
-                            tween: IntTween(
-                              begin: _previousCoins > coins ? coins : _previousCoins,
-                              end: coins,
-                            ),
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeOutCubic,
-                            onEnd: () {
-                              _previousCoins = coins;
-                            },
-                            builder: (context, animatedVal, child) {
-                              return Text(
-                                _formatCoins(animatedVal),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryText,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                AppAssets.goldCoin,
+                                width: 18,
+                                height: 18,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.monetization_on_rounded,
+                                  color: Color(0xFFFFB000),
+                                  size: 18,
                                 ),
-                              );
-                            },
+                              ),
+                              const SizedBox(width: 5),
+                              TweenAnimationBuilder<int>(
+                                tween: IntTween(
+                                  begin: _previousCoins > coins ? coins : _previousCoins,
+                                  end: coins,
+                                ),
+                                duration: const Duration(milliseconds: 500),
+                                curve: Curves.easeOutCubic,
+                                onEnd: () {
+                                  _previousCoins = coins;
+                                },
+                                builder: (context, animatedVal, child) {
+                                  return Text(
+                                    _formatCoins(animatedVal),
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primaryText,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
             ),
           ],

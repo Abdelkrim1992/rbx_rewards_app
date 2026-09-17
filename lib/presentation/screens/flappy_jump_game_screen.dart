@@ -1373,7 +1373,11 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
           if (!mounted) return;
           if (result.success || result.queued) {
             final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-            ref.read(coinProvider.notifier).updateBalance(ref.read(coinProvider) + earned);
+            if (result.newBalance != null && result.newBalance! > 0) {
+              ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+            } else {
+              await ref.read(coinProvider.notifier).credit(earned, 'flappy_jump');
+            }
             ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
 
             // Immediately reset game back to the menu overlay
