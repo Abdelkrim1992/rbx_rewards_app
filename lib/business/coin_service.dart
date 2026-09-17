@@ -53,38 +53,29 @@ class CoinService {
     }
   }
 
-  Future<int> spendCoins(int amount, {required String rewardTitle, required String txId}) async {
+  Future<int> spendCoins(
+    int amount, {
+    required String rewardTitle,
+    required String txId,
+    String? denomId,
+    String? deviceId,
+  }) async {
     final online = await _connectivity.isOnline;
     if (!online) {
-      await _queue.enqueuePending({
-        'type': 'spend',
-        'amount': amount,
-        'rewardTitle': rewardTitle,
-        'txId': txId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      final cached = await _secure.getBalance();
-      final optimistic = cached - amount;
-      await _secure.saveBalance(optimistic);
-      return optimistic;
+      throw Exception('Network offline: Redemptions require an active internet connection');
     }
     try {
-      final balance = await _remote.spendCoinsViaEdge(amount, rewardTitle, txId);
+      final balance = await _remote.spendCoinsViaEdge(
+        amount,
+        rewardTitle,
+        txId,
+        denomId: denomId,
+        deviceId: deviceId,
+      );
       await _secure.saveBalance(balance);
       return balance;
     } catch (e) {
-      // For spend, if it fails, we shouldn't necessarily assume it went through,
-      // but to match the previous queueing/offline behavior:
-      await _queue.enqueuePending({
-        'type': 'spend',
-        'amount': amount,
-        'rewardTitle': rewardTitle,
-        'txId': txId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      });
-      final cached = await _secure.getBalance();
-      final optimistic = cached - amount;
-      await _secure.saveBalance(optimistic);
+      // Re-throw server rejection directly without queueing or fake local balance debit
       rethrow;
     }
   }

@@ -1,9 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/reward_config.dart';
 import '../presentation/providers/coin_provider.dart';
 import '../presentation/providers/providers.dart';
+import '../presentation/providers/reward_provider.dart';
 import '../presentation/providers/user_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -101,6 +102,64 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
   }
 
+  Widget _buildBreakdownRow({
+    required String icon,
+    required String title,
+    required int earned,
+    required Color iconBg,
+    required Color iconBorder,
+  }) {
+    final hasEarned = earned > 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: iconBorder, width: 1),
+            ),
+            child: Text(icon, style: const TextStyle(fontSize: 13)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF334155),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+            decoration: BoxDecoration(
+              color: hasEarned ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: hasEarned ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              hasEarned ? '+$earned RBX' : '0 RBX',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: hasEarned ? const Color(0xFF059669) : const Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showBalanceSheet(BuildContext context, int coins) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
@@ -108,141 +167,256 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        final capService = ref.read(dailyCapServiceProvider);
-        final todayEarned = capService.todayFeaturesEarnings;
-        final maxCap = capService.dynamicFeaturesCap;
-        final remaining = (maxCap - todayEarned).clamp(0, maxCap);
+        return Consumer(
+          builder: (context, ref, _) {
+            final capService = ref.watch(dailyCapServiceProvider);
+            final liveCoins = ref.watch(coinProvider);
+            final todayEarned = capService.todayFeaturesEarnings;
+            final maxCap = capService.dynamicFeaturesCap;
+            final remaining = (maxCap - todayEarned).clamp(0, maxCap);
 
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+            final arcadeGamesEarned = capService.todayGameMathQuizEarnings +
+                capService.todayGameFlappyEarnings +
+                capService.todayGameTapTapEarnings +
+                capService.todayGameFlipCardEarnings +
+                capService.todayQuizEarnings;
+            final chestsAndVideosEarned = capService.todayChestEarnings +
+                capService.todayWatchVideoEarnings;
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
-                    ),
-                    child: Image.asset(AppAssets.goldCoin, width: 28, height: 28),
+              child: SafeArea(
+                top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.88,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Coin Balance',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF64748B),
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                        Text(
-                          '$coins RBX Coins',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBEB),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFFDE68A)),
+                              ),
+                              child: Image.asset(AppAssets.goldCoin, width: 28, height: 28),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Coin Balance',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  Text(
+                                    '$liveCoins RBX Coins',
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Daily Earning Progress
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      'Daily Cap Left',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF475569),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '$remaining / $maxCap coins',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: LinearProgressIndicator(
+                                  value: maxCap > 0 ? (todayEarned / maxCap).clamp(0.0, 1.0) : 0,
+                                  minHeight: 7,
+                                  backgroundColor: const Color(0xFFE2E8F0),
+                                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Today's Activity Breakdown Rows
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      "Today's Activity Breakdown",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '+$todayEarned RBX',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF059669),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                              const SizedBox(height: 6),
+                              _buildBreakdownRow(
+                                icon: '🔥',
+                                title: 'Daily Streak',
+                                earned: capService.todayDailyRewardEarnings,
+                                iconBg: const Color(0xFFFFF7ED),
+                                iconBorder: const Color(0xFFFFEDD5),
+                              ),
+                              _buildBreakdownRow(
+                                icon: '🎡',
+                                title: 'Spin & Win',
+                                earned: capService.todaySpinEarnings,
+                                iconBg: const Color(0xFFFAF5FF),
+                                iconBorder: const Color(0xFFF3E8FF),
+                              ),
+                              _buildBreakdownRow(
+                                icon: '🎟️',
+                                title: 'Scratch Cards',
+                                earned: capService.todayScratchEarnings,
+                                iconBg: const Color(0xFFFEF3C7),
+                                iconBorder: const Color(0xFFFDE68A),
+                              ),
+                              _buildBreakdownRow(
+                                icon: '🎮',
+                                title: 'Arcade Mini-Games',
+                                earned: arcadeGamesEarned,
+                                iconBg: const Color(0xFFEFF6FF),
+                                iconBorder: const Color(0xFFDBEAFE),
+                              ),
+                              _buildBreakdownRow(
+                                icon: '🎁',
+                                title: 'Chests & Video Ads',
+                                earned: chestsAndVideosEarned,
+                                iconBg: const Color(0xFFFDF2F8),
+                                iconBorder: const Color(0xFFFCE7F3),
+                              ),
+                              if (capService.todayOfferwallsEarnings > 0)
+                                _buildBreakdownRow(
+                                  icon: '⭐',
+                                  title: 'Offerwalls & Tasks',
+                                  earned: capService.todayOfferwallsEarnings,
+                                  iconBg: const Color(0xFFF0FDF4),
+                                  iconBorder: const Color(0xFFDCFCE7),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 13),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(Icons.card_giftcard_rounded, size: 18),
+                                label: const Text(
+                                  'Redeem Robux',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(ctx);
+                                  widget.onNavTap?.call(2); // Rewards tab
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Daily Earning Progress
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Daily Cap Left',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF475569),
-                          ),
-                        ),
-                        Text(
-                          '$remaining / $maxCap coins',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: maxCap > 0 ? (todayEarned / maxCap).clamp(0.0, 1.0) : 0,
-                        minHeight: 7,
-                        backgroundColor: const Color(0xFFE2E8F0),
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      ),
-                    ),
-                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.card_giftcard_rounded, size: 18),
-                      label: const Text(
-                        'Redeem Robux',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        widget.onNavTap?.call(2); // Rewards tab
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -255,104 +429,270 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        final cycleDay = (consecutiveDays % 7);
-        final displayDay = cycleDay == 0 && consecutiveDays > 0 ? 7 : (cycleDay == 0 ? 1 : cycleDay);
+        return Consumer(
+          builder: (context, ref, _) {
+            final userProfile = ref.watch(userProfileProvider);
+            final currentDays = userProfile.consecutiveDays > 0 ? userProfile.consecutiveDays : consecutiveDays;
+            final dailyCooldown = ref.watch(dailyRewardCooldownProvider);
+            final isDailyClaimed = dailyCooldown.inSeconds > 0;
 
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+            final cycleStreak = currentDays % 7;
+            final int claimedInCycle;
+            final int? activeDayToClaim;
+
+            if (isDailyClaimed) {
+              claimedInCycle = (currentDays > 0 && cycleStreak == 0) ? 7 : cycleStreak;
+              activeDayToClaim = null;
+            } else {
+              claimedInCycle = cycleStreak;
+              activeDayToClaim = cycleStreak + 1;
+            }
+
+            final displayDay = isDailyClaimed
+                ? ((currentDays > 0 && cycleStreak == 0) ? 7 : (cycleStreak == 0 ? 1 : cycleStreak))
+                : (activeDayToClaim ?? 1);
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              const SizedBox(height: 18),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFFECACA)),
-                    ),
-                    child: const Text('🔥', style: TextStyle(fontSize: 24)),
+              child: SafeArea(
+                top: false,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.88,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '$consecutiveDays Day Streak',
-                          style: const TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                        Center(
+                          child: Container(
+                            width: 38,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                        Text(
-                          'Cycle Day $displayDay of 7 • Mega Chest on Day 7',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF64748B),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFFECACA)),
+                              ),
+                              child: const Text('🔥', style: TextStyle(fontSize: 24)),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$currentDays Day Streak',
+                                    style: const TextStyle(
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    isDailyClaimed
+                                        ? 'Cycle Day $displayDay of 7 Completed • Mega Chest on Day 7'
+                                        : 'Cycle Day $displayDay of 7 • Mega Chest on Day 7',
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // 7-Day Gamified Visual Roadmap Row
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Expanded(
+                                      child: Text(
+                                        '7-Day Streak Roadmap',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFEF2F2),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFFFECACA)),
+                                      ),
+                                      child: Text(
+                                        '$claimedInCycle/7 Claimed',
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFFDC2626),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                children: List.generate(7, (index) {
+                                  final dayNum = index + 1;
+                                  final isClaimed = dayNum <= claimedInCycle;
+                                  final isActive = dayNum == activeDayToClaim;
+                                  final isJackpot = dayNum == 7;
+                                  final reward = RewardConfig.getDailyStreakBaseReward(dayNum);
+
+                                  return Expanded(
+                                    child: Container(
+                                      margin: EdgeInsets.symmetric(horizontal: index == 0 || index == 6 ? 1 : 2),
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+                                      decoration: BoxDecoration(
+                                        color: isClaimed
+                                            ? const Color(0xFFDCFCE7)
+                                            : (isActive
+                                                ? const Color(0xFFFEF2F2)
+                                                : (isJackpot ? const Color(0xFFFEF3C7) : Colors.white)),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isClaimed
+                                              ? const Color(0xFF86EFAC)
+                                              : (isActive
+                                                  ? const Color(0xFFEF4444)
+                                                  : (isJackpot ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0))),
+                                          width: isActive ? 1.5 : 1.0,
+                                        ),
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            isJackpot ? 'D7' : 'D$dayNum',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                              color: isClaimed
+                                                  ? const Color(0xFF16A34A)
+                                                  : (isActive
+                                                      ? const Color(0xFFDC2626)
+                                                      : (isJackpot ? const Color(0xFFB45309) : const Color(0xFF64748B))),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          if (isClaimed)
+                                            const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A))
+                                          else if (isActive)
+                                            const Text('🔥', style: TextStyle(fontSize: 13))
+                                          else if (isJackpot)
+                                            const Text('🎁', style: TextStyle(fontSize: 13))
+                                          else
+                                            const Icon(Icons.lock_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '+$reward',
+                                            style: TextStyle(
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: isClaimed
+                                                  ? const Color(0xFF15803D)
+                                                  : (isActive
+                                                      ? const Color(0xFFDC2626)
+                                                      : (isJackpot ? const Color(0xFFB45309) : const Color(0xFF475569))),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('💡', style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Log in every 24 hours to keep your multiplier alive and claim the weekly Mega Chest jackpot on Day 7!',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: Color(0xFF475569),
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text(
+                              'Keep It Up!',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: const Text(
-                  'Log in every 24 hours to keep your multiplier alive and claim the weekly Mega Chest jackpot!',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF475569),
-                    height: 1.4,
-                  ),
                 ),
               ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text(
-                    'Keep It Up!',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

@@ -84,5 +84,31 @@ void main() {
 
       expect(find.text('How to Play Spin & Win'), findsNothing);
     });
+
+    testWidgets('SpinScreen How to Play bottom sheet renders without overflow on 320x568 compact viewport',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+
+      await tester.pumpWidget(
+        createTestWidget(
+          child: SpinScreen(onBack: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('How to Play Spin & Win'), findsOneWidget);
+      expect(find.text('Got It!'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Got It!'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Got It!'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
   });
 }

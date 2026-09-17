@@ -123,29 +123,42 @@ class CoinNotifier extends Notifier<int> {
     }
   }
 
-  /// Spend coins. Updates state immediately (optimistic), then syncs to backend.
-  Future<bool> spend(int amount, String rewardTitle) async {
+  String? _lastSpendError;
+  String? get lastSpendError => _lastSpendError;
+
+  /// Spend coins for reward redemption.
+  /// Deducts balance only upon verified backend confirmation to prevent phantom redemptions.
+  Future<bool> spend(
+    int amount,
+    String rewardTitle, {
+    String? denomId,
+    String? deviceId,
+  }) async {
     if (!_mounted) return false;
-    if (state < amount) return false;
+    _lastSpendError = null;
+    if (state < amount) {
+      _lastSpendError = 'Insufficient balance';
+      return false;
+    }
     final txId = UuidGenerator.generateV4();
-    final optimisticBalance = state - amount;
-    state = optimisticBalance; // immediate UI update
-    _saveLocally(optimisticBalance);
-    
+
     try {
       final newBalance = await ref.read(coinServiceProvider).spendCoins(
         amount,
         rewardTitle: rewardTitle,
         txId: txId,
+        denomId: denomId,
+        deviceId: deviceId,
       );
       if (_mounted) {
         state = newBalance;
         _saveLocally(newBalance);
       }
       return true;
-    } catch (_) {
-      // Queueing handled in coinServiceProvider.
-      return true;
+    } catch (e) {
+      final msg = e.toString().replaceAll('Exception: ', '').trim();
+      _lastSpendError = msg.isNotEmpty ? msg : 'Redemption rejected by server';
+      return false;
     }
   }
 

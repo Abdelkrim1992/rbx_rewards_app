@@ -1371,14 +1371,16 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             multiplier: multiplier,
           );
           if (!mounted) return;
-          if (result.success || result.queued) {
-            final earned = result.coinsEarned > 0 ? result.coinsEarned : coins;
-            if (result.newBalance != null && result.newBalance! > 0) {
-              ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
-            } else {
-              await ref.read(coinProvider.notifier).credit(earned, 'flappy_jump');
+          if (result.success) {
+            final earned = result.coinsEarned;
+            if (earned > 0) {
+              if (result.newBalance != null && result.newBalance! > 0) {
+                ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+              } else {
+                await ref.read(coinProvider.notifier).credit(earned, 'flappy_jump');
+              }
+              ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
             }
-            ref.read(dailyCapServiceProvider).addCoins(earned, 'flappy_jump');
 
             // Immediately reset game back to the menu overlay
             _game.hasStarted = false;
@@ -1392,11 +1394,13 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               _originalCoinsEarned = 0;
             });
           } else {
+            final isCap = result.error?.toLowerCase().contains('cap') ?? false;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  result.error ?? 'Failed to save game reward',
+                  isCap ? "You're playing in bonus mode!" : (result.error ?? 'Failed to save game reward'),
                 ),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }

@@ -86,6 +86,32 @@ void main() {
       expect(find.text('How to Play Scratch & Win'), findsNothing);
     });
 
+    testWidgets('ScratchCardScreen How to Play bottom sheet renders without overflow on 320x568 compact viewport',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1.0;
+
+      await tester.pumpWidget(
+        createTestWidget(
+          child: ScratchCardScreen(onBack: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('How to Play Scratch & Win'), findsOneWidget);
+      expect(find.text('Got It!'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Got It!'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Got It!'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('ScratchCardScreen renders refill banner and watch ad overlay without overflow on 320x568 when 0 scratches left',
         (WidgetTester tester) async {
       final todayStr = DateTime.now().toIso8601String().substring(0, 10);

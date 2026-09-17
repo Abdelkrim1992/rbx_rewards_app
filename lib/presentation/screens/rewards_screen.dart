@@ -19,7 +19,7 @@ import '../providers/providers.dart';
 import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
 import '../../widgets/coin_fly_overlay.dart';
-import '../../business/sound_service.dart';
+import '../../core/utils/device_fingerprint.dart';
 import 'rewards/widgets/rewards_social_proof_ticker.dart';
 
 class RewardsScreen extends ConsumerStatefulWidget {
@@ -225,13 +225,22 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
 
     setState(() => _isProcessing = true);
 
+    // Sync latest ad counts before redemption
+    await ref.read(adTrackerServiceProvider).forceSync();
+
+    // Capture stable hashed hardware device ID
+    final deviceId = await DeviceFingerprint.getDeviceId();
+
     final fullTitle = '${item.title} - ${denomination.label}';
     final sanitizedTitle = _sanitizeRewardTitle(fullTitle);
 
     // Process redemption via atomic backend RPC
-    final success = await ref
-        .read(coinProvider.notifier)
-        .spend(denomination.coinCost, sanitizedTitle);
+    final success = await ref.read(coinProvider.notifier).spend(
+      denomination.coinCost,
+      sanitizedTitle,
+      denomId: denomination.id,
+      deviceId: deviceId,
+    );
 
     if (!mounted) return;
     setState(() => _isProcessing = false);
@@ -266,10 +275,12 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
       );
     } else {
       if (!mounted) return;
+      final errorMsg = ref.read(coinProvider.notifier).lastSpendError ??
+          'Redemption failed. Your coins were not deducted.';
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Redemption failed. Your coins were not deducted.'),
+        SnackBar(
+          content: Text(errorMsg),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1615,6 +1626,8 @@ class _ClaimedCodeCard extends StatelessWidget {
       case 'rejected':
       case 'cancelled':
         return const Color(0xFFDC2626);
+      case 'pending_review':
+        return const Color(0xFFE11D48); // Rose/Amber security review
       case 'pending':
       default:
         return const Color(0xFFD97706);
@@ -1629,6 +1642,8 @@ class _ClaimedCodeCard extends StatelessWidget {
       case 'rejected':
       case 'cancelled':
         return const Color(0xFFFEE2E2);
+      case 'pending_review':
+        return const Color(0xFFFFE4E6);
       case 'pending':
       default:
         return const Color(0xFFFEF3C7);
@@ -1681,9 +1696,11 @@ class _ClaimedCodeCard extends StatelessWidget {
                 child: Icon(
                   isFulfilled
                       ? Icons.check_circle_rounded
-                      : (status == 'pending'
-                          ? Icons.hourglass_top_rounded
-                          : Icons.cancel_rounded),
+                      : (status == 'pending_review'
+                          ? Icons.security_update_good_rounded
+                          : (status == 'pending'
+                              ? Icons.hourglass_top_rounded
+                              : Icons.cancel_rounded)),
                   color: _statusColor(status),
                   size: 20,
                 ),
@@ -1724,7 +1741,9 @@ class _ClaimedCodeCard extends StatelessWidget {
                 child: Text(
                   isFulfilled
                       ? 'Ready'
-                      : (status == 'pending' ? 'Verifying' : 'Refunded'),
+                      : (status == 'pending_review'
+                          ? 'In Review (24-48h)'
+                          : (status == 'pending' ? 'Verifying' : 'Refunded')),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
@@ -2464,7 +2483,7 @@ class _LockedRequirementsSheet extends StatelessWidget {
               iconColor: const Color(0xFFEAB308),
               iconBgColor: const Color(0xFFFEF9C3),
               title: 'Coin Balance',
-              currentStr: '${userCoins.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")}',
+              currentStr: userCoins.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},"),
               targetStr: '${coinCost.toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (m) => "${m[1]},")} Coins',
               progress: coinProgress,
               isCompleted: hasEnoughCoins,

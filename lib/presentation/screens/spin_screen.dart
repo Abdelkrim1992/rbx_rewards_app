@@ -322,93 +322,102 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final jackpotReward = ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.help_outline_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'How to Play Spin & Win',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const _HowToStep(
-                  icon: Icons.casino_outlined,
-                  title: 'Daily Free Spins',
-                  description: 'Get 3 free spins every single day to win RBX Coins instantly.',
-                  color: Color(0xFF9B5CFF),
-                ),
-                const SizedBox(height: 10),
-                _HowToStep(
-                  icon: Icons.emoji_events_outlined,
-                  title: 'Hit the Jackpot',
-                  description: 'Land on the golden JACKPOT segment to win up to $jackpotReward RBX.',
-                  color: const Color(0xFFF59E0B),
-                ),
-                const SizedBox(height: 10),
-                const _HowToStep(
-                  icon: Icons.play_circle_outline,
-                  title: 'Unlimited Refills',
-                  description: 'Used all spins? Watch short video ads to refill extra spins anytime.',
-                  color: Color(0xFF6B4BF4),
-                ),
-                const SizedBox(height: 20),
-                InteractiveButton(
-                  height: 48,
-                  gradient: AppColors.primaryGradient,
-                  textColor: Colors.white,
-                  onTap: () => Navigator.pop(context),
-                  child: const Center(
-                    child: Text(
-                      'Got It!',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: screenHeight * 0.88,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primarySoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.help_outline_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'How to Play Spin & Win',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const _HowToStep(
+                    icon: Icons.casino_outlined,
+                    title: 'Daily Free Spins',
+                    description: 'Get 3 free spins every single day to win RBX Coins instantly.',
+                    color: Color(0xFF9B5CFF),
+                  ),
+                  const SizedBox(height: 8),
+                  _HowToStep(
+                    icon: Icons.emoji_events_outlined,
+                    title: 'Hit the Jackpot',
+                    description: 'Land on the golden JACKPOT segment to win up to $jackpotReward RBX.',
+                    color: const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(height: 8),
+                  const _HowToStep(
+                    icon: Icons.play_circle_outline,
+                    title: 'Unlimited Refills',
+                    description: 'Used all spins? Watch short video ads to refill extra spins anytime.',
+                    color: Color(0xFF6B4BF4),
+                  ),
+                  const SizedBox(height: 16),
+                  InteractiveButton(
+                    height: 48,
+                    gradient: AppColors.primaryGradient,
+                    textColor: Colors.white,
+                    onTap: () => Navigator.pop(context),
+                    child: const Center(
+                      child: Text(
+                        'Got It!',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -436,7 +445,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
         widget.onBack();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FE),
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
@@ -456,16 +465,21 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                     final availableWidth = constraints.maxWidth;
                     final isCompact = availableHeight < 560 || availableWidth < 350;
 
+                    final bottomPadding = isCompact ? 14.0 : 20.0;
+                    final topPadding = isCompact ? 4.0 : 8.0;
+
                     // Wheel size dynamically calculated to fit with guaranteed zero overflow
-                    final maxWheelByHeight = (availableHeight - (isCompact ? 190 : 230)).clamp(180.0, 360.0);
-                    final maxWheelByWidth = (availableWidth * (isCompact ? 0.78 : 0.82)).clamp(180.0, 360.0);
+                    final maxWheelByHeight = (availableHeight - (isCompact ? 180 : 220) - bottomPadding).clamp(170.0, 360.0);
+                    final maxWheelByWidth = (availableWidth * (isCompact ? 0.78 : 0.82)).clamp(170.0, 360.0);
                     final wheelSize = min(maxWheelByHeight, maxWheelByWidth);
                     final centerHubSize = (wheelSize * 0.29).clamp(64.0, 84.0);
 
                     return Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 12 : AppLayout.screenPadding,
-                        vertical: isCompact ? 6 : 10,
+                      padding: EdgeInsets.fromLTRB(
+                        isCompact ? 12 : AppLayout.screenPadding,
+                        topPadding,
+                        isCompact ? 12 : AppLayout.screenPadding,
+                        bottomPadding,
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -476,12 +490,12 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.cardBorder),
+                              border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Color(0x06000000),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
+                                  color: Color(0x04000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 1),
                                 ),
                               ],
                             ),
@@ -587,9 +601,9 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: AppColors.primary.withValues(alpha: 0.20),
-                                              blurRadius: 36,
-                                              spreadRadius: 6,
+                                              color: AppColors.primary.withValues(alpha: 0.10),
+                                              blurRadius: 20,
+                                              spreadRadius: 2,
                                             ),
                                           ],
                                         ),
@@ -941,14 +955,14 @@ class _HowToStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.7)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0D000000),
+            color: Color(0x06000000),
             blurRadius: 4,
             offset: Offset(0, 1),
           ),
@@ -957,15 +971,15 @@ class _HowToStep extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -973,7 +987,7 @@ class _HowToStep extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF0F172A),
                   ),
@@ -982,9 +996,9 @@ class _HowToStep extends StatelessWidget {
                 Text(
                   description,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     color: Color(0xFF64748B),
-                    height: 1.35,
+                    height: 1.3,
                   ),
                 ),
               ],

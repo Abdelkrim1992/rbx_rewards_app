@@ -287,14 +287,16 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         multiplier: multiplier,
       );
       if (!mounted) return false;
-      if (result.success || result.queued) {
-        final earned = result.coinsEarned > 0 ? result.coinsEarned : targetCoins;
-        if (result.newBalance != null && result.newBalance! > 0) {
-          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
-        } else {
-          await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+      if (result.success) {
+        final earned = result.coinsEarned;
+        if (earned > 0) {
+          if (result.newBalance != null && result.newBalance! > 0) {
+            ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+          } else {
+            await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+          }
+          ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
         }
-        ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
 
         if (mounted) {
           setState(() {
@@ -304,8 +306,14 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         }
         return true;
       } else {
+        final isCap = result.error?.toLowerCase().contains('cap') ?? false;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result.error ?? 'Failed to save game reward')),
+          SnackBar(
+            content: Text(
+              isCap ? "You're playing in bonus mode!" : (result.error ?? 'Failed to save game reward'),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         return false;
       }
@@ -369,14 +377,16 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         originalScore: _originalCoinsEarned,
         multiplier: 1,
       );
-      if (result.success || result.queued) {
-        final earned = result.coinsEarned > 0 ? result.coinsEarned : _originalCoinsEarned;
-        if (result.newBalance != null && result.newBalance! > 0) {
-          ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
-        } else {
-          await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+      if (result.success) {
+        final earned = result.coinsEarned;
+        if (earned > 0) {
+          if (result.newBalance != null && result.newBalance! > 0) {
+            ref.read(coinProvider.notifier).setAuthoritativeBalance(result.newBalance!);
+          } else {
+            await ref.read(coinProvider.notifier).credit(earned, 'math_quiz');
+          }
+          ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
         }
-        ref.read(dailyCapServiceProvider).addCoins(earned, 'math_quiz');
         if (mounted) {
           setState(() {
             _hasClaimed = true;

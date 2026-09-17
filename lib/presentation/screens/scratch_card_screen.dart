@@ -31,6 +31,8 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   bool _isScratched = false;
   bool _hasStartedScratching = false;
   bool _isProcessing = false;
+  double _scratchProgress = 0.0;
+  int _ticketNumber = 7824;
   late int _rewardAmount;
   
   int _scratchesRemaining = GamePrefs.maxScratchesPerDay;
@@ -125,6 +127,9 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     final max = limits.$2;
     final random = Random();
     
+    _ticketNumber = 1000 + random.nextInt(9000);
+    _scratchProgress = 0.0;
+
     if (max > min) {
       _rewardAmount = min + random.nextInt((max - min) + 1);
     } else {
@@ -136,6 +141,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     setState(() {
       _isScratched = false;
       _hasStartedScratching = false;
+      _scratchProgress = 0.0;
       _generateReward();
     });
     _scratcherKey.currentState?.reset(duration: const Duration(milliseconds: 300));
@@ -220,93 +226,102 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
     final maxPrize = ref.read(dailyCapServiceProvider).getRewardLimits('scratch').$2;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.help_outline_rounded,
-                        color: AppColors.primary,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'How to Play Scratch & Win',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const _HowToStep(
-                  icon: Icons.touch_app,
-                  title: 'Scratch the Card',
-                  description: 'Use your finger to scratch away the cover and reveal the prize.',
-                  color: Color(0xFF9B5CFF),
-                ),
-                const SizedBox(height: 10),
-                _HowToStep(
-                  icon: Icons.monetization_on,
-                  title: 'Reveal the Prize',
-                  description: 'Match symbols to win up to $maxPrize RBX instantly.',
-                  color: const Color(0xFF6B4BF4),
-                ),
-                const SizedBox(height: 10),
-                const _HowToStep(
-                  icon: Icons.play_circle_outline,
-                  title: 'Unlimited Cards',
-                  description: 'Watch a short video to refill your scratch cards whenever you want.',
-                  color: const Color(0xFF4A2BC2),
-                ),
-                const SizedBox(height: 20),
-                InteractiveButton(
-                  height: 48,
-                  gradient: AppColors.primaryGradient,
-                  textColor: Colors.white,
-                  onTap: () => Navigator.pop(context),
-                  child: const Center(
-                    child: Text(
-                      'Got It!',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: screenHeight * 0.88,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primarySoft,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.help_outline_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'How to Play Scratch & Win',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const _HowToStep(
+                    icon: Icons.touch_app,
+                    title: 'Scratch the Card',
+                    description: 'Use your finger to scratch away the cover and reveal the prize.',
+                    color: Color(0xFF9B5CFF),
+                  ),
+                  const SizedBox(height: 8),
+                  _HowToStep(
+                    icon: Icons.monetization_on,
+                    title: 'Reveal the Prize',
+                    description: 'Match symbols to win up to $maxPrize RBX instantly.',
+                    color: const Color(0xFF6B4BF4),
+                  ),
+                  const SizedBox(height: 8),
+                  const _HowToStep(
+                    icon: Icons.play_circle_outline,
+                    title: 'Unlimited Cards',
+                    description: 'Watch a short video to refill your scratch cards whenever you want.',
+                    color: Color(0xFF4A2BC2),
+                  ),
+                  const SizedBox(height: 16),
+                  InteractiveButton(
+                    height: 48,
+                    gradient: AppColors.primaryGradient,
+                    textColor: Colors.white,
+                    onTap: () => Navigator.pop(context),
+                    child: const Center(
+                      child: Text(
+                        'Got It!',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -318,9 +333,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
     final screenWidth = mediaQuery.size.width;
-    final screenHeight = mediaQuery.size.height;
     final isCompact = screenWidth < 360;
-    final isShort = screenHeight < 680;
     final horizontalPadding = isCompact ? 12.0 : 16.0;
 
     return PopScope(
@@ -341,396 +354,604 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                 isBackEnabled: !_isProcessing,
                 onInfoTap: () => _showHowToPlay(context),
               ),
-              const SizedBox(height: 6),
 
-              // Daily Streak / Milestone Progress Banner
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFAF5FF),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFF3E8FF)),
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.local_fire_department_rounded,
-                              color: Color(0xFFF59E0B),
-                              size: 20,
+              // Responsive Fixed Viewport
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final availableHeight = constraints.maxHeight;
+                    final availableWidth = constraints.maxWidth;
+                    final isShortScreen = availableHeight < 560;
+                    final bottomPadding = isShortScreen ? 14.0 : 20.0;
+                    final topPadding = isShortScreen ? 4.0 : 8.0;
+
+                    // Dynamic card height guaranteeing 0 vertical overflow
+                    final cardMaxHeight = (availableHeight - (isShortScreen ? 185 : 215) - bottomPadding).clamp(195.0, 350.0);
+                    final cardMaxWidth = (availableWidth * (isCompact ? 0.94 : 0.90)).clamp(280.0, 430.0);
+
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        topPadding,
+                        horizontalPadding,
+                        bottomPadding,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // 1. Daily Scratch Goal / Token Chips Banner
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x04000000),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 1),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Daily Scratch Goal',
-                              style: TextStyle(
-                                fontSize: isCompact ? 12 : 13,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF6B21A8),
-                              ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFFEF3C7),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.local_fire_department_rounded,
+                                    color: Color(0xFFF59E0B),
+                                    size: 17,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        'Daily Scratch Goal',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      Text(
+                                        _scratchesRemaining > 0
+                                            ? '$_scratchesRemaining of ${GamePrefs.maxScratchesPerDay} Cards Left'
+                                            : 'Daily Goal Completed!',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // 3 Thematic Ticket Token Chips
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: List.generate(GamePrefs.maxScratchesPerDay, (i) {
+                                    final isAvailable = (GamePrefs.maxScratchesPerDay - _scratchesRemaining) <= i &&
+                                        _scratchesRemaining > 0;
+                                    return Container(
+                                      margin: const EdgeInsets.only(left: 5),
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: isAvailable
+                                            ? const LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                                              )
+                                            : null,
+                                        color: isAvailable ? null : const Color(0xFFE2E8F0),
+                                        boxShadow: isAvailable
+                                            ? [
+                                                BoxShadow(
+                                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 1),
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                      child: Icon(
+                                        isAvailable
+                                            ? Icons.confirmation_number_rounded
+                                            : Icons.check_rounded,
+                                        size: 13,
+                                        color: isAvailable ? Colors.white : const Color(0xFF94A3B8),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(width: 12),
-                        Row(
-                          children: [
-                            for (int i = 0; i < GamePrefs.maxScratchesPerDay; i++) ...[
+                          ),
+
+                          // 2. Refill / Free Scratches Status Pill
+                          if (!_isLoadingLimit) ...[
+                            if (_scratchesRemaining <= 0) ...[
                               Container(
-                                width: 9,
-                                height: 9,
-                                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: (GamePrefs.maxScratchesPerDay - _scratchesRemaining) > i
-                                      ? AppColors.primary
-                                      : const Color(0xFFD8B4FE),
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.smart_display_rounded,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '0 Scratches Left • Watch Video to Refill',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF475569),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F3FF),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFDDD6FE)),
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.stars_rounded,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Free Scratches: $_scratchesRemaining',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.card_giftcard_rounded,
-                              color: AppColors.primary,
-                              size: 16,
-                            ),
                           ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
 
-              // Scratches Left Indicator / Ad Refill Status Pill
-              if (!_isLoadingLimit) ...[
-                if (_scratchesRemaining <= 0) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 12 : 16,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.smart_display_rounded,
-                              size: 17,
-                              color: AppColors.primary,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              '0 Scratches Left • Watch Video to Refill',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF475569),
+                          // 3. The Hero Lottery Ticket Scratch Card
+                          Flexible(
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth: cardMaxWidth,
+                                maxHeight: cardMaxHeight,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ] else ...[
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isCompact ? 12 : 16,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F3FF),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFDDD6FE)),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.stars_rounded,
-                              size: 17,
-                              color: AppColors.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Free Scratches: $_scratchesRemaining',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF7C3AED),
+                                    Color(0xFF5B21B6),
+                                    Color(0xFF4C1D95),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFFFD700).withValues(alpha: 0.35),
+                                  width: 1.0,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-
-              // Centered Hero Scratch Card (Expands cleanly without any scroll conflict)
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                    child: Container(
-                      constraints: BoxConstraints(
-                        maxWidth: 420,
-                        maxHeight: isShort ? 250 : 310,
-                      ),
-                      padding: EdgeInsets.all(isCompact ? 12 : 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.15),
-                            blurRadius: 24,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            _scratchesRemaining <= 0
-                                ? 'Watch video below to scratch!'
-                                : 'Scratch below to reveal!',
-                            style: TextStyle(
-                              fontSize: isCompact ? 15 : 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          SizedBox(height: isCompact ? 10 : 14),
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: Stack(
-                                children: [
-                                  IgnorePointer(
-                                    ignoring: _scratchesRemaining <= 0 || _isLoadingLimit,
-                                    child: Listener(
-                                      onPointerMove: (_) => _onScratchMove(),
-                                      child: Scratcher(
-                                        key: _scratcherKey,
-                                        brushSize: isCompact ? 34 : 40,
-                                        threshold: 50,
-                                        color: AppColors.primaryLight,
-                                        image: Image.asset(
-                                          AppAssets.dailyRewardImage,
-                                          fit: BoxFit.cover,
-                                        ),
-                                        onChange: (value) {
-                                          _onScratchMove();
-                                          if (value > 0 && !_hasStartedScratching) {
-                                            setState(() {
-                                              _hasStartedScratching = true;
-                                            });
-                                          }
-                                        },
-                                        onThreshold: () {
-                                          _handleScratchWin();
-                                        },
-                                        child: Container(
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                          ),
-                                          child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Stack(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.all(isCompact ? 10 : 12),
+                                      child: Column(
+                                        children: [
+                                          // Ticket Top Header Row
+                                          Row(
                                             children: [
-                                              Image.asset(
-                                                AppAssets.goldRbxCoin,
-                                                width: isCompact ? 60 : 76,
-                                                height: isCompact ? 60 : 76,
+                                              const Icon(
+                                                Icons.confirmation_number_rounded,
+                                                color: Color(0xFFFFD700),
+                                                size: 16,
                                               ),
-                                              SizedBox(height: isCompact ? 6 : 10),
-                                              FittedBox(
-                                                fit: BoxFit.scaleDown,
+                                              const SizedBox(width: 6),
+                                              const Expanded(
                                                 child: Text(
-                                                  '$_rewardAmount RBX',
+                                                  'GOLDEN SCRATCH',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                    fontSize: isCompact ? 26 : 32,
+                                                    color: Colors.white,
+                                                    fontSize: 12,
                                                     fontWeight: FontWeight.w900,
-                                                    color: AppColors.primaryText,
+                                                    letterSpacing: 0.6,
                                                   ),
                                                 ),
                                               ),
-                                              Text(
-                                                'You Won!',
-                                                style: TextStyle(
-                                                  fontSize: isCompact ? 13 : 15,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppColors.secondaryText,
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black.withValues(alpha: 0.25),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: Colors.white.withValues(alpha: 0.2),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '#TKT-$_ticketNumber',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFFFE082),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.5,
+                                                  ),
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (_scratchesRemaining <= 0 && !_isLoadingLimit)
-                                    Positioned.fill(
-                                      child: Material(
-                                        color: Colors.black.withValues(alpha: 0.38),
-                                        child: InkWell(
-                                          onTap: _isProcessing ? null : _watchAdForExtraScratch,
-                                          child: Center(
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Container(
-                                                  padding: const EdgeInsets.all(12),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: AppColors.primary.withValues(alpha: 0.35),
-                                                        blurRadius: 14,
-                                                        spreadRadius: 2,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.play_circle_fill,
-                                                    size: 32,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                const Text(
-                                                  'WATCH VIDEO TO SCRATCH',
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                const Text(
-                                                  'Tap to unlock card',
-                                                  style: TextStyle(
-                                                    color: Colors.white70,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
+
+                                          const SizedBox(height: 6),
+
+                                          // Perforated Divider Line
+                                          Row(
+                                            children: List.generate(32, (index) => Expanded(
+                                              child: Container(
+                                                color: index.isEven ? Colors.white.withValues(alpha: 0.35) : Colors.transparent,
+                                                height: 1.2,
+                                              ),
+                                            )),
+                                          ),
+
+                                          const SizedBox(height: 6),
+
+                                          // Guide Text
+                                          Text(
+                                            _scratchesRemaining <= 0
+                                                ? 'Watch video below to scratch!'
+                                                : 'Scratch below to reveal!',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              letterSpacing: 0.3,
                                             ),
                                           ),
-                                        ),
+
+                                          const SizedBox(height: 6),
+
+                                          // The Scratch Window Frame
+                                          Expanded(
+                                            child: ClipRRect(
+                                              borderRadius: BorderRadius.circular(14),
+                                              child: Stack(
+                                                children: [
+                                                  IgnorePointer(
+                                                    ignoring: _scratchesRemaining <= 0 || _isLoadingLimit,
+                                                    child: Listener(
+                                                      onPointerMove: (_) => _onScratchMove(),
+                                                      child: Scratcher(
+                                                        key: _scratcherKey,
+                                                        brushSize: isCompact ? 36 : 42,
+                                                        threshold: 50,
+                                                        color: const Color(0xFF6D28D9),
+                                                        image: Image.asset(
+                                                          AppAssets.dailyRewardImage,
+                                                          fit: BoxFit.cover,
+                                                        ),
+                                                        onChange: (value) {
+                                                          _onScratchMove();
+                                                          if (value > 0 && !_hasStartedScratching) {
+                                                            setState(() {
+                                                              _hasStartedScratching = true;
+                                                            });
+                                                          }
+                                                          if (mounted) {
+                                                            setState(() {
+                                                              _scratchProgress = value;
+                                                            });
+                                                          }
+                                                        },
+                                                        onThreshold: () {
+                                                          _handleScratchWin();
+                                                        },
+                                                        child: Container(
+                                                          width: double.infinity,
+                                                          height: double.infinity,
+                                                          decoration: const BoxDecoration(
+                                                            gradient: RadialGradient(
+                                                              center: Alignment.center,
+                                                              radius: 0.85,
+                                                              colors: [
+                                                                Color(0xFFFFFBEB),
+                                                                Color(0xFFFEF3C7),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                          child: Column(
+                                                            mainAxisAlignment: MainAxisAlignment.center,
+                                                            children: [
+                                                              Container(
+                                                                padding: EdgeInsets.all(isCompact ? 4 : 6),
+                                                                decoration: BoxDecoration(
+                                                                  shape: BoxShape.circle,
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: const Color(0xFFF59E0B).withValues(alpha: 0.30),
+                                                                      blurRadius: 16,
+                                                                      spreadRadius: 2,
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                child: Image.asset(
+                                                                  AppAssets.goldRbxCoin,
+                                                                  width: isCompact ? 54 : 68,
+                                                                  height: isCompact ? 54 : 68,
+                                                                ),
+                                                              ),
+                                                              SizedBox(height: isCompact ? 3 : 6),
+                                                              FittedBox(
+                                                                fit: BoxFit.scaleDown,
+                                                                child: Text(
+                                                                  '$_rewardAmount RBX',
+                                                                  style: TextStyle(
+                                                                    fontSize: isCompact ? 24 : 28,
+                                                                    fontWeight: FontWeight.w900,
+                                                                    color: const Color(0xFF92400E),
+                                                                    letterSpacing: 0.5,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                margin: const EdgeInsets.only(top: 2),
+                                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
+                                                                  borderRadius: BorderRadius.circular(10),
+                                                                ),
+                                                                child: const Text(
+                                                                  '🎉 WINNER!',
+                                                                  style: TextStyle(
+                                                                    fontSize: 11,
+                                                                    fontWeight: FontWeight.w800,
+                                                                    color: Color(0xFF78350F),
+                                                                    letterSpacing: 0.5,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+
+                                                  // Locked Overlay when 0 scratches left
+                                                  if (_scratchesRemaining <= 0 && !_isLoadingLimit)
+                                                    Positioned.fill(
+                                                      child: Material(
+                                                        color: Colors.black.withValues(alpha: 0.45),
+                                                        child: InkWell(
+                                                          onTap: _isProcessing ? null : _watchAdForExtraScratch,
+                                                          child: Center(
+                                                            child: Column(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              children: [
+                                                                Container(
+                                                                  padding: const EdgeInsets.all(12),
+                                                                  decoration: BoxDecoration(
+                                                                    color: Colors.white,
+                                                                    shape: BoxShape.circle,
+                                                                    boxShadow: [
+                                                                      BoxShadow(
+                                                                        color: AppColors.primary.withValues(alpha: 0.35),
+                                                                        blurRadius: 14,
+                                                                        spreadRadius: 2,
+                                                                      ),
+                                                                    ],
+                                                                  ),
+                                                                  child: const Icon(
+                                                                    Icons.play_circle_fill,
+                                                                    size: 32,
+                                                                    color: AppColors.primary,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 10),
+                                                                const Text(
+                                                                  'WATCH VIDEO TO SCRATCH',
+                                                                  style: TextStyle(
+                                                                    color: Colors.white,
+                                                                    fontSize: 14,
+                                                                    fontWeight: FontWeight.w900,
+                                                                    letterSpacing: 0.5,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(height: 4),
+                                                                const Text(
+                                                                  'Tap to unlock card',
+                                                                  style: TextStyle(
+                                                                    color: Colors.white70,
+                                                                    fontSize: 12,
+                                                                    fontWeight: FontWeight.w600,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(height: 8),
+
+                                          // Real-time Scratch Meter
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.auto_awesome_rounded,
+                                                size: 13,
+                                                color: Color(0xFFFFD700),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${(_scratchProgress * 2).clamp(0, 100).toInt()}%',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  child: LinearProgressIndicator(
+                                                    value: (_scratchProgress / 50).clamp(0.0, 1.0),
+                                                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                                                    minHeight: 5,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              const Text(
+                                                'Goal: 50%',
+                                                style: TextStyle(
+                                                  color: Color(0xFFFFE082),
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // 4. Live Jackpot Info Ticker
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFFDE68A).withValues(alpha: 0.7),
+                                width: 1.0,
+                              ),
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 16),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Jackpot: Win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX!',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF92400E),
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
                                 ],
+                              ),
+                            ),
+                          ),
+
+                          // 5. Fixed Bottom Action Button Dock
+                          InteractiveButton(
+                            height: 52,
+                            gradient: _scratchesRemaining <= 0
+                                ? const LinearGradient(
+                                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                  )
+                                : AppColors.primaryGradient,
+                            textColor: Colors.white,
+                            isLoading: _isProcessing && !_hasActiveScratch,
+                            onTap: _isProcessing ? null : _watchAdForExtraScratch,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.play_circle_fill,
+                                      color: Colors.white,
+                                      size: isCompact ? 18 : 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _scratchesRemaining <= 0
+                                          ? 'Watch Video for Free Scratch'
+                                          : 'Watch Video for Extra Scratch',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Live Recent Win / Jackpot Info Ticker
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Jackpot: Win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX!',
-                          style: TextStyle(
-                            fontSize: isCompact ? 11.5 : 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF475569),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Fixed Bottom Action Button Dock (Always in thumb zone)
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  0,
-                  horizontalPadding,
-                  isCompact ? 12 : 18,
-                ),
-                child: InteractiveButton(
-                  height: isCompact ? 48 : 52,
-                  gradient: AppColors.primaryGradient,
-                  textColor: Colors.white,
-                  isLoading: _isProcessing && !_hasActiveScratch,
-                  onTap: _isProcessing ? null : _watchAdForExtraScratch,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.play_circle_fill,
-                            color: Colors.white,
-                            size: isCompact ? 18 : 22,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _scratchesRemaining <= 0
-                                ? 'Watch Video for Free Scratch'
-                                : 'Watch Video for Extra Scratch',
-                            style: TextStyle(
-                              fontSize: isCompact ? 13 : 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -746,67 +967,61 @@ class _HowToStep extends StatelessWidget {
   final String title;
   final String description;
   final Color color;
-  final bool isCompact;
 
   const _HowToStep({
     required this.icon,
     required this.title,
     required this.description,
     required this.color,
-    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconBoxSize = isCompact ? 40.0 : 48.0;
-    final iconSize = isCompact ? 20.0 : 24.0;
-    final spacing = isCompact ? 12.0 : 16.0;
-
     return Container(
-      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.cardBorder),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.7)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
+            color: Color(0x06000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            width: iconBoxSize,
-            height: iconBoxSize,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: iconSize),
+            child: Icon(icon, color: color, size: 20),
           ),
-          SizedBox(width: spacing),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: isCompact ? 14 : 15,
+                  style: const TextStyle(
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF131326),
+                    color: Color(0xFF0F172A),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: TextStyle(
-                    fontSize: isCompact ? 11.5 : 12,
-                    color: const Color(0xFF868A9F),
-                    height: 1.35,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF64748B),
+                    height: 1.3,
                   ),
                 ),
               ],

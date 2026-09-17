@@ -109,8 +109,20 @@ class SupabaseRepository {
     throw Exception('User is not authenticated');
   }
 
-  Future<int> spendCoinsViaEdge(int amount, String rewardTitle, String txId) async {
-    final data = await callEdgeFunction('spend-coins', body: {'amount': amount, 'rewardTitle': rewardTitle, 'txId': txId});
+  Future<int> spendCoinsViaEdge(
+    int amount,
+    String rewardTitle,
+    String txId, {
+    String? denomId,
+    String? deviceId,
+  }) async {
+    final data = await callEdgeFunction('spend-coins', body: {
+      'amount': amount,
+      'rewardTitle': rewardTitle,
+      'txId': txId,
+      if (denomId != null) 'denomId': denomId,
+      if (deviceId != null) 'deviceId': deviceId,
+    });
     return data['remaining'] as int? ?? data['balance'] as int? ?? 0;
   }
 
