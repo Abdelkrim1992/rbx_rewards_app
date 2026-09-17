@@ -68,7 +68,24 @@ class DailyRewardCooldownNotifier extends StateNotifier<Duration> {
       state = const Duration(hours: 24);
       _cooldownEnd = DateTime.now().add(state);
       _startTimer();
-      await _ref.read(coinProvider.notifier).credit(result.amount, 'daily_reward');
+
+      if (result.isOffline) {
+        // Offline claim: coins have not been credited on backend yet, queue via credit()
+        await _ref.read(coinProvider.notifier).credit(result.amount, 'daily_reward');
+      } else {
+        // Online claim: backend RPC claim_daily_reward ALREADY credited result.amount.
+        // Update local daily cap tracking so features and limits stay in sync:
+        _ref.read(dailyCapServiceProvider).addCoins(result.amount, 'daily_reward');
+
+        // Update coin balance to authoritative newBalance returned by backend
+        if (result.newBalance > 0) {
+          _ref.read(coinProvider.notifier).updateBalance(result.newBalance);
+        } else {
+          final current = _ref.read(coinProvider);
+          _ref.read(coinProvider.notifier).updateBalance(current + result.amount);
+        }
+      }
+
       // Invalidate profile so consecutive days streak and stats update immediately
       _ref.invalidate(userProfileStreamProvider);
       return true;

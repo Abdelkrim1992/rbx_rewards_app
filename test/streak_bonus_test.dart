@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
 import 'package:rbx_rewards/models/reward_config.dart';
+import 'package:rbx_rewards/models/claim_result.dart';
 import 'package:rbx_rewards/widgets/streak_saver_sheet.dart';
 
 void main() {
@@ -113,6 +114,51 @@ void main() {
       await tester.tap(find.text('No thanks, start over at Day 1'));
       await tester.pump();
       expect(resetCalled, isTrue);
+    });
+  });
+
+  group('ClaimResult Parsing & Daily Reward Deduplication Tests', () {
+    test('ClaimResult parses nested edge function response with newBalance', () {
+      final edgeResponse = {
+        'success': true,
+        'amount': 10,
+        'data': {
+          'success': true,
+          'amount': 10,
+          'balance': 210,
+          'consecutive_days': 2,
+        },
+      };
+
+      final result = ClaimResult.fromMap(edgeResponse);
+      expect(result.success, isTrue);
+      expect(result.amount, 10);
+      expect(result.newBalance, 210);
+      expect(result.consecutiveDays, 2);
+      expect(result.isOffline, isFalse);
+    });
+
+    test('ClaimResult parses flat response', () {
+      final flatResponse = {
+        'success': true,
+        'amount': 30,
+        'balance': 350,
+        'consecutive_days': 4,
+      };
+
+      final result = ClaimResult.fromMap(flatResponse);
+      expect(result.success, isTrue);
+      expect(result.amount, 30);
+      expect(result.newBalance, 350);
+      expect(result.consecutiveDays, 4);
+      expect(result.isOffline, isFalse);
+    });
+
+    test('ClaimResult.offlineClaim marks claim as isOffline', () {
+      final offline = ClaimResult.offlineClaim(amount: 10);
+      expect(offline.success, isTrue);
+      expect(offline.amount, 10);
+      expect(offline.isOffline, isTrue);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../business/sound_service.dart';
 import '../theme/app_theme.dart';
 import 'app_header.dart';
+import 'feature_top_bar.dart';
 
 /// Production-ready Flying Coin Particle Animation with Bezier flight paths.
 /// Spawns from any dialog or claim button and flies directly to the AppHeader balance badge.
@@ -125,6 +126,7 @@ class _CoinFlyOverlayState extends State<CoinFlyOverlay>
   void _onParticleArrival() {
     SoundService.instance.playCoin();
     HapticFeedback.lightImpact();
+    FeatureTopBar.pulseBadge();
     RbxAppHeader.pulseBadge();
   }
 
@@ -137,6 +139,22 @@ class _CoinFlyOverlayState extends State<CoinFlyOverlay>
   Offset _resolveTarget(BuildContext context) {
     if (_targetPosition != null) return _targetPosition!;
 
+    // 1. Try in-game / feature top bar first
+    try {
+      final featureContext = FeatureTopBar.balanceBadgeKey?.currentContext;
+      if (featureContext != null && featureContext.mounted) {
+        final renderBox = featureContext.findRenderObject() as RenderBox?;
+        if (renderBox != null && renderBox.hasSize) {
+          final pos = renderBox.localToGlobal(
+            Offset(renderBox.size.width / 2, renderBox.size.height / 2),
+          );
+          _targetPosition = pos;
+          return pos;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Try main app header
     try {
       final keyContext = RbxAppHeader.balanceBadgeKey?.currentContext;
       if (keyContext != null && keyContext.mounted) {

@@ -15,6 +15,7 @@ import '../../widgets/quit_confirmation_dialog.dart';
 import '../../widgets/ad_reward_dialog.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/feature_top_bar.dart';
 import '../../business/sound_service.dart';
 
 class ScratchCardScreen extends ConsumerStatefulWidget {
@@ -110,6 +111,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   int _lastScratchSoundTime = 0;
 
   void _onScratchMove() {
+    if (_isScratched || _isProcessing || _scratchesRemaining <= 0) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastScratchSoundTime > 220) {
       _lastScratchSoundTime = now;
@@ -119,8 +121,6 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
 
   Future<void> _handleScratchWin() async {
     if (_isScratched || _isProcessing) return;
-    
-    SoundService.instance.playJackpot();
 
     setState(() {
       _isScratched = true;
@@ -208,94 +208,11 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              // Nav bar
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  horizontalPadding,
-                  12,
-                  horizontalPadding,
-                  0,
-                ),
-                child: SizedBox(
-                  height: 44,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: _handleBack,
-                          child: Container(
-                            width: isCompact ? 38 : 44,
-                            height: isCompact ? 38 : 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: AppColors.purple,
-                              size: isCompact ? 16 : 18,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isCompact ? 48 : 64,
-                        ),
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'Scratch & Win',
-                            style: TextStyle(
-                              fontSize: isCompact ? 18 : 20,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF131326),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Consumer(
-                          builder: (context, ref, child) {
-                            final coinBalance = ref.watch(coinProvider);
-                            return Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isCompact ? 8 : 10,
-                                vertical: isCompact ? 4 : 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Image.asset(
-                                    AppAssets.goldRbxCoin,
-                                    width: isCompact ? 16 : 18,
-                                    height: isCompact ? 16 : 18,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    coinBalance.toString(),
-                                    style: TextStyle(
-                                      fontSize: isCompact ? 13 : 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // Unified Feature Top Bar
+              FeatureTopBar(
+                title: 'Scratch & Win',
+                onBack: _handleBack,
+                isBackEnabled: !_isProcessing,
               ),
               SizedBox(height: isCompact ? 12 : 20),
 

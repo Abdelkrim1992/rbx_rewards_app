@@ -595,26 +595,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
 
                     // ── 5. CONDITIONAL LOGOUT BUTTON (Only for Google/Apple users) ──
-                    if (isSocialUser) ...[
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: horizontalPadding),
-                        child: InteractiveButton(
-                          icon: Icons.logout_rounded,
-                          iconSize: 18,
-                          text: 'Logout',
-                          height: 48,
-                          borderRadius: 14,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                          ),
-                          onTap: () => showLogoutConfirmDialog(context, ref),
-                        ),
-                      ),
-                    ],
+                    // if (isSocialUser) ...[
+                    //   const SizedBox(height: 16),
+                    //   Padding(
+                    //     padding:
+                    //         EdgeInsets.symmetric(horizontal: horizontalPadding),
+                    //     child: InteractiveButton(
+                    //       icon: Icons.logout_rounded,
+                    //       iconSize: 18,
+                    //       text: 'Logout',
+                    //       height: 48,
+                    //       borderRadius: 14,
+                    //       fontSize: 14,
+                    //       fontWeight: FontWeight.w700,
+                    //       gradient: const LinearGradient(
+                    //         colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                    //       ),
+                    //       onTap: () => showLogoutConfirmDialog(context, ref),
+                    //     ),
+                    //   ),
+                    // ],
 
                     // App Version Footer
                     const SizedBox(height: 24),

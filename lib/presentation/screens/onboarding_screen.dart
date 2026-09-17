@@ -247,38 +247,59 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     16,
                     topPadding * 0.5,
                   ),
-                  child: Row(
-                    children: [
-                      if (_currentPage > 0)
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18,
-                            color: Color(0xFF475467),
-                          ),
-                          onPressed: _isSigningIn || _isClaiming ? null : _previousPage,
-                          tooltip: 'Back',
-                        )
-                      else
-                        const SizedBox(width: 40, height: 40),
-                      const Spacer(),
-                      // Subtle step indicator text
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF4F3FF),
-                          borderRadius: BorderRadius.circular(20),
+                  child: SizedBox(
+                    height: 48,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: _currentPage > 0
+                              ? IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 48,
+                                    minHeight: 48,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    size: 18,
+                                    color: Color(0xFF475467),
+                                  ),
+                                  onPressed: _isSigningIn || _isClaiming
+                                      ? null
+                                      : _previousPage,
+                                  tooltip: 'Back',
+                                )
+                              : null,
                         ),
-                        child: Text(
-                          'Step ${_currentPage + 1} of 3',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF5637E6),
+                        const Spacer(),
+                        // Subtle step indicator card (strictly locked at exact same level across all screens)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F3FF),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFE0DBFC),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: Text(
+                            'Step ${_currentPage + 1} of 3',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF5637E6),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
 
@@ -386,30 +407,37 @@ class _OnboardingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final headerHeight = (screenHeight * 0.115).clamp(86.0, 96.0);
+
     return SizedBox(
-      height: 84,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: title,
-          ),
-          const SizedBox(height: 5),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF667085),
-                height: 1.2,
-              ),
+      height: headerHeight,
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.center,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                title,
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF667085),
+                    height: 1.2,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -573,9 +601,10 @@ class _StepOneContentState extends State<_StepOneContent>
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final isCompact = widget.isCompact;
-    final vGapTop = screenHeight * 0.008;
-    final vGapSm = screenHeight * 0.012;
-    final cardHeight = (screenHeight * 0.115).clamp(80.0, 108.0);
+    final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
+    final gapHeroCards = (screenHeight * 0.022).clamp(14.0, 20.0);
+    final gapCardsBottom = (screenHeight * 0.014).clamp(10.0, 15.0);
+    final cardHeight = (screenHeight * 0.10).clamp(78.0, 90.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -593,7 +622,7 @@ class _StepOneContentState extends State<_StepOneContent>
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF101828),
                   letterSpacing: -0.6,
-                  height: 1.15,
+                  height: 1.22,
                 ),
                 children: [
                   TextSpan(text: 'Earn '),
@@ -601,11 +630,11 @@ class _StepOneContentState extends State<_StepOneContent>
                     text: 'RBX Rewards\n',
                     style: TextStyle(color: Color(0xFF5637E6)),
                   ),
-                  TextSpan(text: 'Every Single Day'),
+                  TextSpan(text: 'Every Day'),
                 ],
               ),
             ),
-            subtitle: 'Play mini games, complete activities, and collect reward coins.',
+            subtitle: 'Play mini games, complete tasks & earn coins.',
           ),
 
           // Hero 3D Roblox Avatar with Ambient Glow & Floating Animation
@@ -620,8 +649,8 @@ class _StepOneContentState extends State<_StepOneContent>
                     children: [
                       // Ambient Gaming Radial Glow
                       Container(
-                        width: 180,
-                        height: 180,
+                        width: isCompact ? 160 : 185,
+                        height: isCompact ? 160 : 185,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           boxShadow: [
@@ -671,7 +700,7 @@ class _StepOneContentState extends State<_StepOneContent>
             ),
           ),
 
-          SizedBox(height: vGapSm),
+          SizedBox(height: gapHeroCards),
 
           // 3 Elevated Feature Cards Row
           SizedBox(
@@ -683,29 +712,26 @@ class _StepOneContentState extends State<_StepOneContent>
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.firstFeatureCard,
                     title: 'Play Games',
-                    badgeText: '50+ Games',
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Expanded(
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.secondFeatureCard,
                     title: 'Spin & Win',
-                    badgeText: 'Daily',
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 10),
                 Expanded(
                   child: _MiniFeatureCard(
                     imagePath: AppAssets.thirtyFeatureCard,
                     title: 'Unlock Rewards',
-                    badgeText: 'Real Robux',
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: vGapTop),
+          SizedBox(height: gapCardsBottom),
         ],
       ),
     );
@@ -715,18 +741,16 @@ class _StepOneContentState extends State<_StepOneContent>
 class _MiniFeatureCard extends StatelessWidget {
   final String imagePath;
   final String title;
-  final String badgeText;
 
   const _MiniFeatureCard({
     required this.imagePath,
     required this.title,
-    required this.badgeText,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -744,65 +768,52 @@ class _MiniFeatureCard extends StatelessWidget {
           ),
         ],
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF6F5FD),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0x185637E6)),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  imagePath,
-                  width: 38,
-                  height: 38,
-                  fit: BoxFit.cover,
-                  cacheWidth: 120,
-                  cacheHeight: 120,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.star_rounded,
-                    color: AppColors.primary,
-                    size: 20,
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6F5FD),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(color: const Color(0x185637E6)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: Image.asset(
+                    imagePath,
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.cover,
+                    cacheWidth: 120,
+                    cacheHeight: 120,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.star_rounded,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1D2939),
-                letterSpacing: -0.1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF4F3FF),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                badgeText,
+              const SizedBox(height: 6),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 1,
                 style: const TextStyle(
-                  fontSize: 9.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF5637E6),
+                  color: Color(0xFF1D2939),
+                  letterSpacing: -0.1,
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -820,7 +831,8 @@ class _StepTwoContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final vGapTop = screenHeight * 0.008;
+    final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
+    final gapCardsBottom = (screenHeight * 0.014).clamp(10.0, 15.0);
     final vGapCards = (screenHeight * 0.014).clamp(6.0, 14.0);
 
     return Padding(
@@ -840,7 +852,7 @@ class _StepTwoContent extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF101828),
                   letterSpacing: -0.6,
-                  height: 1.15,
+                  height: 1.22,
                 ),
                 children: [
                   TextSpan(text: 'Play. '),
@@ -936,7 +948,7 @@ class _StepTwoContent extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(height: vGapTop),
+          SizedBox(height: gapCardsBottom),
         ],
       ),
     );
@@ -1121,7 +1133,8 @@ class _StepThreeContentState extends State<_StepThreeContent>
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
     final isCompact = widget.isCompact;
-    final vGapTop = screenHeight * 0.008;
+    final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
+    final gapCardsBottom = (screenHeight * 0.014).clamp(10.0, 15.0);
     final vGapMd = screenHeight * 0.012;
     final coinSize = (screenHeight * 0.065).clamp(40.0, 56.0);
     final cardPad = (screenHeight * 0.016).clamp(10.0, 16.0);
@@ -1142,7 +1155,7 @@ class _StepThreeContentState extends State<_StepThreeContent>
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF101828),
                   letterSpacing: -0.6,
-                  height: 1.15,
+                  height: 1.22,
                 ),
                 children: [
                   TextSpan(text: 'Your first '),
@@ -1341,7 +1354,7 @@ class _StepThreeContentState extends State<_StepThreeContent>
               ],
             ),
           ),
-          SizedBox(height: vGapTop),
+          SizedBox(height: gapCardsBottom),
         ],
       ),
     );

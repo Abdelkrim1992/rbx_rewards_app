@@ -82,9 +82,9 @@ void main() {
       expect(find.text('100% Secure • Cloud Save Enabled'), findsOneWidget);
     });
 
-    testWidgets('Step 3 renders properly on compact devices without overflow',
+    testWidgets('All onboarding steps render without overflow across compact mobile devices',
         (WidgetTester tester) async {
-      // Small screen test (e.g. compact Android screen)
+      // Small screen test (e.g. compact Android screen: 360x640 logical)
       tester.view.physicalSize = const Size(720, 1280);
       tester.view.devicePixelRatio = 2.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -92,11 +92,21 @@ void main() {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
+      // Step 1: zero overflow
+      expect(find.text('Step 1 of 3'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Step 2: zero overflow (guarantees the 1.00px header overflow is eliminated)
       await tester.tap(find.text('Get Started'));
       await tester.pumpAndSettle();
+      expect(find.text('Step 2 of 3'), findsOneWidget);
+      expect(find.text('Play'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // Step 3: zero overflow
       await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
-
+      expect(find.text('Step 3 of 3'), findsOneWidget);
       expect(find.text('Continue with Google'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

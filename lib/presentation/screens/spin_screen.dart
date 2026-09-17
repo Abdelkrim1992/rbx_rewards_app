@@ -14,6 +14,7 @@ import '../../models/ad_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/feature_top_bar.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../business/sound_service.dart';
 
@@ -144,7 +145,6 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
     final freeSpins = ref.read(spinProvider).spinsRemaining;
     final isSpinBlocked = ref.read(dailyCapServiceProvider).isCapReachedFor('spin') || ref.read(dailyCapServiceProvider).isFeaturesCapReached;
     if (_isSpinning || _isProcessing || freeSpins == 0 || isSpinBlocked) return;
-    SoundService.instance.playButton();
     final random = Random();
     final targetSegment = _pickWeightedSegment(random);
     final baseRotations = 2 + random.nextInt(6);
@@ -178,10 +178,6 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
       final reward = _prizeToCoins(prize);
 
       if (!mounted) return;
-
-      if (prize == 'JACKPOT') {
-        SoundService.instance.playJackpot();
-      }
 
       setState(() {
         _isSpinning = false;
@@ -262,81 +258,11 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
         body: SafeArea(
           child: Column(
             children: [
-              // Nav bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: SizedBox(
-                  height: 44,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: GestureDetector(
-                          onTap: (_isSpinning || _isProcessing) ? null : widget.onBack,
-                          child: Opacity(
-                            opacity: (_isSpinning || _isProcessing) ? 0.4 : 1.0,
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.arrow_back_ios_new,
-                                color: AppColors.purple,
-                                size: 18,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Text(
-                        'Spin & Win',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF131326),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Consumer(
-                          builder: (context, ref, child) {
-                            final coinBalance = ref.watch(coinProvider);
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primarySoft,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Image.asset(
-                                    AppAssets.goldRbxCoin,
-                                    width: 18,
-                                    height: 18,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    coinBalance.toString(),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primaryText,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // Unified Feature Top Bar
+              FeatureTopBar(
+                title: 'Spin & Win',
+                onBack: widget.onBack,
+                isBackEnabled: !_isSpinning && !_isProcessing,
               ),
               const SizedBox(height: 10),
 

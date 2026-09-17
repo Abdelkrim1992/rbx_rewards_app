@@ -223,7 +223,11 @@ class AuthService {
         accessToken: accessToken,
       );
 
-      return response.user != null;
+      if (response.user != null) {
+        await _ensurePublicUserRow(response.user!);
+        return true;
+      }
+      return false;
     } on PlatformException catch (e) {
       debugPrint('Native Google Sign-In PlatformException: ${e.code} - ${e.message}');
       if (e.code == 'sign_in_failed' || (e.message != null && e.message!.contains('10'))) {
@@ -264,7 +268,11 @@ class AuthService {
         nonce: rawNonce,
       );
 
-      return response.user != null;
+      if (response.user != null) {
+        await _ensurePublicUserRow(response.user!);
+        return true;
+      }
+      return false;
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {
         debugPrint('ℹ️ Apple Sign-In dismissed by user');
@@ -275,6 +283,24 @@ class AuthService {
     } catch (e) {
       debugPrint('Native Apple Sign-In error: $e');
       rethrow;
+    }
+  }
+
+  /// Fail-safe to ensure a public.users row exists for social auth users
+  Future<void> _ensurePublicUserRow(User user) async {
+    try {
+      final displayName = user.userMetadata?['full_name'] as String? ??
+          user.userMetadata?['name'] as String? ??
+          user.email?.split('@').first ??
+          'Player${Random().nextInt(900000) + 100000}';
+
+      await _client.from('users').upsert({
+        'id': user.id,
+        'display_name': displayName,
+      }, onConflict: 'id');
+      debugPrint('✅ Verified public.users row exists for user ${user.id}');
+    } catch (e) {
+      debugPrint('Fail-safe public.users upsert notice: $e');
     }
   }
 

@@ -105,7 +105,6 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   Future<void> _handleRegularClaim() async {
     if (_isClaiming || _isLoadingAd) return;
     setState(() => _isClaiming = true);
-    SoundService.instance.playButton();
     HapticFeedback.lightImpact();
 
     try {
@@ -138,7 +137,6 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
 
   Future<void> _handleDoubleClaim() async {
     if (_isClaiming || _isLoadingAd) return;
-    SoundService.instance.playButton();
     final adNotifier = ref.read(adProvider.notifier);
 
     if (!adNotifier.canShowOptionalAd) {
@@ -174,8 +172,6 @@ class _RewardClaimDialogState extends ConsumerState<RewardClaimDialog>
   Future<void> _onAdRewardEarned() async {
     final boostedAmount = _getBoostedReward();
     if (!mounted) return;
-
-    SoundService.instance.playJackpot();
 
     setState(() {
       _isLoadingAd = false;

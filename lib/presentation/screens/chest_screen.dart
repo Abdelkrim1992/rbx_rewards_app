@@ -8,6 +8,7 @@ import '../../widgets/chest_painter.dart';
 import '../../widgets/coin_burst.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/interactive_button.dart';
+import '../../widgets/feature_top_bar.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../business/sound_service.dart';
 import '../../business/notification_service.dart';
@@ -141,80 +142,10 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
       body: SafeArea(
         child: Column(
           children: [
-            // Nav bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: SizedBox(
-                height: 44,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.pop(context);
-                        },
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: AppColors.purple,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'Treasure Chest',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF131326),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Consumer(
-                        builder: (context, ref, child) {
-                          final coinBalance = ref.watch(coinProvider);
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image.asset(
-                                  AppAssets.goldRbxCoin,
-                                  width: 18,
-                                  height: 18,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  coinBalance.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Unified Feature Top Bar
+            FeatureTopBar(
+              title: 'Treasure Chest',
+              onBack: () => Navigator.pop(context),
             ),
             const SizedBox(height: 10),
             Text(
@@ -465,7 +396,6 @@ class _ChestOpeningDialogState extends State<ChestOpeningDialog>
       setState(() {
         _burstCoins = true;
       });
-      SoundService.instance.playJackpot();
     }
     // Wait for the coin burst to fully finish (2 seconds) before closing
     await Future.delayed(const Duration(milliseconds: 2000));

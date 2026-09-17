@@ -5,14 +5,14 @@ import 'package:rbx_rewards/business/notification_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('NotificationService Tests', () {
+  group('NotificationService Unit Tests', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({
         'pref_notifications_enabled': true,
       });
     });
 
-    test('Initializes with default enabled preference', () async {
+    test('Initializes with default enabled preference when unset', () async {
       final service = NotificationService.testInstance(enabled: true);
       await service.init();
       expect(service.isNotificationsEnabled, isTrue);
@@ -23,46 +23,74 @@ void main() {
         'pref_notifications_enabled': false,
       });
       final service = NotificationService.testInstance(enabled: false);
+      await service.init();
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('pref_notifications_enabled'), isFalse);
+      expect(prefs.getBool(NotificationService.prefKey), isFalse);
       expect(service.isNotificationsEnabled, isFalse);
     });
 
-    test('setNotificationsEnabled toggles state, persists, and handles scheduling', () async {
+    test('Loads enabled preference from SharedPreferences', () async {
+      SharedPreferences.setMockInitialValues({
+        'pref_notifications_enabled': true,
+      });
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(NotificationService.prefKey), isTrue);
+      expect(service.isNotificationsEnabled, isTrue);
+    });
+
+    test('setNotificationsEnabled(false) disables state, persists preference, and cancels pending notifications', () async {
       final service = NotificationService.testInstance(enabled: true);
       await service.init();
 
       await service.setNotificationsEnabled(false);
       expect(service.isNotificationsEnabled, isFalse);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('pref_notifications_enabled'), isFalse);
+      expect(prefs.getBool(NotificationService.prefKey), isFalse);
+    });
+
+    test('setNotificationsEnabled(true) enables state, persists preference, and reschedules retention loops', () async {
+      final service = NotificationService.testInstance(enabled: false);
+      await service.init();
 
       await service.setNotificationsEnabled(true);
       expect(service.isNotificationsEnabled, isTrue);
-      expect(prefs.getBool('pref_notifications_enabled'), isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool(NotificationService.prefKey), isTrue);
     });
 
-    test('scheduleChestReady handles future trigger safely', () async {
+    test('scheduleChestReady handles future trigger dates safely', () async {
       final service = NotificationService.testInstance(enabled: true);
       await service.init();
 
       final futureTrigger = DateTime.now().add(const Duration(hours: 3));
       await expectLater(service.scheduleChestReady(futureTrigger), completes);
+    });
 
-      // Trigger in the past should safely no-op
-      final pastTrigger = DateTime.now().subtract(const Duration(minutes: 5));
+    test('scheduleChestReady safely ignores past trigger dates without scheduling', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      final pastTrigger = DateTime.now().subtract(const Duration(minutes: 10));
       await expectLater(service.scheduleChestReady(pastTrigger), completes);
     });
 
-    test('scheduleDailyQuestsReminder and scheduleStreakReminder execute safely', () async {
+    test('scheduleDailyQuestsReminder schedules successfully for midday 1:00 PM', () async {
       final service = NotificationService.testInstance(enabled: true);
       await service.init();
 
       await expectLater(service.scheduleDailyQuestsReminder(), completes);
+    });
+
+    test('scheduleStreakReminder schedules successfully for evening 8:00 PM', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
       await expectLater(service.scheduleStreakReminder(), completes);
     });
 
-    test('Cancellation methods execute safely', () async {
+    test('All individual and global cancellation methods execute safely', () async {
       final service = NotificationService.testInstance(enabled: true);
       await service.init();
 
@@ -71,7 +99,7 @@ void main() {
       await expectLater(service.cancelAll(), completes);
     });
 
-    test('Scheduling no-ops immediately when notifications are disabled', () async {
+    test('All scheduling methods immediately no-op when notifications are disabled', () async {
       final service = NotificationService.testInstance(enabled: false);
       expect(service.isNotificationsEnabled, isFalse);
 
@@ -79,6 +107,22 @@ void main() {
       await expectLater(service.scheduleChestReady(futureTrigger), completes);
       await expectLater(service.scheduleDailyQuestsReminder(), completes);
       await expectLater(service.scheduleStreakReminder(), completes);
+    });
+
+    test('requestPermissions executes safely without throwing in test environment', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      await expectLater(service.requestPermissions(), completes);
+    });
+
+    test('Constant identifiers match specifications', () {
+      expect(NotificationService.chestReadyNotificationId, 1001);
+      expect(NotificationService.dailyQuestsNotificationId, 1002);
+      expect(NotificationService.streakReminderNotificationId, 1003);
+      expect(NotificationService.channelId, 'rewards_channel');
+      expect(NotificationService.channelName, 'Rewards & Bonuses');
+      expect(NotificationService.prefKey, 'pref_notifications_enabled');
     });
   });
 }

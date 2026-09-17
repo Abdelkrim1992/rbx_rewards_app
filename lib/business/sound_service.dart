@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,22 +49,24 @@ class SoundService {
       debugPrint('SoundService: Could not read audio preference: $e');
     }
 
-    try {
-      _primaryPlayer = AudioPlayer();
-      await _primaryPlayer?.setPlayerMode(PlayerMode.lowLatency);
+    if (!_isTestMode) {
+      try {
+        _primaryPlayer = AudioPlayer();
+        await _primaryPlayer?.setPlayerMode(PlayerMode.lowLatency);
 
-      _ambientPlayer = AudioPlayer();
-      await _ambientPlayer?.setPlayerMode(PlayerMode.mediaPlayer);
+        _ambientPlayer = AudioPlayer();
+        await _ambientPlayer?.setPlayerMode(PlayerMode.mediaPlayer);
 
-      // Create a small pool of 3 players for rapid wheel ticks / rapid coin impacts
-      for (int i = 0; i < 3; i++) {
-        final p = AudioPlayer();
-        await p.setPlayerMode(PlayerMode.lowLatency);
-        _tickPool.add(p);
+        // Create a small pool of 3 players for rapid wheel ticks / rapid coin impacts
+        for (int i = 0; i < 3; i++) {
+          final p = AudioPlayer();
+          await p.setPlayerMode(PlayerMode.lowLatency);
+          _tickPool.add(p);
+        }
+      } catch (e) {
+        // Graceful fallback for test runner / headless environments
+        debugPrint('SoundService: AudioPlayer init note: $e');
       }
-    } catch (e) {
-      // Graceful fallback for test runner / headless environments
-      debugPrint('SoundService: AudioPlayer init note: $e');
     }
   }
 
@@ -81,20 +84,42 @@ class SoundService {
     }
   }
 
-  /// Internal helper to safely trigger playback from assets.
-  Future<void> _playAsset(String path, {AudioPlayer? customPlayer, double volume = 1.0}) async {
+  final Set<AudioPlayer> _busyPlayers = {};
+  int _lastTickTimestamp = 0;
+
+  /// Internal helper to safely trigger playback from assets with timeout & busy guards.
+  Future<void> _playAsset(
+    String path, {
+    AudioPlayer? customPlayer,
+    double volume = 1.0,
+  }) async {
     if (!_soundEnabled) return;
 
+    final player = customPlayer ?? _primaryPlayer;
+    if (player == null) return;
+
+    // Prevent piling up concurrent calls on the same player
+    if (_busyPlayers.contains(player)) {
+      return;
+    }
+    _busyPlayers.add(player);
+
     try {
-      final player = customPlayer ?? _primaryPlayer;
-      if (player == null) return;
-      await player.setVolume(volume);
-      await player.stop();
-      await player.play(AssetSource(path));
+      await player
+          .setVolume(volume)
+          .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      await player
+          .stop()
+          .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      await player
+          .play(AssetSource(path))
+          .timeout(const Duration(milliseconds: 2000), onTimeout: () {});
     } catch (e) {
-      if (!_isTestMode) {
-        debugPrint('SoundService playback error ($path): $e');
+      if (!_isTestMode && e is! TimeoutException) {
+        debugPrint('SoundService playback note ($path): $e');
       }
+    } finally {
+      _busyPlayers.remove(player);
     }
   }
 
@@ -112,15 +137,24 @@ class SoundService {
   }
 
   /// Short, dry acoustic transient at 1800 Hz for Lucky Wheel pegs (~0.02s).
+  /// Guarded with a 65ms debounce throttle and round-robin player pool.
   Future<void> playWheelTick() async {
     if (!_soundEnabled) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Debounce to prevent flooding native audio thread on high-speed rotations
+    if (now - _lastTickTimestamp < 65) return;
+    _lastTickTimestamp = now;
+
     if (_tickPool.isEmpty) {
-      await _playAsset('sounds/wheel_tick.wav', volume: 0.7);
+      // Fire and forget without blocking wheel rotation animation
+      unawaited(_playAsset('sounds/wheel_tick.wav', volume: 0.7));
       return;
     }
+
     final player = _tickPool[_tickPoolIndex];
     _tickPoolIndex = (_tickPoolIndex + 1) % _tickPool.length;
-    await _playAsset('sounds/wheel_tick.wav', customPlayer: player, volume: 0.7);
+    unawaited(_playAsset('sounds/wheel_tick.wav', customPlayer: player, volume: 0.7));
   }
 
   /// Heavy mechanical latch click rising into magical resonant chord (~0.8s).

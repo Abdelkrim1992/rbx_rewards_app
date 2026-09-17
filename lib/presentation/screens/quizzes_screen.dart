@@ -10,6 +10,7 @@ import '../../core/utils/game_reward_helper.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
+import '../../widgets/feature_top_bar.dart';
 import '../providers/coin_provider.dart';
 import '../providers/data_providers.dart';
 import '../providers/providers.dart';
@@ -391,100 +392,30 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
   }
 
   Widget _buildScreenHeader() {
-    String headerText = '';
+    String headerText = 'Quizzes';
     if (_gameState == 'PLAYING') {
       headerText = 'Question $_questionIndex/${_sessionQuestions.length}';
     } else if (_gameState == 'GAMEOVER') {
       headerText = 'Quiz Results';
-    } else {
-      headerText = 'Quizzes';
     }
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: SizedBox(
-        height: 44,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: GestureDetector(
-                onTap: () async {
-                  if (_gameState == 'PLAYING') {
-                    final shouldLeave = await showQuitConfirmationDialog(
-                      context,
-                      title: 'Quit Quiz?',
-                      message:
-                          'Are you sure you want to exit? You will lose unclaimed progress.',
-                    );
-                    if (shouldLeave && mounted) {
-                      _backToMenu();
-                    }
-                  } else {
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.primarySoft,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_back_ios_new,
-                    color: AppColors.purple,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-            Text(
-              headerText,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF131326),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Consumer(
-                builder: (context, ref, child) {
-                  final coinBalance = ref.watch(coinProvider);
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          AppAssets.goldRbxCoin,
-                          width: 18,
-                          height: 18,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          coinBalance.toString(),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
+    return FeatureTopBar(
+      title: headerText,
+      onBack: () async {
+        if (_gameState == 'PLAYING') {
+          final shouldLeave = await showQuitConfirmationDialog(
+            context,
+            title: 'Quit Quiz?',
+            message:
+                'Are you sure you want to exit? You will lose unclaimed progress.',
+          );
+          if (shouldLeave && mounted) {
+            _backToMenu();
+          }
+        } else {
+          Navigator.of(context).pop();
+        }
+      },
     );
   }
 

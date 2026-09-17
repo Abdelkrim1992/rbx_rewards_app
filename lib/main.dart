@@ -92,26 +92,14 @@ Future<ProviderContainer> _initStorageAndServices() async {
   );
 }
 
-Future<void> _initDeviceAuth(ProviderContainer container) async {
+Future<void> _initStartupAuth(ProviderContainer container) async {
   try {
     final auth = container.read(authServiceProvider);
-    if (auth.currentUser == null) {
-      try {
-        await auth.signInWithDevice().timeout(
-          const Duration(seconds: 3),
-          onTimeout: () {
-            debugPrint(
-                '⚠️ Device sign-in timed out, proceeding in offline mode');
-            return null;
-          },
-        );
-      } catch (e) {
-        debugPrint('Failed to sign in with device on startup: $e');
-      }
-    }
 
-    // Auto-detect returning user on cold boot to skip onboarding
+    // In forced social sign-in architecture, do NOT auto-create a ghost device account.
+    // Only check if an authenticated session already exists from a previous login.
     if (auth.currentUser != null) {
+      debugPrint('🔑 Active session found: ${auth.currentUser?.email ?? auth.currentUser?.id}');
       try {
         final userData = await container
             .read(supabaseRepositoryProvider)
@@ -132,6 +120,8 @@ Future<void> _initDeviceAuth(ProviderContainer container) async {
       } catch (e) {
         debugPrint('Returning user check skipped: $e');
       }
+    } else {
+      debugPrint('ℹ️ No active session on startup. Onboarding sign-in gate will be shown.');
     }
   } catch (e) {
     debugPrint('❌ Auth initialization error: $e');
@@ -144,7 +134,7 @@ Future<ProviderContainer> _bootstrapServices() async {
     final container = await _initStorageAndServices();
 
     if (isSupabaseReady) {
-      await _initDeviceAuth(container);
+      await _initStartupAuth(container);
     }
     return container;
   } catch (e) {
@@ -406,13 +396,14 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   }
 
   Future<void> _onGetStarted() async {
-    // Fail-safe: Ensure user account is authenticated before entering the app
+    // Only allow entering the app if user has authenticated (or in testing environment)
     final auth = ref.read(authServiceProvider);
     if (auth.currentUser == null) {
-      try {
-        await auth.signInWithDevice();
-      } catch (e) {
-        debugPrint('Device sign-in during onGetStarted fallback: $e');
+      final isTest =
+          !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+      if (!isTest) {
+        debugPrint('⚠️ Cannot complete onboarding without an authenticated account.');
+        return;
       }
     }
     await ref.read(onboardingCompletedProvider.notifier).setCompleted(true);

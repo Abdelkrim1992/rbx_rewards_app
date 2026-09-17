@@ -18,6 +18,7 @@ import '../providers/user_provider.dart';
 import '../providers/providers.dart';
 import '../providers/ad_provider.dart';
 import '../../models/ad_models.dart';
+import '../../widgets/coin_fly_overlay.dart';
 import '../../business/sound_service.dart';
 import 'rewards/widgets/rewards_social_proof_ticker.dart';
 
@@ -150,7 +151,14 @@ class _RewardsScreenState extends ConsumerState<RewardsScreen> {
               final yieldMultiplier = ref.read(dailyCapServiceProvider).getYieldMultiplier();
               final bonus = (25 * yieldMultiplier).round().clamp(4, 25);
               await ref.read(coinProvider.notifier).credit(bonus, 'watch_video');
-              SoundService.instance.playCoin();
+              if (mounted) {
+                final size = MediaQuery.of(context).size;
+                CoinFlyOverlay.spawn(
+                  context,
+                  fromPosition: Offset(size.width / 2, size.height / 2),
+                  coinCount: 10,
+                );
+              }
             },
             onAdFailed: (err) async {
               ScaffoldMessenger.of(context).showSnackBar(

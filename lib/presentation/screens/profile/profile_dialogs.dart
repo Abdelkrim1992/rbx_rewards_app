@@ -847,9 +847,26 @@ void showLogoutConfirmDialog(BuildContext context, WidgetRef ref) {
             colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
           ),
           onTap: () async {
+            final rootNav = Navigator.of(context, rootNavigator: true);
             Navigator.pop(ctx);
-            await ref.read(authServiceProvider).signOut();
+
+            try {
+              await ref.read(authServiceProvider).signOut();
+            } catch (e) {
+              debugPrint('Sign-out notice: $e');
+            }
+
+            // Invalidate and reset user state to prevent stale data leakage between accounts
+            ref.read(coinProvider.notifier).forceReset();
+            ref.read(dailyCapServiceProvider).resetAllEarnings();
+            ref.invalidate(userProfileStreamProvider);
+            ref.invalidate(userProfileProvider);
+            ref.invalidate(rewardHistoryProvider);
+
             await ref.read(onboardingCompletedProvider.notifier).setCompleted(false);
+
+            // Pop any pushed screens (e.g. SettingsScreen) back to root so Onboarding is front and center
+            rootNav.popUntil((route) => route.isFirst);
           },
         ),
       ],
@@ -969,6 +986,7 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
               ElevatedButton(
                 onPressed: (isConfirmed && !isDeleting)
                     ? () async {
+                        final rootNav = Navigator.of(context, rootNavigator: true);
                         setDialogState(() => isDeleting = true);
                         try {
                           final auth = ref.read(authServiceProvider);
@@ -994,12 +1012,7 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
                               .setCompleted(false);
 
                           // Return directly to the root Onboarding screen, closing all dialogs and pushed settings screens
-                          final navContext =
-                              context.mounted ? context : (ctx.mounted ? ctx : null);
-                          if (navContext != null) {
-                            Navigator.of(navContext, rootNavigator: true)
-                                .popUntil((route) => route.isFirst);
-                          }
+                          rootNav.popUntil((route) => route.isFirst);
                         } catch (e) {
                           debugPrint('Account deletion error: $e');
                           try {
@@ -1017,12 +1030,7 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
                               .read(onboardingCompletedProvider.notifier)
                               .setCompleted(false);
 
-                          final navContext =
-                              context.mounted ? context : (ctx.mounted ? ctx : null);
-                          if (navContext != null) {
-                            Navigator.of(navContext, rootNavigator: true)
-                                .popUntil((route) => route.isFirst);
-                          }
+                          rootNav.popUntil((route) => route.isFirst);
                         }
                       }
                     : null,
