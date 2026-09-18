@@ -33,18 +33,18 @@ Implement rigorous anti-fraud barriers to protect the business against auto-clic
   * `lib/core/utils/device_fingerprint.dart`
   * `lib/presentation/screens/rewards_screen.dart`
 * **Sub-tasks:**
-  - [ ] Use `device_info_plus` to generate a stable, hashed hardware device ID (`androidId` on Android, `identifierForVendor` on iOS).
-  - [ ] Pass `deviceId` along with the redemption payload in `_handleRedeem()`.
+  - [x] Use `device_info_plus` to generate a stable, hashed hardware device ID (`androidId` on Android, `identifierForVendor` on iOS).
+  - [x] Pass `deviceId` along with the redemption payload in `_handleRedeem()`.
 
 ### Task 3.2: Update Supabase `spend-coins` Edge Function
 * **File:** `supabase/functions/spend-coins/index.ts`
 * **Sub-tasks:**
-  - [ ] Query `user_ad_stats` table for `lifetime_forced_ads + lifetime_optional_ads`.
-  - [ ] Verify `lifetime_ads >= min_required_ads` for the requested denomination:
+  - [x] Query `user_ad_stats` table for `lifetime_forced_ads + lifetime_optional_ads`.
+  - [x] Verify `lifetime_ads >= min_required_ads` for the requested denomination:
     - Reject with: `"Please complete more game sessions before claiming this reward"`.
-  - [ ] Check if `denomId === 'starter_rbx_50c'` has already been redeemed by this `user_id` OR `device_id`.
-  - [ ] Record the `device_id` in the `claimed_rewards` / `transactions` table.
-  - [ ] Set redemption status to `pending_review` with an estimated delivery timestamp (24–48h).
+  - [x] Check if `denomId === 'starter_rbx_50c'` has already been redeemed by this `user_id` OR `device_id`.
+  - [x] Record the `device_id` in the `claimed_rewards` / `transactions` table.
+  - [x] Set redemption status to `pending_review` with an estimated delivery timestamp (24–48h).
 
 ### Task 3.3: Fix Client-Side Optimistic Credit on Game Screens
 * **Files:**
@@ -53,18 +53,18 @@ Implement rigorous anti-fraud barriers to protect the business against auto-clic
   * `lib/presentation/screens/flip_card_game_screen.dart`
   * `lib/presentation/screens/flappy_jump_game_screen.dart`
 * **Sub-tasks:**
-  - [ ] Locate `_submitAndRecordReward` and `_autoCreditCoinsOnPlayAgain`.
-  - [ ] Remove `ref.read(coinProvider.notifier).updateBalance(balance + earned)` when `result.success == false`.
-  - [ ] Only credit coins to `coinProvider` if the backend server explicitly returns `result.success == true`.
-  - [ ] If `result.error` contains a cap notice, show a gentle banner: `"You're playing in bonus mode!"` instead of pretending full coins were credited.
+  - [x] Locate `_submitAndRecordReward` and `_autoCreditCoinsOnPlayAgain`.
+  - [x] Remove `ref.read(coinProvider.notifier).updateBalance(balance + earned)` when `result.success == false`.
+  - [x] Only credit coins to `coinProvider` if the backend server explicitly returns `result.success == true`.
+  - [x] If `result.error` contains a cap notice, show a gentle banner: `"You're playing in bonus mode!"` instead of pretending full coins were credited.
 
 ### Task 3.4: Security & Redemption Unit Tests
 * **File:** `test/redemption_security_test.dart` (New Test File)
 * **Sub-tasks:**
-  - [ ] Test that starter card fails if lifetime ads < 70.
-  - [ ] Test that starter card fails on a second attempt with the same `deviceId`.
-  - [ ] Test that $3.00 card fails if lifetime ads < 500.
-  - [ ] Test that legitimate user with 520 lifetime ads passes and receives `pending_review` status.
+  - [x] Test that starter card fails if lifetime ads < 70.
+  - [x] Test that starter card fails on a second attempt with the same `deviceId`.
+  - [x] Test that $3.00 card fails if lifetime ads < 500.
+  - [x] Test that legitimate user with 520 lifetime ads passes and receives `pending_review` status.
 
 ---
 

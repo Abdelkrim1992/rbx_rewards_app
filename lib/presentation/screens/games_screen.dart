@@ -9,14 +9,15 @@ import '../../widgets/game_prefs.dart';
 import '../providers/providers.dart';
 import '../providers/user_provider.dart';
 
-// Game Screens
+// Game Screens (Deferred for instant app boot)
 import 'leaderboard_screen.dart';
-import 'tap_tap_game_screen.dart';
-import 'flappy_jump_game_screen.dart';
-import 'math_quiz_screen.dart';
-import 'quizzes_screen.dart';
-import 'flip_card_game_screen.dart';
-import 'scratch_card_screen.dart';
+import '../../widgets/deferred_game_loader.dart';
+import 'tap_tap_game_screen.dart' deferred as tap_game;
+import 'flappy_jump_game_screen.dart' deferred as flappy_game;
+import 'math_quiz_screen.dart' deferred as math_game;
+import 'quizzes_screen.dart' deferred as quiz_game;
+import 'flip_card_game_screen.dart' deferred as flip_game;
+import 'scratch_card_screen.dart' deferred as scratch_game;
 
 // Modular Games Components
 import 'games/models/game_item_data.dart';
@@ -86,7 +87,13 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         getPersonalBest: GamePrefs.getFlappyBestScore,
         personalBestUnit: 'pts',
         isSpotlight: true,
-        screenBuilder: (ctx, onNav) => const FlappyJumpGameScreen(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Flappy Jump',
+          themeColor: const Color(0xFFF59E0B),
+          iconAsset: AppAssets.flappyJumpGame,
+          loadLibrary: flappy_game.loadLibrary,
+          builder: () => flappy_game.FlappyJumpGameScreen(),
+        ),
       ),
       GameItemData(
         id: 'tap_tap',
@@ -110,7 +117,13 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         ],
         getPersonalBest: () => GamePrefs.getBestScore('tap_tap'),
         personalBestUnit: 'hits',
-        screenBuilder: (ctx, onNav) => const TapTapGameScreen(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Tap Tap',
+          themeColor: const Color(0xFF2563EB),
+          iconAsset: AppAssets.tapTapGame,
+          loadLibrary: tap_game.loadLibrary,
+          builder: () => tap_game.TapTapGameScreen(),
+        ),
       ),
       GameItemData(
         id: 'math_quiz',
@@ -134,7 +147,13 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         ],
         getPersonalBest: () => GamePrefs.getBestScore('math_quiz'),
         personalBestUnit: 'score',
-        screenBuilder: (ctx, onNav) => const MathQuizScreen(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Math Quiz',
+          themeColor: const Color(0xFF10B981),
+          iconAsset: AppAssets.quizMasterGame,
+          loadLibrary: math_game.loadLibrary,
+          builder: () => math_game.MathQuizScreen(),
+        ),
       ),
       GameItemData(
         id: 'quizzes',
@@ -158,7 +177,13 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         ],
         getPersonalBest: () => GamePrefs.getBestScore('quizzes'),
         personalBestUnit: 'correct',
-        screenBuilder: (ctx, onNav) => const QuizzesScreen(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Roblox Trivia',
+          themeColor: const Color(0xFF8B5CF6),
+          iconAsset: AppAssets.quizMasterQuickActions,
+          loadLibrary: quiz_game.loadLibrary,
+          builder: () => quiz_game.QuizzesScreen(),
+        ),
       ),
       GameItemData(
         id: 'flip_card',
@@ -182,7 +207,13 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         ],
         getPersonalBest: () => GamePrefs.getBestScore('flip_card'),
         personalBestUnit: 'pairs',
-        screenBuilder: (ctx, onNav) => const FlipCardGameScreen(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Flip Cards',
+          themeColor: const Color(0xFFEC4899),
+          iconAsset: AppAssets.memoryMatchGame,
+          loadLibrary: flip_game.loadLibrary,
+          builder: () => flip_game.FlipCardGameScreen(),
+        ),
       ),
       GameItemData(
         id: 'scratch',
@@ -206,8 +237,14 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
         ],
         getPersonalBest: () => GamePrefs.getScratchesRemaining(),
         personalBestUnit: 'free left',
-        screenBuilder: (ctx, onNav) => ScratchCardScreen(
-          onBack: () => Navigator.of(ctx).pop(),
+        screenBuilder: (ctx, onNav) => DeferredGameLoader(
+          title: 'Scratch Card',
+          themeColor: AppColors.purple,
+          iconAsset: AppAssets.dailyRewardImage,
+          loadLibrary: scratch_game.loadLibrary,
+          builder: () => scratch_game.ScratchCardScreen(
+            onBack: () => Navigator.of(ctx).pop(),
+          ),
         ),
       ),
     ];

@@ -83,7 +83,23 @@ class DailyCapService extends ChangeNotifier {
   };
 
   /// Dynamic reward limits: (baseReward, premiumReward) per feature
-  final Map<String, (int, int)> _rewardLimits = {};
+  final Map<String, (int, int)> _rewardLimits = {
+    'ad': (25, 25),
+    'watch_video': (25, 25),
+    'watch_earn': (25, 25),
+    'video': (25, 25),
+    'chest': (12, 60),
+    'scratch': (9, 48),
+    'spin': (6, 48),
+    'tap_tap': (6, 24),
+    'flappy_jump': (6, 24),
+    'flip_card': (6, 24),
+    'math_quiz': (6, 24),
+    'quiz': (6, 24),
+    'daily_reward': (15, 30),
+    'mega_chest': (250, 500),
+    'mega_chest_double': (250, 500),
+  };
 
   DailyCapService(this._repository);
 
@@ -268,12 +284,9 @@ class DailyCapService extends ChangeNotifier {
     }
   }
 
-  /// Get the random reward range for a feature, defaults to hardcoded values if not in DB.
+  /// Get the random base reward range for variable features (chest, scratch, spin).
   (int min, int max) getRewardLimits(String source) {
     final key = _normalizeSource(source);
-    if (_rewardLimits.containsKey(key)) {
-      return _rewardLimits[key]!;
-    }
     if (key == 'chest') return (RewardConfig.chestMinBase, RewardConfig.chestMaxBase);
     if (key == 'scratch') return (RewardConfig.scratchMinBase, RewardConfig.scratchMaxBase);
     if (key == 'spin') return (RewardConfig.spinWheelBaseSlices.first, RewardConfig.spinJackpotBase);

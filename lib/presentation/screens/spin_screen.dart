@@ -304,10 +304,12 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
 
   Future<void> _handleWin(int reward) async {
     if (!mounted) return;
+    final premiumReward = reward * 4;
     await showRewardChoice(
       context: context,
       featureName: 'Spin Reward',
       baseReward: reward,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.spinExtra,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.spinWheelIcon,

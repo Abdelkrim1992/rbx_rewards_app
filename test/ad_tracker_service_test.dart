@@ -62,5 +62,20 @@ void main() {
       expect(service.canShowForcedAd(), isFalse);
       expect(service.getRemainingOptionalAds(), 0);
     });
+
+    test('Tracking data properly counts daily forced and optional ads', () async {
+      await service.incrementDailyAdCount(AdType.forced);
+      await service.incrementDailyAdCount(AdType.optional);
+      await service.incrementDailyAdCount(AdType.optional);
+
+      expect(service.trackingData.dailyForcedAds, 1);
+      expect(service.trackingData.dailyOptionalAds, 2);
+      expect(service.dailyAdsWatched, 3);
+
+      await service.resetDailyCounters();
+      expect(service.trackingData.dailyForcedAds, 0);
+      expect(service.trackingData.dailyOptionalAds, 0);
+      expect(service.dailyAdsWatched, 0);
+    });
   });
 }

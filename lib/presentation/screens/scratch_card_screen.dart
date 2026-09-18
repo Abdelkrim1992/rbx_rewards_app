@@ -172,10 +172,13 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
 
     if (!mounted) return;
 
+    final premiumReward = _rewardAmount * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Scratch Card Reward',
       baseReward: _rewardAmount,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.scratchCard,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.goldRbxCoin,
@@ -223,7 +226,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
   }
 
   void _showHowToPlay(BuildContext context) {
-    final maxPrize = ref.read(dailyCapServiceProvider).getRewardLimits('scratch').$2;
+    final maxPrize = ref.read(dailyCapServiceProvider).getRewardLimits('scratch').$2 * 4;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -894,7 +897,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                                   const Icon(Icons.stars_rounded, color: Color(0xFFF59E0B), size: 16),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Jackpot: Win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2} RBX!',
+                                    'Jackpot: Win up to ${ref.watch(dailyCapServiceProvider).getRewardLimits('scratch').$2 * 4} RBX!',
                                     style: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w800,

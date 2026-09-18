@@ -25,7 +25,8 @@ Future<void> showGameRewardChoice({
   Gradient? premiumGradient,
   Color? quickTextColor,
   Color? quickBorderColor,
-  int multiplier = 4,
+  int? multiplier,
+  int? premiumReward,
 }) async {
   final gameKey = featureName.toLowerCase().replaceAll(' ', '_');
   await GamePrefs.incrementGamePlayCount(gameKey);
@@ -40,6 +41,7 @@ Future<void> showGameRewardChoice({
     premiumPlacement: premiumPlacement,
     heroAsset: heroAsset,
     multiplier: multiplier,
+    premiumReward: premiumReward ?? (multiplier != null ? null : baseReward * 4),
     onSuccess: onSuccess,
     onCancel: onCancel,
   );

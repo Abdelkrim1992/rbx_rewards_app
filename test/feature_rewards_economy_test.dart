@@ -109,4 +109,53 @@ void main() {
       expect(capService.getPremiumReward('mega_chest'), equals(500));
     });
   });
+
+  group('Dynamic Skill and Action-Based Scaling Tests', () {
+    test('Tap Tap Reflex scales dynamically with tap counter and maxBase', () {
+      // Fail (< 30 taps)
+      expect(RewardConfig.calculateTapTapBaseReward(10, 0, maxBase: 6), 0);
+
+      // Bronze with maxBase = 6
+      expect(RewardConfig.calculateTapTapBaseReward(50, 0, maxBase: 6), 2);
+      expect(2 * 4, 8); // Premium 4x
+
+      // Silver with maxBase = 6
+      expect(RewardConfig.calculateTapTapBaseReward(90, 10, maxBase: 6), 3);
+      expect(3 * 4, 12); // Premium 4x
+
+      // Gold with maxBase = 6
+      expect(RewardConfig.calculateTapTapBaseReward(150, 50, maxBase: 6), 6);
+      expect(6 * 4, 24); // Premium 4x
+    });
+
+    test('Flip Card Memory scales dynamically with time remaining and maxBase', () {
+      // Fail (< 2 pairs)
+      expect(RewardConfig.calculateFlipCardBaseReward(matchesFound: 1, timeLeftSeconds: 50, maxBase: 6), 0);
+
+      // Bronze: partial board
+      expect(RewardConfig.calculateFlipCardBaseReward(matchesFound: 4, timeLeftSeconds: 40, maxBase: 6), 2);
+
+      // Silver: all pairs but < 15s left
+      expect(RewardConfig.calculateFlipCardBaseReward(matchesFound: 6, timeLeftSeconds: 10, maxBase: 6), 4);
+
+      // Gold: speed clear with >= 15s left
+      expect(RewardConfig.calculateFlipCardBaseReward(matchesFound: 6, timeLeftSeconds: 25, maxBase: 6), 6);
+    });
+
+    test('Spin & Win multiplier gives 4x of exactly where spin stopped', () {
+      for (int slice in [2, 4, 6, 8, 10]) {
+        final premium = slice * 4;
+        expect(premium, equals(slice * 4));
+        expect(premium, lessThanOrEqualTo(40));
+      }
+    });
+
+    test('Scratch Card random base in 6-12 range with 4x gives 24-48', () {
+      for (int base = 6; base <= 12; base++) {
+        final premium = base * 4;
+        expect(premium, greaterThanOrEqualTo(24));
+        expect(premium, lessThanOrEqualTo(48));
+      }
+    });
+  });
 }

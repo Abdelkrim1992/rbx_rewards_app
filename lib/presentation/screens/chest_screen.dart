@@ -96,10 +96,13 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
 
     bool claimed = false;
 
+    final premiumReward = earnedCoins * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Chest Reward',
       baseReward: earnedCoins,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.chestOpen,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.megaChest,

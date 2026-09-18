@@ -240,9 +240,12 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
+    final maxBase = ref.read(dailyCapServiceProvider).getBaseReward('quiz');
     final coins = RewardConfig.calculateMathQuizBaseReward(
       _correctCount,
       _sessionQuestions.length,
+      maxBase: maxBase,
+      timeLeftSeconds: _secondsLeft,
     );
     setState(() {
       _originalCoinsEarned = coins;
@@ -268,10 +271,13 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
     if (!mounted) return;
 
+    final premiumReward = _originalCoinsEarned * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Quiz Master Reward',
       baseReward: _originalCoinsEarned,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.quizMasterGame,

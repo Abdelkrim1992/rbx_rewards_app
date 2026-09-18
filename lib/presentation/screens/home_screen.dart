@@ -22,14 +22,15 @@ import '../../widgets/ad_reward_dialog.dart';
 import '../../widgets/coin_burst.dart';
 import '../../core/utils/reward_helper.dart';
 
-// Screen Navigation Targets
-import 'chest_screen.dart';
-import 'scratch_card_screen.dart';
-import 'tap_tap_game_screen.dart';
-import 'flappy_jump_game_screen.dart';
-import 'math_quiz_screen.dart';
-import 'flip_card_game_screen.dart';
-import 'quizzes_screen.dart';
+// Screen Navigation Targets (Deferred for instant app boot)
+import '../../widgets/deferred_game_loader.dart';
+import 'chest_screen.dart' deferred as chest_screen;
+import 'scratch_card_screen.dart' deferred as scratch_screen;
+import 'tap_tap_game_screen.dart' deferred as tap_screen;
+import 'flappy_jump_game_screen.dart' deferred as flappy_screen;
+import 'math_quiz_screen.dart' deferred as math_screen;
+import 'flip_card_game_screen.dart' deferred as flip_screen;
+import 'quizzes_screen.dart' deferred as quiz_screen;
 
 // Modular Home Screen Components
 import 'home/widgets/home_goal_card.dart';
@@ -90,15 +91,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final userProfile = ref.read(userProfileProvider);
     final nextDay = (userProfile.consecutiveDays % 7) + 1;
     final rewardAmount = RewardConfig.getDailyStreakBaseReward(nextDay);
+    final capService = ref.read(dailyCapServiceProvider);
+    final maxPremium = capService.getPremiumReward('daily_reward', fallback: 30);
+    final premiumReward = (rewardAmount * 2).clamp(rewardAmount, maxPremium);
 
     await showRewardChoice(
       context: context,
       featureName: nextDay == 7 ? 'Day 7 Jackpot' : 'Daily Streak Bonus',
       baseReward: rewardAmount,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.dailyReward,
       premiumPlacement: AdPlacement.dailyReward,
       heroAsset: nextDay == 7 ? AppAssets.megaChest : AppAssets.goldRbxCoin,
-      multiplier: 3,
+      multiplier: 2,
       onSuccess: (coins) async {
         await ref.read(dailyRewardCooldownProvider.notifier).claimDaily(
               amount: coins,
@@ -246,12 +251,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _completeMegaChestClaim() async {
     if (_isProcessing) return;
-    // Read dynamic mega chest base reward from database
-    final megaChestBase = ref.read(dailyCapServiceProvider).getBaseReward('mega_chest', fallback: RewardConfig.megaChestReward);
+    // Read dynamic mega chest base and premium rewards from database
+    final capService = ref.read(dailyCapServiceProvider);
+    final megaChestBase = capService.getBaseReward('mega_chest', fallback: RewardConfig.megaChestReward);
+    final megaChestPremium = capService.getPremiumReward('mega_chest', fallback: RewardConfig.megaChestPremium);
     await showRewardChoice(
       context: context,
       featureName: 'Chest Reward',
       baseReward: megaChestBase,
+      premiumReward: megaChestPremium,
       quickPlacement: AdPlacement.chestOpen,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.megaChest,
@@ -300,7 +308,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () async {
           if (!isOnline) return;
           final earned = await Navigator.of(context).push<int>(
-            MaterialPageRoute(builder: (_) => const TapTapGameScreen()),
+            MaterialPageRoute(
+              builder: (_) => DeferredGameLoader(
+                title: 'Tap Tap',
+                themeColor: const Color(0xFF2563EB),
+                iconAsset: AppAssets.tapTapGame,
+                loadLibrary: tap_screen.loadLibrary,
+                builder: () => tap_screen.TapTapGameScreen(),
+              ),
+            ),
           );
           if (earned != null && earned > 0) {
             ref.invalidate(userProfileStreamProvider);
@@ -320,7 +336,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () async {
           if (!isOnline) return;
           final earned = await Navigator.of(context).push<int>(
-            MaterialPageRoute(builder: (_) => const MathQuizScreen()),
+            MaterialPageRoute(
+              builder: (_) => DeferredGameLoader(
+                title: 'Math Quiz',
+                themeColor: const Color(0xFF10B981),
+                iconAsset: AppAssets.quizMasterGame,
+                loadLibrary: math_screen.loadLibrary,
+                builder: () => math_screen.MathQuizScreen(),
+              ),
+            ),
           );
           if (earned != null && earned > 0) {
             ref.invalidate(userProfileStreamProvider);
@@ -340,7 +364,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () async {
           if (!isOnline) return;
           final earned = await Navigator.of(context).push<int>(
-            MaterialPageRoute(builder: (_) => const FlappyJumpGameScreen()),
+            MaterialPageRoute(
+              builder: (_) => DeferredGameLoader(
+                title: 'Flappy Jump',
+                themeColor: const Color(0xFFF59E0B),
+                iconAsset: AppAssets.flappyJumpGame,
+                loadLibrary: flappy_screen.loadLibrary,
+                builder: () => flappy_screen.FlappyJumpGameScreen(),
+              ),
+            ),
           );
           if (earned != null && earned > 0) {
             ref.invalidate(userProfileStreamProvider);
@@ -360,7 +392,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () async {
           if (!isOnline) return;
           final earned = await Navigator.of(context).push<int>(
-            MaterialPageRoute(builder: (_) => const FlipCardGameScreen()),
+            MaterialPageRoute(
+              builder: (_) => DeferredGameLoader(
+                title: 'Flip Cards',
+                themeColor: const Color(0xFFEC4899),
+                iconAsset: AppAssets.memoryMatchGame,
+                loadLibrary: flip_screen.loadLibrary,
+                builder: () => flip_screen.FlipCardGameScreen(),
+              ),
+            ),
           );
           if (earned != null && earned > 0) {
             ref.invalidate(userProfileStreamProvider);
@@ -380,7 +420,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: () async {
           if (!isOnline) return;
           final earned = await Navigator.of(context).push<int>(
-            MaterialPageRoute(builder: (_) => const QuizzesScreen()),
+            MaterialPageRoute(
+              builder: (_) => DeferredGameLoader(
+                title: 'Roblox Trivia',
+                themeColor: const Color(0xFF8B5CF6),
+                iconAsset: AppAssets.quizMasterQuickActions,
+                loadLibrary: quiz_screen.loadLibrary,
+                builder: () => quiz_screen.QuizzesScreen(),
+              ),
+            ),
           );
           if (earned != null && earned > 0) {
             ref.invalidate(userProfileStreamProvider);
@@ -478,7 +526,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             final earned =
                                 await Navigator.of(context).push<int>(
                               MaterialPageRoute(
-                                builder: (_) => const ChestScreen(),
+                                builder: (_) => DeferredGameLoader(
+                                  title: 'Mystery Chest',
+                                  themeColor: AppColors.primary,
+                                  iconAsset: AppAssets.chestIcon,
+                                  loadLibrary: chest_screen.loadLibrary,
+                                  builder: () => chest_screen.ChestScreen(),
+                                ),
                               ),
                             );
                             if (earned != null && earned > 0) {
@@ -490,8 +544,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           onScratchTap: () async {
                             await Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => ScratchCardScreen(
-                                  onBack: () => Navigator.of(context).pop(),
+                                builder: (_) => DeferredGameLoader(
+                                  title: 'Scratch Card',
+                                  themeColor: AppColors.purple,
+                                  iconAsset: AppAssets.dailyRewardImage,
+                                  loadLibrary: scratch_screen.loadLibrary,
+                                  builder: () => scratch_screen.ScratchCardScreen(
+                                    onBack: () => Navigator.of(context).pop(),
+                                  ),
                                 ),
                               ),
                             );

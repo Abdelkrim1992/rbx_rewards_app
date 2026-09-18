@@ -146,7 +146,7 @@ class AppAssets {
   static const String dailyRewardGift = 'assets/images/daily_reward_gift.webp';
   static const String chestIcon = 'assets/images/open_chest_quick_actions.webp';
   static const String spinWheelIcon = 'assets/images/spin_quick_action.webp';
-  static const String watchEarnIcon = 'assets/images/watch_earn_quick_action.png';
+  static const String watchEarnIcon = 'assets/images/watch_earn_quick_action.webp';
   static const String tapTapGame = 'assets/images/tap_tap_mini_game.webp';
   static const String quizMasterGame = 'assets/images/math_quiz_mini_game.webp';
   static const String quizMasterQuickActions =
@@ -213,35 +213,33 @@ class AppAssets {
   // Games screen
   static const String flappyJumpGame = 'assets/images/flappy_mini_game.webp';
 
-  /// Assets to precache in memory on app startup for instant rendering
-  static const List<String> allPrecacheAssets = [
-    appIcon,
+  /// Critical assets to precache on app boot (kept under 3 items for <30ms cold boot)
+  static const List<String> bootPrecacheAssets = [
     rbxLogo,
+    appIcon,
     onboardingHero,
-    onboardingGiftBox,
-    onboardingGame,
-    onboardingCoin,
-    onboardingReward,
-    firstFeatureCard,
-    secondFeatureCard,
-    thirtyFeatureCard,
+  ];
+
+  /// Secondary assets to pre-warm in the background after home screen is mounted
+  static const List<String> backgroundPrecacheAssets = [
     goldRbxCoin,
     balanceWidgetImage,
     dailyRewardImage,
     dailyRewardGift,
     chestIcon,
     spinWheelIcon,
-    tapTapGame,
-    quizMasterGame,
-    quizMasterQuickActions,
-    memoryMatchGame,
-    megaChest,
-    roblox3UsdCard,
-    roblox5UsdCard,
-    roblox10UsdCard,
+    watchEarnIcon,
+    firstFeatureCard,
+    secondFeatureCard,
+    thirtyFeatureCard,
     profileAvatar,
     gamepadStat,
-    flappyJumpGame,
+  ];
+
+  /// Legacy alias maintained for backwards compatibility
+  static const List<String> allPrecacheAssets = [
+    ...bootPrecacheAssets,
+    ...backgroundPrecacheAssets,
   ];
 
   /// Navigation SVGs to preload

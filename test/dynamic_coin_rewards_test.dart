@@ -53,26 +53,26 @@ void main() {
     });
 
     test('Default fallback rewards are returned when DB is not yet fetched', () {
-      expect(capService.getBaseReward('ad'), 50);
-      expect(capService.getBaseReward('watch_earn'), 50);
-      expect(capService.getBaseReward('watch_video'), 50);
-      expect(capService.getBaseReward('video'), 50);
-      expect(capService.getBaseReward('chest'), 15);
-      expect(capService.getBaseReward('scratch'), 5);
-      expect(capService.getBaseReward('spin'), 5);
-      expect(capService.getBaseReward('quiz'), 2);
-      expect(capService.getBaseReward('quizzes'), 2);
-      expect(capService.getBaseReward('math_quiz'), 2);
-      expect(capService.getBaseReward('tap_tap'), 1);
-      expect(capService.getBaseReward('flip_card'), 15);
-      expect(capService.getBaseReward('mega_chest'), 1000);
+      expect(capService.getBaseReward('ad'), 25);
+      expect(capService.getBaseReward('watch_earn'), 25);
+      expect(capService.getBaseReward('watch_video'), 25);
+      expect(capService.getBaseReward('video'), 25);
+      expect(capService.getBaseReward('chest'), 12);
+      expect(capService.getBaseReward('scratch'), 9);
+      expect(capService.getBaseReward('spin'), 6);
+      expect(capService.getBaseReward('quiz'), 6);
+      expect(capService.getBaseReward('quizzes'), 6);
+      expect(capService.getBaseReward('math_quiz'), 6);
+      expect(capService.getBaseReward('tap_tap'), 6);
+      expect(capService.getBaseReward('flip_card'), 6);
+      expect(capService.getBaseReward('mega_chest'), 250);
 
-      expect(capService.getPremiumReward('ad'), 50);
-      expect(capService.getPremiumReward('chest'), 45);
-      expect(capService.getPremiumReward('scratch'), 50);
-      expect(capService.getPremiumReward('spin'), 25);
-      expect(capService.getPremiumReward('quiz'), 4);
-      expect(capService.getPremiumReward('flip_card'), 30);
+      expect(capService.getPremiumReward('ad'), 25);
+      expect(capService.getPremiumReward('chest'), 60);
+      expect(capService.getPremiumReward('scratch'), 48);
+      expect(capService.getPremiumReward('spin'), 48);
+      expect(capService.getPremiumReward('quiz'), 24);
+      expect(capService.getPremiumReward('flip_card'), 24);
     });
 
     test('refreshLimits fetches coin_distributions and updates values & notifies listeners', () async {

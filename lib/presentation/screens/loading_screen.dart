@@ -56,18 +56,18 @@ class _LoadingScreenState extends State<LoadingScreen> {
       // 1. Kick off service bootstrap (Supabase, Hive, SharedPreferences)
       final bootstrapFuture = widget.onBootstrap!();
 
-      // 2. Concurrently precache all raster images, navigation SVGs, and network assets
-      final precacheFuture = ImagePrecacheHelper.precacheAll(context);
+      // 2. Fast boot precache for cold launch (limited to immediate 2-3 assets, <30ms)
+      final precacheFuture = ImagePrecacheHelper.precacheBootAssets(context);
 
-      // 3. Guarantee minimum visible display duration (2200ms) so user sees the logo + spinner
-      final minDurationFuture = Future.delayed(const Duration(milliseconds: 2200));
+      // 3. Ultra-short frame-smoothing duration (200ms) to prevent visual flash
+      final minDurationFuture = Future.delayed(const Duration(milliseconds: 200));
 
       final results = await Future.wait([
         bootstrapFuture,
         precacheFuture,
         minDurationFuture,
       ]).timeout(
-        const Duration(seconds: 8),
+        const Duration(seconds: 4),
         onTimeout: () async {
           debugPrint('⚠️ Cold boot sequence timeout reached, continuing...');
           final container = await bootstrapFuture.catchError((_) => ProviderContainer());

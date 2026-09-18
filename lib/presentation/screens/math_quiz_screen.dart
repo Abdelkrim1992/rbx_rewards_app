@@ -251,7 +251,13 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
 
-    final coins = RewardConfig.calculateMathQuizBaseReward(_correctCount, _totalQuestions);
+    final maxBase = ref.read(dailyCapServiceProvider).getBaseReward('math_quiz');
+    final coins = RewardConfig.calculateMathQuizBaseReward(
+      _correctCount,
+      _totalQuestions,
+      maxBase: maxBase,
+      timeLeftSeconds: _secondsLeft,
+    );
 
     setState(() {
       _originalCoinsEarned = coins;
@@ -334,10 +340,13 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
     if (!mounted) return;
 
+    final premiumReward = _originalCoinsEarned * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Math Quiz Reward',
       baseReward: _originalCoinsEarned,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.quizMasterGame,

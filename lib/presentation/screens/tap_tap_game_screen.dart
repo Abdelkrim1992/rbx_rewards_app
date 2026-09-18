@@ -258,7 +258,8 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
         _coinsEarned = 0;
       });
     } else {
-      final totalCoins = RewardConfig.calculateTapTapBaseReward(_score, _maxCombo);
+      final maxBase = ref.read(dailyCapServiceProvider).getBaseReward('tap_tap');
+      final totalCoins = RewardConfig.calculateTapTapBaseReward(_score, _maxCombo, maxBase: maxBase);
       
       setState(() {
         _isGameOver = true;
@@ -991,10 +992,13 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
 
     if (!mounted) return;
 
+    final premiumReward = _originalCoinsEarned * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Tap Tap Reward',
       baseReward: _originalCoinsEarned,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.tapTapGame,

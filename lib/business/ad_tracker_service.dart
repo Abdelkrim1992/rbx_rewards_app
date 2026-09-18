@@ -65,11 +65,9 @@ class AdTrackerService {
     } else {
       _trackingData.lifetimeOptionalAds++;
     }
-    _adsSinceLastSync++;
-    if (_adsSinceLastSync >= _syncThreshold) {
-      await _syncToBackend();
-    }
     await _persistCounters();
+    // Sync to backend on every completed ad so database daily counter is real-time
+    await _syncToBackend();
   }
 
   /// Increment per-placement count.
@@ -147,19 +145,25 @@ class AdTrackerService {
     _limitFlagOverride = enabled;
   }
 
-  /// Sync lifetime counters to Supabase.
+  /// Sync lifetime and daily counters to Supabase user_ad_stats.
   Future<void> _syncToBackend() async {
     final client = _supabase ?? Supabase.instance.client;
     final uid = client.auth.currentUser?.id;
     if (uid == null) return;
 
     try {
+      final now = DateTime.now().toUtc();
+      final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       await client.from('user_ad_stats').upsert({
         'user_id': uid,
         'lifetime_forced_ads': _trackingData.lifetimeForcedAds,
         'lifetime_optional_ads': _trackingData.lifetimeOptionalAds,
+        'daily_ads_completed': _trackingData.dailyForcedAds + _trackingData.dailyOptionalAds,
+        'daily_forced_ads': _trackingData.dailyForcedAds,
+        'daily_optional_ads': _trackingData.dailyOptionalAds,
+        'last_ad_date': todayStr,
         'placement_counts': _trackingData.placementCounts,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': now.toIso8601String(),
       });
       _adsSinceLastSync = 0;
     } catch (e) {

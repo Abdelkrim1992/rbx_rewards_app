@@ -93,6 +93,9 @@ class SoundService {
     AudioPlayer? customPlayer,
     double volume = 1.0,
   }) async {
+    if (!_initialized) {
+      await init();
+    }
     if (!_soundEnabled) return;
 
     final player = customPlayer ?? _primaryPlayer;

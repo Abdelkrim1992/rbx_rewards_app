@@ -235,10 +235,12 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     _gameTimer?.cancel();
 
     // Performance-tiered reward based on matches found and time remaining
+    final maxBase = ref.read(dailyCapServiceProvider).getBaseReward('flip_card');
     final total = RewardConfig.calculateFlipCardBaseReward(
       matchesFound: _matchesFound,
       timeLeftSeconds: _secondsLeft,
       totalPairs: _totalPairs,
+      maxBase: maxBase,
     );
 
     setState(() {
@@ -268,10 +270,13 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
 
     if (!mounted) return;
 
+    final premiumReward = _originalCoinsEarned * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Memory Match Reward',
       baseReward: _originalCoinsEarned,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.memoryMatchGame,

@@ -39,6 +39,7 @@ import 'business/pubscale_service.dart';
 import 'business/sound_service.dart';
 import 'business/notification_service.dart';
 import 'theme/app_theme.dart';
+import 'utils/image_precache_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -65,81 +66,55 @@ Future<bool> _initSupabase() async {
   }
 }
 
-Future<ProviderContainer> _initStorageAndServices() async {
-  final prefs = await SharedPreferences.getInstance();
-  final hiveRepo = HiveRepository();
-  try {
-    await hiveRepo.init();
-  } catch (e) {
-    debugPrint('❌ Hive init failed: $e');
-  }
-
-  try {
-    await SoundService.instance.init();
-    await NotificationService.instance.init();
-    await NotificationService.instance.scheduleDailyQuestsReminder();
-    await NotificationService.instance.scheduleStreakReminder();
-  } catch (e) {
-    debugPrint('Sound/Notification startup init note: $e');
-  }
-
-  return ProviderContainer(
-    overrides: [
-      hiveRepositoryProvider.overrideWithValue(hiveRepo),
-      onboardingCompletedProvider
-          .overrideWith((ref) => OnboardingNotifier(prefs)),
-    ],
-  );
-}
-
-Future<void> _initStartupAuth(ProviderContainer container) async {
-  try {
-    final auth = container.read(authServiceProvider);
-
-    // In forced social sign-in architecture, do NOT auto-create a ghost device account.
-    // Only check if an authenticated session already exists from a previous login.
-    if (auth.currentUser != null) {
-      debugPrint('🔑 Active session found: ${auth.currentUser?.email ?? auth.currentUser?.id}');
-      try {
-        final userData = await container
-            .read(supabaseRepositoryProvider)
-            .getUserData()
-            .timeout(const Duration(seconds: 2));
-
-        final bool hasClaimedBonus =
-            userData['welcome_bonus_claimed'] as bool? ?? false;
-        final int balance = userData['balance'] as int? ?? 0;
-        final int gamesPlayed = userData['games_played'] as int? ?? 0;
-
-        if (hasClaimedBonus || balance > 0 || gamesPlayed > 0) {
-          debugPrint('👋 Returning user detected. Auto-skipping onboarding carousel.');
-          await container
-              .read(onboardingCompletedProvider.notifier)
-              .setCompleted(true);
-        }
-      } catch (e) {
-        debugPrint('Returning user check skipped: $e');
-      }
-    } else {
-      debugPrint('ℹ️ No active session on startup. Onboarding sign-in gate will be shown.');
-    }
-  } catch (e) {
-    debugPrint('❌ Auth initialization error: $e');
-  }
-}
-
 Future<ProviderContainer> _bootstrapServices() async {
   try {
-    final isSupabaseReady = await _initSupabase();
-    final container = await _initStorageAndServices();
+    final hiveRepo = HiveRepository();
 
+    // 1. Parallelize core offline-first storage and Supabase initialization
+    final results = await Future.wait([
+      _initSupabase(),
+      SharedPreferences.getInstance(),
+      hiveRepo.init().then((_) => true).catchError((e) {
+        debugPrint('❌ Hive init failed: $e');
+        return false;
+      }),
+    ]);
+
+    final isSupabaseReady = results[0] as bool;
+    final prefs = results[1] as SharedPreferences;
+
+    final container = ProviderContainer(
+      overrides: [
+        hiveRepositoryProvider.overrideWithValue(hiveRepo),
+        onboardingCompletedProvider
+            .overrideWith((ref) => OnboardingNotifier(prefs)),
+      ],
+    );
+
+    // 2. Fast in-memory session check (ZERO blocking network calls on startup)
     if (isSupabaseReady) {
-      await _initStartupAuth(container);
+      _initStartupAuthFast(container);
     }
+
     return container;
   } catch (e) {
     debugPrint('❌ App bootstrap error: $e');
     return ProviderContainer();
+  }
+}
+
+void _initStartupAuthFast(ProviderContainer container) {
+  try {
+    final auth = container.read(authServiceProvider);
+    if (auth.currentUser != null) {
+      debugPrint('🔑 Active session found: ${auth.currentUser?.email ?? auth.currentUser?.id}');
+      // Fast bypass onboarding carousel for authenticated returning user
+      container.read(onboardingCompletedProvider.notifier).setCompleted(true);
+    } else {
+      debugPrint('ℹ️ No active session on startup. Onboarding sign-in gate will be shown.');
+    }
+  } catch (e) {
+    debugPrint('❌ Fast auth initialization note: $e');
   }
 }
 
@@ -355,7 +330,22 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   }
 
   void _initDeferredServices() {
-    // Defer monetization SDKs until after boot screen and target screen are mounted
+    // 1. Pre-warm secondary dashboard assets & SVGs after first frame is safely rendered
+    ImagePrecacheHelper.precacheBackground(context);
+
+    // 2. Initialize sound & local notifications asynchronously in background
+    Future.microtask(() async {
+      try {
+        await SoundService.instance.init();
+        await NotificationService.instance.init();
+        await NotificationService.instance.scheduleDailyQuestsReminder();
+        await NotificationService.instance.scheduleStreakReminder();
+      } catch (e) {
+        debugPrint('Deferred background services note: $e');
+      }
+    });
+
+    // 3. Defer monetization SDKs until after boot screen and target screen are mounted
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       try {

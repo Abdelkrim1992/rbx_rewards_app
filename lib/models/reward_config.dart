@@ -64,41 +64,60 @@ class RewardConfig {
   static const int miniGameMultiplier = 4;
   static const int miniGameMaxPremiumReward = 48; // 12 x 4 = 48 max
 
-  /// Math Quiz & Trivia reward calculation
-  static int calculateMathQuizBaseReward(int correctCount, int totalQuestions) {
+  /// Math Quiz & Trivia reward calculation based on accuracy ratio and speed.
+  static int calculateMathQuizBaseReward(
+    int correctCount,
+    int totalQuestions, {
+    int maxBase = miniGameMaxBaseReward,
+    int? timeLeftSeconds,
+  }) {
     if (totalQuestions <= 0) return 0;
     final ratio = correctCount / totalQuestions;
     if (ratio < 0.4) return 0; // Fail threshold (< 40% correct)
-    if (ratio < 0.6) return 3; // Bronze (40% - 59%)
-    if (ratio < 1.0) return 7; // Silver (60% - 99%)
-    return miniGameMaxBaseReward; // 12 coins Gold (100% perfect)
+    if (ratio < 0.6) return (maxBase * 0.25).round().clamp(1, maxBase); // Bronze (40% - 59% -> 3)
+    if (ratio < 1.0) return (maxBase * 0.58).round().clamp(1, maxBase); // Silver (60% - 99% -> 7)
+    return maxBase; // Gold (100% perfect -> 12)
   }
 
-  /// Flappy Jump reward calculation
-  static int calculateFlappyBaseReward(int score) {
+  /// Flappy Jump reward calculation based on score (pipes cleared) & survival.
+  static int calculateFlappyBaseReward(
+    int score, {
+    int maxBase = miniGameMaxBaseReward,
+  }) {
     if (score < 3) return 0; // Fail / early crash
-    if (score < 10) return 3; // Bronze (3-9 score)
-    if (score < 25) return 7; // Silver (10-24 score)
-    return miniGameMaxBaseReward; // 12 coins Gold (25+ score)
+    if (score < 10) return (maxBase * 0.25).round().clamp(1, maxBase); // Bronze (3-9 score -> 3)
+    if (score < 25) return (maxBase * 0.58).round().clamp(1, maxBase); // Silver (10-24 score -> 7)
+    return maxBase; // Gold (25+ score -> 12)
   }
 
-  /// Tap Tap Reflex reward calculation
-  static int calculateTapTapBaseReward(int score, int maxCombo) {
+  /// Tap Tap Reflex reward calculation directly based on tap counter and combo.
+  static int calculateTapTapBaseReward(
+    int score,
+    int maxCombo, {
+    int maxBase = miniGameMaxBaseReward,
+  }) {
     if (score < 30) return 0; // Anti-AFK Fail (< 30 taps)
-    if (score < 71) return 3; // Bronze (30-70 taps)
-    if (score < 141) return 7; // Silver (71-140 taps)
-    return miniGameMaxBaseReward; // 12 coins Gold (141+ taps)
+    if (score < 71) return (maxBase * 0.25).round().clamp(1, maxBase); // Bronze (30-70 taps -> 3)
+    if (score < 141) return (maxBase * 0.58).round().clamp(1, maxBase); // Silver (71-140 taps -> 7)
+    return maxBase; // Gold (141+ taps -> 12)
   }
 
-  /// Flip Card Memory match reward calculation
+  /// Flip Card Memory match reward calculation based on pairs found & time left.
   static int calculateFlipCardBaseReward({
     required int matchesFound,
     required int timeLeftSeconds,
     int totalPairs = 6,
+    int maxBase = miniGameMaxBaseReward,
   }) {
     if (matchesFound < 2) return 0; // Fail (< 2 pairs)
-    if (matchesFound < totalPairs) return 4; // Bronze (2-5 pairs matched)
-    if (timeLeftSeconds < 15) return 8; // Silver (Cleared with < 15s left)
-    return miniGameMaxBaseReward; // 12 coins Gold (Speed clear with >= 15s left)
+    if (matchesFound < totalPairs) {
+      // Partial completion: Bronze tier (4 for maxBase 12)
+      return (maxBase * (1.0 / 3.0)).round().clamp(1, maxBase);
+    }
+    // Completed all pairs: Time factor determines Silver vs Gold
+    if (timeLeftSeconds < 15) {
+      return (maxBase * (2.0 / 3.0)).round().clamp(1, maxBase); // Silver (< 15s left -> 8)
+    }
+    return maxBase; // Gold (Speed clear with >= 15s left -> 12)
   }
 }

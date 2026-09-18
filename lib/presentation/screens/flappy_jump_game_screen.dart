@@ -1241,7 +1241,8 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
         _handledGameOver = true;
         _checkAndUpdateHighScore();
         // Recalculate final base reward from final score
-        final finalBase = RewardConfig.calculateFlappyBaseReward(_game.score);
+        final maxBase = ref.read(dailyCapServiceProvider).getBaseReward('flappy_jump');
+        final finalBase = RewardConfig.calculateFlappyBaseReward(_game.score, maxBase: maxBase);
         _game.coinsEarned = finalBase;
         if (finalBase > 0) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1400,10 +1401,13 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     // Final calculation is already done by onStateChanged – use game.coinsEarned as base
     final baseAmt = _game.coinsEarned;
 
+    final premiumReward = baseAmt * 4;
+
     await showRewardChoice(
       context: context,
       featureName: 'Flappy Jump Reward',
       baseReward: baseAmt,
+      premiumReward: premiumReward,
       quickPlacement: AdPlacement.miniGameCompletion,
       premiumPlacement: AdPlacement.doubleReward,
       heroAsset: AppAssets.goldRbxCoin,
