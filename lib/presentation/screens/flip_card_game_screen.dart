@@ -8,6 +8,7 @@ import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/interactive_button.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../models/reward_config.dart';
@@ -418,6 +419,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
+        final navigator = Navigator.of(context);
         final shouldLeave = await showQuitConfirmationDialog(
           context,
           title: 'Quit Game?',
@@ -425,7 +427,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
               'Are you sure you want to exit? You will lose unclaimed progress.',
         );
         if (shouldLeave && mounted) {
-          Navigator.of(context).pop();
+          navigator.pop();
         }
       },
       child: Scaffold(
@@ -480,7 +482,8 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                       message:
                           'Are you sure you want to exit? You will lose unclaimed progress.',
                     );
-                    if (shouldLeave && mounted) {
+                    if (!mounted) return;
+                    if (shouldLeave) {
                       Navigator.of(context).pop();
                     }
                   } else {
@@ -564,104 +567,191 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
 
   // --- 1. MENU SCREEN ---
   Widget _buildMenuScreen() {
-    return Column(
+    final maxBase = ref.watch(dailyCapServiceProvider).getBaseReward('flip_card');
+    return SingleChildScrollView(
       key: const ValueKey('MENU'),
-      mainAxisAlignment: MainAxisAlignment.center,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 8),
+          _buildLobbyCardsDeck(),
+          const SizedBox(height: 18),
+          _buildLobbyHeader(),
+          const SizedBox(height: 14),
+          _buildLobbyRewardPill(maxBase),
+          const SizedBox(height: 16),
+          _buildLobbyChips(),
+          const SizedBox(height: 28),
+          _buildLobbyStartButton(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLobbyCardsDeck() {
+    return SizedBox(
+      height: 120,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Transform.translate(
+            offset: const Offset(-45, 6),
+            child: Transform.rotate(
+              angle: -0.18,
+              child: _buildMiniPreviewCard('💎', true),
+            ),
+          ),
+          Transform.translate(
+            offset: const Offset(45, 6),
+            child: Transform.rotate(
+              angle: 0.18,
+              child: _buildMiniPreviewCard('⭐', true),
+            ),
+          ),
+          _buildMiniPreviewCard('🔥', false),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLobbyHeader() {
+    return Column(
       children: [
-        const Spacer(),
-        // Title
-        Text(
-          'Flip Cards',
-          style: GoogleFonts.outfit(
-            fontSize: 44,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFF181C32),
-            letterSpacing: -0.5,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDE9FE),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFDDD6FE)),
           ),
-        ),
-        const SizedBox(height: 12),
-        // Subtitle
-        Text(
-          'Match pairs to earn\nRBX Coins!',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF64748B),
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Mini preview cards
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildMiniPreviewCard('?', false),
-            const SizedBox(width: 12),
-            _buildMiniPreviewCard('💎', true),
-            const SizedBox(width: 12),
-            _buildMiniPreviewCard('💎', true),
-            const SizedBox(width: 12),
-            _buildMiniPreviewCard('?', false),
-          ],
-        ),
-
-        const SizedBox(height: 50),
-
-        // Glowing Big Pulse Play Button
-        GestureDetector(
-          onTap: _startGame,
-          child: Column(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6338F9).withOpacity(0.35),
-                      blurRadius: 25,
-                      spreadRadius: 4,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                    size: 70,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
+              const Icon(Icons.psychology_rounded, size: 15, color: Color(0xFF7C3AED)),
+              const SizedBox(width: 6),
               Text(
-                'Start Game',
+                'MEMORY ARENA',
                 style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF181C32),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: const Color(0xFF7C3AED),
                 ),
               ),
             ],
           ),
         ),
-        const Spacer(),
+        const SizedBox(height: 10),
+        Text(
+          'Memory Match',
+          style: GoogleFonts.outfit(
+            fontSize: 34,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF181C32),
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Flip cards, track pairs, and earn RBX\nbefore the countdown expires!',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF64748B),
+            height: 1.35,
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildLobbyRewardPill(int maxBase) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F3FF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDDD6FE)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(AppAssets.goldRbxCoin, width: 22, height: 22),
+          const SizedBox(width: 8),
+          Text(
+            'Earn up to +$maxBase RBX (4X with Boost)',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF6D28D9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLobbyChips() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildLobbySpecChip(Icons.dashboard_rounded, '8 Pairs'),
+        const SizedBox(width: 8),
+        _buildLobbySpecChip(Icons.timer_outlined, '90 Seconds'),
+        const SizedBox(width: 8),
+        _buildLobbySpecChip(Icons.local_fire_department_rounded, 'Streak Boost'),
+      ],
+    );
+  }
+
+  Widget _buildLobbySpecChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: const Color(0xFF475569)),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLobbyStartButton() {
+    return InteractiveButton(
+      height: 56,
+      icon: Icons.play_arrow_rounded,
+      iconSize: 24,
+      text: 'START GAME',
+      fontSize: 16,
+      fontWeight: FontWeight.w900,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        _startGame();
+      },
     );
   }
 
   Widget _buildMiniPreviewCard(String text, bool isRevealed) {
     return Container(
-      width: 52,
-      height: 68,
+      width: 58,
+      height: 78,
       decoration: BoxDecoration(
         gradient: isRevealed
             ? null
@@ -674,15 +764,15 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isRevealed
-              ? const Color(0xFF6338F9).withOpacity(0.3)
-              : Colors.transparent,
+              ? const Color(0xFF6338F9).withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.4),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6338F9).withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: const Color(0xFF6338F9).withValues(alpha: 0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -690,7 +780,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
         child: Text(
           text,
           style: TextStyle(
-            fontSize: isRevealed ? 24 : 20,
+            fontSize: isRevealed ? 26 : 22,
             fontWeight: FontWeight.w900,
             color: isRevealed ? null : Colors.white,
           ),
@@ -705,120 +795,150 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
       key: const ValueKey('PLAYING'),
       children: [
         const SizedBox(height: 8),
+        _buildGameplayHeaderStats(),
+        const SizedBox(height: 12),
+        Expanded(child: _buildCardGrid()),
+        _buildGameplayBottomTimer(),
+      ],
+    );
+  }
 
-        // Stats row: Moves + Combo
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              _buildStatPill(Icons.touch_app, 'Moves', '$_moves'),
-              const SizedBox(width: 12),
-              _buildStatPill(Icons.bolt, 'Combo', '${_comboStreak}x'),
-              const Spacer(),
-              // Timer pill
-              Container(
-                height: 38,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: _secondsLeft <= 15
-                      ? const Color(0xFFFFEBEE)
-                      : const Color(0xFFF1F1FB),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _secondsLeft <= 15
-                        ? const Color(0xFFE57373)
-                        : const Color(0xFFE2E2F5),
+  Widget _buildGameplayHeaderStats() {
+    final isLowTime = _secondsLeft <= 15;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          _buildStatPill(Icons.touch_app_rounded, 'Moves', '$_moves'),
+          const SizedBox(width: 8),
+          _buildComboPill(),
+          const Spacer(),
+          Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: isLowTime ? const Color(0xFFFEE2E2) : const Color(0xFFF1F1FB),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isLowTime ? const Color(0xFFEF4444) : const Color(0xFFE2E2F5),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.timer_rounded,
+                  color: isLowTime ? const Color(0xFFDC2626) : const Color(0xFF6338F9),
+                  size: 17,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _formatTimerText(),
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: isLowTime ? const Color(0xFFDC2626) : const Color(0xFF131326),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.timer,
-                      color: _secondsLeft <= 15
-                          ? const Color(0xFFE57373)
-                          : const Color(0xFF6338F9),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _formatTimerText(),
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: _secondsLeft <= 15
-                            ? const Color(0xFFB71C1C)
-                            : const Color(0xFF131326),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Card Grid
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 0.75,
-              ),
-              itemCount: _cards.length,
-              itemBuilder: (ctx, i) {
-                return _buildGameCard(i);
-              },
+              ],
             ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
 
-        // Bottom Timer Progress Bar
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  height: 16,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECEFF1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: _timerProgress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _secondsLeft <= 15
-                            ? const Color(0xFFE57373)
-                            : const Color(0xFF6338F9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                '$_matchesFound/$_totalPairs',
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
+  Widget _buildComboPill() {
+    final hasCombo = _comboStreak >= 2;
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: hasCombo ? const Color(0xFFFFF7ED) : const Color(0xFFF1F1FB),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: hasCombo ? const Color(0xFFF97316) : const Color(0xFFE2E2F5),
         ),
-      ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.local_fire_department_rounded,
+            color: hasCombo ? const Color(0xFFEA580C) : const Color(0xFF6338F9),
+            size: 17,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            '${_comboStreak}x',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: hasCombo ? const Color(0xFFEA580C) : const Color(0xFF131326),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.74,
+        ),
+        itemCount: _cards.length,
+        itemBuilder: (ctx, i) => _buildGameCard(i),
+      ),
+    );
+  }
+
+  Widget _buildGameplayBottomTimer() {
+    final isLowTime = _secondsLeft <= 15;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              height: 14,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: _timerProgress.clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isLowTime
+                          ? [const Color(0xFFEF4444), const Color(0xFFDC2626)]
+                          : [const Color(0xFF6338F9), const Color(0xFF10B981)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Text(
+            '$_matchesFound/$_totalPairs Pairs',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF475569),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -856,46 +976,46 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     return GestureDetector(
       onTap: () => _onCardTap(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 260),
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           gradient: showFace
               ? null
               : const LinearGradient(
-                  colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
+                  colors: [Color(0xFF2E1065), Color(0xFF6338F9)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
           color: showFace
-              ? (card.isMatched ? const Color(0xFFE8F5E9) : Colors.white)
+              ? (card.isMatched ? const Color(0xFFECFDF5) : Colors.white)
               : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: card.isMatched
-                ? const Color(0xFF81C784)
+                ? const Color(0xFF10B981)
                 : (showFace
-                    ? const Color(0xFF6338F9).withOpacity(0.3)
-                    : Colors.transparent),
-            width: 2.5,
+                    ? const Color(0xFF6338F9)
+                    : const Color(0xFF8B64FF).withValues(alpha: 0.5)),
+            width: card.isMatched ? 2.5 : 2.0,
           ),
           boxShadow: [
             BoxShadow(
               color: card.isMatched
-                  ? const Color(0xFF81C784).withOpacity(0.25)
-                  : const Color(0xFF6338F9).withOpacity(showFace ? 0.12 : 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+                  ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                  : const Color(0xFF6338F9).withValues(alpha: showFace ? 0.12 : 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Center(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
+            duration: const Duration(milliseconds: 200),
             child: showFace
                 ? Text(
                     card.symbol,
                     key: ValueKey('face_$index'),
-                    style: const TextStyle(fontSize: 32),
+                    style: const TextStyle(fontSize: 30),
                   )
                 : Container(
                     key: ValueKey('back_$index'),
@@ -903,13 +1023,17 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                     height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.35),
+                        width: 1.5,
+                      ),
                     ),
                     child: const Center(
                       child: Text(
                         '?',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
@@ -928,15 +1052,9 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     final bool clearedBoard = _matchesFound >= _totalPairs;
     final tierName = !didWin
         ? 'Keep Practicing'
-        : (_originalCoinsEarned == 12
+        : (_originalCoinsEarned >= 12
             ? 'Photographic Memory 🥇'
-            : (_originalCoinsEarned == 8 ? 'Memory Master 🥈' : 'Sharp Mind 🥉'));
-
-    final headerTitle = !didWin
-        ? (clearedBoard ? 'Board Cleared!' : "Time's Up!")
-        : (_originalCoinsEarned == 12
-            ? 'Photographic Memory! 🥇'
-            : (_originalCoinsEarned == 8 ? 'Memory Master! 🥈' : 'Sharp Mind! 🥉'));
+            : (_originalCoinsEarned >= 8 ? 'Memory Master 🥈' : 'Sharp Mind 🥉'));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -953,256 +1071,217 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Spacer(),
-
-                  // Trophy / Timeout icon
-                  ScaleTransition(
-                    scale: _matchPopScale,
-                    child: Container(
-                      width: useSmallStyle ? 70 : 90,
-                      height: useSmallStyle ? 70 : 90,
-                      decoration: BoxDecoration(
-                        color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFFEF2F2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        didWin ? Icons.emoji_events_rounded : Icons.close_rounded,
-                        color: didWin ? const Color(0xFFFFCC44) : const Color(0xFFEF4444),
-                        size: useSmallStyle ? 38 : 50,
-                      ),
-                    ),
-                  ),
+                  _buildGameOverHero(didWin, useSmallStyle),
+                  SizedBox(height: useSmallStyle ? 10 : 16),
+                  _buildStarRating(didWin, clearedBoard),
+                  SizedBox(height: useSmallStyle ? 6 : 10),
+                  _buildGameOverTitle(didWin, clearedBoard, useSmallStyle),
                   SizedBox(height: useSmallStyle ? 12 : 20),
-
-                  // Result Header
-                  Text(
-                    headerTitle,
-                    style: GoogleFonts.outfit(
-                      fontSize: useSmallStyle ? 26 : 32,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF181C32),
-                    ),
-                  ),
-                  SizedBox(height: useSmallStyle ? 6 : 8),
-
-                  // Stats
-                  Text(
-                    '$_matchesFound/$_totalPairs Pairs  •  $_moves Moves',
-                    style: GoogleFonts.inter(
-                      fontSize: useSmallStyle ? 13 : 15,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-
-                  if (_maxCombo >= 2) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Best Combo: ${_maxCombo}x',
-                      style: GoogleFonts.inter(
-                        fontSize: useSmallStyle ? 12 : 13,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6338F9),
-                      ),
-                    ),
-                  ],
-
-                  SizedBox(height: useSmallStyle ? 14 : 24),
-
-                  // Breakdown
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: useSmallStyle ? 24 : 40),
-                    child: Container(
-                      padding: EdgeInsets.all(useSmallStyle ? 14 : 18),
-                      decoration: BoxDecoration(
-                        color: didWin ? const Color(0xFFF1F1FB) : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: didWin ? const Color(0xFFE2E2F5) : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          _buildRewardRow('Pairs Matched', '$_matchesFound / $_totalPairs'),
-                          const SizedBox(height: 8),
-                          _buildRewardRow('Time Remaining', '${_secondsLeft}s'),
-                          const SizedBox(height: 8),
-                          _buildRewardRow('Performance Tier', tierName),
-                          const SizedBox(height: 8),
-                          _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(color: Color(0xFFE2E2F5)),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total Earned',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF181C32),
-                                ),
-                              ),
-                              Row(
-                                children: [
-                                  const Icon(Icons.currency_bitcoin,
-                                      color: Color(0xFFFFB000), size: 20),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '+$_coinsEarned RBX',
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF181C32),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  _buildGameOverBreakdown(didWin, tierName, useSmallStyle),
                   const Spacer(),
-
-                  // Action Buttons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        if (didWin && !_hasClaimed) ...[
-                          // Primary: Claim Reward
-                          GestureDetector(
-                            onTap: _isProcessingAd ? null : _claimCoins,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 50 : 60,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6338F9).withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isProcessingClaim
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
-                                        ),
-                                      )
-                                    : Text(
-                                        'Claim Reward (+$_originalCoinsEarned RBX)',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 15 : 17,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: useSmallStyle ? 10 : 14),
-                          // Secondary: Play Again
-                          GestureDetector(
-                            onTap: _isProcessingAd ? null : _playAgain,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 46 : 54,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECE7FF),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 23 : 27),
-                                border: Border.all(color: const Color(0xFFD8D0FF), width: 1.5),
-                              ),
-                              child: Center(
-                                child: _isProcessingPlayAgain
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFF6338F9),
-                                          strokeWidth: 2.0,
-                                        ),
-                                      )
-                                    : Text(
-                                        'Play Again',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 15 : 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF6338F9),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          // Primary: Play Again / Try Again
-                          GestureDetector(
-                            onTap: _isProcessingAd ? null : _playAgain,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 50 : 60,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF6338F9), Color(0xFF8B64FF)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6338F9).withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isProcessingPlayAgain
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
-                                        ),
-                                      )
-                                    : Text(
-                                        didWin ? 'Play Again' : 'Try Again',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 16 : 18,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 30),
-                      ],
-                    ),
-                  ),
+                  _buildGameOverButtons(didWin, useSmallStyle),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildGameOverHero(bool didWin, bool useSmallStyle) {
+    final size = useSmallStyle ? 72.0 : 88.0;
+    return ScaleTransition(
+      scale: _matchPopScale,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: didWin ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: (didWin ? const Color(0xFFF59E0B) : const Color(0xFFEF4444))
+                  .withValues(alpha: 0.25),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Icon(
+          didWin ? Icons.emoji_events_rounded : Icons.close_rounded,
+          color: didWin ? const Color(0xFFD97706) : const Color(0xFFDC2626),
+          size: useSmallStyle ? 38 : 46,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStarRating(bool didWin, bool clearedBoard) {
+    int stars = 0;
+    if (clearedBoard && _secondsLeft >= 45) {
+      stars = 3;
+    } else if (clearedBoard) {
+      stars = 2;
+    } else if (didWin) {
+      stars = 1;
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (i) {
+        final isFilled = i < stars;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Icon(
+            Icons.star_rounded,
+            size: 26,
+            color: isFilled ? const Color(0xFFF59E0B) : const Color(0xFFCBD5E1),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildGameOverTitle(bool didWin, bool clearedBoard, bool useSmallStyle) {
+    final headerTitle = !didWin
+        ? (clearedBoard ? 'Board Cleared!' : "Time's Up!")
+        : (_originalCoinsEarned >= 12
+            ? 'Photographic Memory!'
+            : (_originalCoinsEarned >= 8 ? 'Memory Master!' : 'Sharp Mind!'));
+
+    return Column(
+      children: [
+        Text(
+          headerTitle,
+          style: GoogleFonts.outfit(
+            fontSize: useSmallStyle ? 24 : 30,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF181C32),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$_matchesFound/$_totalPairs Pairs Matched  •  $_moves Moves',
+          style: GoogleFonts.inter(
+            fontSize: useSmallStyle ? 13 : 14,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF64748B),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGameOverBreakdown(bool didWin, String tierName, bool useSmallStyle) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: useSmallStyle ? 20 : 36),
+      child: Container(
+        padding: EdgeInsets.all(useSmallStyle ? 14 : 18),
+        decoration: BoxDecoration(
+          color: didWin ? const Color(0xFFF5F3FF) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: didWin ? const Color(0xFFDDD6FE) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Column(
+          children: [
+            _buildRewardRow('Pairs Matched', '$_matchesFound / $_totalPairs'),
+            const SizedBox(height: 8),
+            _buildRewardRow('Time Remaining', '${_secondsLeft}s'),
+            const SizedBox(height: 8),
+            _buildRewardRow('Performance Tier', tierName),
+            const SizedBox(height: 8),
+            _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(color: Color(0xFFDDD6FE)),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Total Earned',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF181C32),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Image.asset(AppAssets.goldRbxCoin, width: 20, height: 20),
+                    const SizedBox(width: 5),
+                    Text(
+                      '+$_coinsEarned RBX',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF7C3AED),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameOverButtons(bool didWin, bool useSmallStyle) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          if (didWin && !_hasClaimed) ...[
+            _buildPrimaryClaimButton(useSmallStyle),
+            SizedBox(height: useSmallStyle ? 10 : 12),
+            _buildSecondaryPlayAgainButton(useSmallStyle),
+          ] else ...[
+            _buildPrimaryPlayAgainButton(didWin, useSmallStyle),
+          ],
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryClaimButton(bool useSmallStyle) {
+    return InteractiveButton(
+      height: useSmallStyle ? 50 : 56,
+      isLoading: _isProcessingClaim,
+      onTap: _isProcessingAd ? null : _claimCoins,
+      text: 'Claim Reward (+$_originalCoinsEarned RBX)',
+      fontSize: useSmallStyle ? 14 : 15,
+      fontWeight: FontWeight.w900,
+    );
+  }
+
+  Widget _buildSecondaryPlayAgainButton(bool useSmallStyle) {
+    return InteractiveButton(
+      height: useSmallStyle ? 44 : 50,
+      isLoading: _isProcessingPlayAgain,
+      onTap: _isProcessingAd ? null : _playAgain,
+      backgroundColor: AppColors.primarySoft,
+      border: Border.all(color: AppColors.cardBorder, width: 1.5),
+      textColor: AppColors.purple,
+      text: 'Play Again',
+      fontSize: useSmallStyle ? 13 : 15,
+      fontWeight: FontWeight.w800,
+    );
+  }
+
+  Widget _buildPrimaryPlayAgainButton(bool didWin, bool useSmallStyle) {
+    return InteractiveButton(
+      height: useSmallStyle ? 50 : 56,
+      isLoading: _isProcessingPlayAgain,
+      onTap: _isProcessingAd ? null : _playAgain,
+      text: didWin ? 'Play Again' : 'Try Again',
+      fontSize: useSmallStyle ? 14 : 16,
+      fontWeight: FontWeight.w900,
     );
   }
 
@@ -1235,48 +1314,39 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
     return AnimatedBuilder(
       animation: _floatController,
       builder: (context, child) {
-        final floatOffset =
-            math.sin(_floatController.value * 2 * math.pi) * 12.0;
-
+        final floatOffset = math.sin(_floatController.value * 2 * math.pi) * 12.0;
         return Stack(
           children: [
             Positioned(
               top: 80 + floatOffset,
               left: 30,
-              child: _buildDecorativeSymbol(
-                  '🃏', 48, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('🃏', 48, const Color(0xFF6338F9).withValues(alpha: 0.7)),
             ),
             Positioned(
               top: 40 - floatOffset,
               right: 140,
-              child: _buildDecorativeSymbol(
-                  '✨', 40, const Color(0xFF8B64FF).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('✨', 40, const Color(0xFF8B64FF).withValues(alpha: 0.7)),
             ),
             Positioned(
               top: 100 + floatOffset,
               right: 40,
-              child: _buildDecorativeSymbol(
-                  '🎴', 44, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('🎴', 44, const Color(0xFF6338F9).withValues(alpha: 0.7)),
             ),
             Positioned(
               bottom: 120 + floatOffset,
               left: 45,
-              child: _buildDecorativeSymbol(
-                  '🃏', 46, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('🃏', 46, const Color(0xFF6338F9).withValues(alpha: 0.7)),
             ),
             Positioned(
               bottom: 80 - floatOffset,
               right: 120,
-              child: _buildDecorativeSymbol(
-                  '✨', 38, const Color(0xFF8B64FF).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('✨', 38, const Color(0xFF8B64FF).withValues(alpha: 0.7)),
             ),
             Positioned(
               bottom: 140 + floatOffset,
               right: 50,
-              child: _buildDecorativeSymbol(
-                  '🎴', 42, const Color(0xFF6338F9).withOpacity(0.7)),
+              child: _buildDecorativeSymbol('🎴', 42, const Color(0xFF6338F9).withValues(alpha: 0.7)),
             ),
-            // Drifting Gold Coins
             Positioned(
               top: 160 - floatOffset,
               right: -20,
@@ -1317,7 +1387,7 @@ class _FlipCardGameScreenState extends ConsumerState<FlipCardGameScreen>
           shadows: [
             Shadow(
               blurRadius: 10,
-              color: color.withOpacity(0.18),
+              color: color.withValues(alpha: 0.18),
               offset: const Offset(0, 4),
             ),
           ],

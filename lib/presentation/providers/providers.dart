@@ -74,3 +74,6 @@ final badgeServiceProvider = Provider((ref) => BadgeService());
 final dailyCapServiceProvider = ChangeNotifierProvider<DailyCapService>(
   (ref) => DailyCapService(ref.watch(supabaseRepositoryProvider)),
 );
+
+/// Tracks active tab in HomeDailyHubCard (0 = Streak, 1 = Missions/Quests)
+final dailyHubTabProvider = StateProvider<int>((ref) => 0);

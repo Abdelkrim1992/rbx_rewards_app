@@ -158,14 +158,6 @@ class _GameShelfCardState extends State<_GameShelfCard> {
               color: AppColors.cardBorder,
               width: 1.2,
             ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 8,
-                spreadRadius: 0,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,

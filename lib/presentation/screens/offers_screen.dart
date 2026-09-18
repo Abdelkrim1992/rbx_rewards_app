@@ -204,7 +204,7 @@ class _OffersScreenState extends ConsumerState<OffersScreen> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       height: 1.6,
-                                      color: AppColors.slateText.withOpacity(0.9),
+                                      color: AppColors.slateText.withValues(alpha: 0.9),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -262,7 +262,7 @@ class _OfferwallCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: gradientColors.last.withOpacity(0.25),
+              color: gradientColors.last.withValues(alpha: 0.25),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -279,7 +279,7 @@ class _OfferwallCard extends StatelessWidget {
                   width: 90,
                   height: 90,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
+                    color: Colors.white.withValues(alpha: 0.08),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -291,7 +291,7 @@ class _OfferwallCard extends StatelessWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -307,7 +307,7 @@ class _OfferwallCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
@@ -322,7 +322,7 @@ class _OfferwallCard extends StatelessWidget {
                         ),
                         Icon(
                           icon,
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           size: 22,
                         ),
                       ],
@@ -342,7 +342,7 @@ class _OfferwallCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withValues(alpha: 0.9),
                         fontWeight: FontWeight.w400,
                         height: 1.35,
                       ),
@@ -354,7 +354,7 @@ class _OfferwallCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -384,7 +384,7 @@ class _OfferwallCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
+                                color: Colors.black.withValues(alpha: 0.05),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),

@@ -172,16 +172,6 @@ class _HomeMegaChestCardState extends ConsumerState<HomeMegaChestCard>
                 color: AppColors.cardBorder,
                 width: 1.2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: isReadyToClaim
-                      ? AppColors.purple.withValues(alpha: 0.1)
-                      : const Color(0x0A000000),
-                  blurRadius: 10,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 3),
-                ),
-              ],
             ),
             child: Row(
               children: [

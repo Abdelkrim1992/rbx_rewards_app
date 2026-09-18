@@ -236,7 +236,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -420,7 +420,7 @@ class _PodiumItem extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.15),
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -444,12 +444,12 @@ class _PodiumItem extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: isEmpty
                     ? [
-                        const Color(0xFFE5E7EB).withOpacity(0.5),
-                        const Color(0xFFF3F4F6).withOpacity(0.2),
+                        const Color(0xFFE5E7EB).withValues(alpha: 0.5),
+                        const Color(0xFFF3F4F6).withValues(alpha: 0.2),
                       ]
                     : [
-                        color.withOpacity(0.5),
-                        color.withOpacity(0.2),
+                        color.withValues(alpha: 0.5),
+                        color.withValues(alpha: 0.2),
                       ],
               ),
               borderRadius: const BorderRadius.vertical(
@@ -488,16 +488,10 @@ class _LeaderboardListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
           color: entry.isUser
-              ? AppColors.purple.withOpacity(0.3)
+              ? AppColors.purple.withValues(alpha: 0.3)
               : AppColors.cardBorder,
+          width: 1.2,
         ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 2,
-            spreadRadius: 0,
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -507,7 +501,7 @@ class _LeaderboardListItem extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: entry.isUser
-                  ? AppColors.purple.withOpacity(0.15)
+                  ? AppColors.purple.withValues(alpha: 0.15)
                   : const Color(0xFFF3F4F6),
               shape: BoxShape.circle,
             ),
@@ -618,7 +612,7 @@ class _EmptyLeaderboardState extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.purple.withOpacity(0.2),
+                    color: AppColors.purple.withValues(alpha: 0.2),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -662,7 +656,7 @@ class _EmptyLeaderboardState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.purple.withOpacity(0.3),
+                      color: AppColors.purple.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

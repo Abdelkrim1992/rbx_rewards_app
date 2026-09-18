@@ -218,8 +218,8 @@ class FlappyJumpGame extends FlameGame {
         z: random.nextDouble() * 400 + 300,
         size: random.nextDouble() * 40 + 35,
         color: random.nextBool()
-            ? const Color(0xFF6E3AFF).withOpacity(0.18)
-            : const Color(0xFFFF52A2).withOpacity(0.15),
+            ? const Color(0xFF6E3AFF).withValues(alpha: 0.18)
+            : const Color(0xFFFF52A2).withValues(alpha: 0.15),
       ));
     }
 
@@ -308,7 +308,7 @@ class FlappyJumpGame extends FlameGame {
         vy: math.sin(angle) * speed + 20,
         size: random.nextDouble() * 5 + 3,
         lifeTime: 0.4,
-        color: const Color(0xFF8C62F8).withOpacity(0.6),
+        color: const Color(0xFF8C62F8).withValues(alpha: 0.6),
       ));
     }
   }
@@ -668,10 +668,10 @@ class FlappyJumpGame extends FlameGame {
           style: GoogleFonts.outfit(
             fontSize: ft.fontSize,
             fontWeight: FontWeight.w900,
-            color: ft.color.withOpacity(opacity),
+            color: ft.color.withValues(alpha: opacity),
             shadows: [
               Shadow(
-                color: ft.color.withOpacity(0.5 * opacity),
+                color: ft.color.withValues(alpha: (0.5 * opacity).clamp(0.0, 1.0)),
                 blurRadius: 10,
               ),
               const Shadow(
@@ -692,7 +692,7 @@ class FlappyJumpGame extends FlameGame {
 
   void _draw3DGrid(Canvas canvas) {
     final gridPaint = Paint()
-      ..color = const Color(0xFF6E3AFF).withOpacity(0.12)
+      ..color = const Color(0xFF6E3AFF).withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -753,7 +753,7 @@ class FlappyJumpGame extends FlameGame {
       ..color = island.color
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
-      ..color = island.color.withOpacity(0.5)
+      ..color = island.color.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
@@ -858,7 +858,7 @@ class FlappyJumpGame extends FlameGame {
       ).createShader(Rect.fromPoints(proj[0], proj[2]));
 
     final sidePaint = Paint()
-      ..color = const Color(0xFF26105E).withOpacity(0.95)
+      ..color = const Color(0xFF26105E).withValues(alpha: 0.95)
       ..style = PaintingStyle.fill;
 
     final energyFacePaint = Paint()
@@ -991,7 +991,7 @@ class FlappyJumpGame extends FlameGame {
       ..strokeWidth = 1.0;
 
     final outerGlow = Paint()
-      ..color = neonCyan.withOpacity(0.5)
+      ..color = neonCyan.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
@@ -1040,7 +1040,7 @@ class FlappyJumpGame extends FlameGame {
         width: shadowSize * 1.5,
         height: shadowSize * 0.3,
       ),
-      Paint()..color = Colors.black.withOpacity(0.35),
+      Paint()..color = Colors.black.withValues(alpha: 0.35),
     );
 
     // Save state to rotate visor/wings
@@ -1104,8 +1104,8 @@ class FlappyJumpGame extends FlameGame {
 
     final neonGlow = Paint()
       ..color = isGameOver
-          ? const Color(0xFFFF007F).withOpacity(0.4)
-          : const Color(0xFF00FFCC).withOpacity(0.4)
+          ? const Color(0xFFFF007F).withValues(alpha: 0.4)
+          : const Color(0xFF00FFCC).withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
@@ -1519,6 +1519,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       canPop: !isPlaying,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop || !isPlaying) return;
+        final navigator = Navigator.of(context);
         final shouldLeave = await showQuitConfirmationDialog(
           context,
           title: 'Quit Game?',
@@ -1526,7 +1527,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               'Are you sure you want to exit? You will lose unclaimed progress.',
         );
         if (shouldLeave && mounted) {
-          Navigator.of(context).pop();
+          navigator.pop();
         }
       },
       child: Scaffold(
@@ -1662,7 +1663,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.black.withOpacity(0.4),
+      color: Colors.black.withValues(alpha: 0.45),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SafeArea(
         child: Column(
@@ -1750,23 +1751,58 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                     letterSpacing: 3,
                   ),
                 ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00FFCC).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF00FFCC).withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Fly & earn up to +31 RBX',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF00FFCC),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Image.asset(
+                        AppAssets.goldCoin,
+                        width: 15,
+                        height: 15,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.monetization_on,
+                          size: 15,
+                          color: Color(0xFFFFCC44),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
 
             const SizedBox(height: 24),
 
-            // Animated Character preview placeholder representation
+            // Animated Character preview representation
             Container(
               height: 110,
               width: 110,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF6E3AFF).withOpacity(0.2),
+                color: const Color(0xFF6E3AFF).withValues(alpha: 0.2),
                 border: Border.all(
-                    color: const Color(0xFF00FFCC).withOpacity(0.4), width: 2),
+                    color: const Color(0xFF00FFCC).withValues(alpha: 0.4), width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF6E3AFF).withOpacity(0.3),
+                    color: const Color(0xFF6E3AFF).withValues(alpha: 0.3),
                     blurRadius: 20,
                   ),
                 ],
@@ -1774,20 +1810,18 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Spinning outer ring
+                  // Outer ring
                   Container(
                     width: 90,
                     height: 90,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFFFF52A2).withOpacity(0.5),
+                        color: const Color(0xFFFF52A2).withValues(alpha: 0.5),
                         width: 1.5,
-                        style: BorderStyle.solid,
                       ),
                     ),
                   ),
-                  // The player character representation
                   const Icon(Icons.rocket_launch,
                       color: Color(0xFF00FFCC), size: 44),
                 ],
@@ -1796,13 +1830,13 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
 
             const Spacer(flex: 2),
 
-            // Stats (High Score display)
+            // High Score display
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white10),
+                border: Border.all(color: Colors.white12),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1830,11 +1864,14 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 30),
 
             // Play Button
             GestureDetector(
-              onTap: _startGame,
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                _startGame();
+              },
               child: Container(
                 width: double.infinity,
                 height: 58,
@@ -1845,7 +1882,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6035EE).withOpacity(0.5),
+                      color: const Color(0xFF6035EE).withValues(alpha: 0.5),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -1874,7 +1911,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               ),
             ),
 
-            const SizedBox(height: 32),
+            const Spacer(),
           ],
         ),
       ),
@@ -1921,7 +1958,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.black.withOpacity(0.65),
+      color: Colors.black.withValues(alpha: 0.65),
       child: Center(
         child: Container(
           width: 300,
@@ -1930,10 +1967,10 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             color: const Color(0xFF19163D),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-                color: const Color(0xFF6E3AFF).withOpacity(0.4), width: 1.5),
+                color: const Color(0xFF6E3AFF).withValues(alpha: 0.4), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6E3AFF).withOpacity(0.2),
+                color: const Color(0xFF6E3AFF).withValues(alpha: 0.2),
                 blurRadius: 20,
               ),
             ],
@@ -1979,7 +2016,8 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
                     message:
                         'Are you sure you want to exit? You will lose unclaimed progress.',
                   );
-                  if (shouldLeave && context.mounted) {
+                  if (!mounted) return;
+                  if (shouldLeave) {
                     Navigator.of(context).pop();
                   }
                 },
@@ -2009,7 +2047,7 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               ? const LinearGradient(
                   colors: [Color(0xFF8C62F8), Color(0xFF6035EE)])
               : null,
-          color: isPrimary ? null : Colors.white.withOpacity(0.06),
+          color: isPrimary ? null : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isPrimary ? Colors.white30 : Colors.white12,

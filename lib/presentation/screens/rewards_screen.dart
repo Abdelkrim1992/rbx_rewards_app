@@ -711,13 +711,6 @@ class _RewardGridCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.cardBorder, width: 1.2),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0C000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1530,13 +1523,6 @@ class _ClaimedCodesLocker extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.cardBorder, width: 1.2),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
             ),
             child: Column(
               children: [
@@ -1671,14 +1657,7 @@ class _ClaimedCodeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: AppColors.cardBorder, width: 1.2),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -2263,13 +2242,6 @@ class RedeemSuccessDialog extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: AppColors.cardBorder, width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.15),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

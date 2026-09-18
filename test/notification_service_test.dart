@@ -145,9 +145,47 @@ void main() {
       expect(NotificationService.chestReadyNotificationId, 1001);
       expect(NotificationService.dailyQuestsNotificationId, 1002);
       expect(NotificationService.streakReminderNotificationId, 1003);
+      expect(NotificationService.payloadWelcome, 'welcome');
+      expect(NotificationService.payloadChest, 'chest');
+      expect(NotificationService.payloadQuests, 'quests');
+      expect(NotificationService.payloadStreak, 'streak');
       expect(NotificationService.channelId, 'rewards_channel');
       expect(NotificationService.channelName, 'Rewards & Bonuses');
       expect(NotificationService.prefKey, 'pref_notifications_enabled');
+    });
+
+    test('handleNotificationPayload updates selectNotificationPayload notifier', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      expect(service.selectNotificationPayload.value, isNull);
+
+      service.handleNotificationPayload(NotificationService.payloadChest);
+      expect(service.selectNotificationPayload.value, 'chest');
+
+      service.handleNotificationPayload(NotificationService.payloadQuests);
+      expect(service.selectNotificationPayload.value, 'quests');
+
+      service.handleNotificationPayload(null);
+      expect(service.selectNotificationPayload.value, 'quests');
+
+      service.handleNotificationPayload('');
+      expect(service.selectNotificationPayload.value, 'quests');
+    });
+
+    test('scheduleStreakReminder with isClaimedToday: true handles tomorrow scheduling safely', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      await expectLater(
+        service.scheduleStreakReminder(isClaimedToday: true),
+        completes,
+      );
+    });
+
+    test('onDailyRewardClaimed cancels today and reschedules for tomorrow safely', () async {
+      final service = NotificationService.testInstance(enabled: true);
+      await service.init();
+
+      await expectLater(service.onDailyRewardClaimed(), completes);
     });
   });
 }

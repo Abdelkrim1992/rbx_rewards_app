@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
 import '../../widgets/bottom_nav.dart';
-import '../../widgets/interactive_button.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/screen_title.dart';
 import '../providers/data_providers.dart';
@@ -109,7 +108,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = ref.watch(authServiceProvider);
     final userProfile = ref.watch(userProfileProvider);
     final historyAsync = ref.watch(rewardHistoryProvider);
 
@@ -139,7 +137,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         : 'RBX-USER';
 
     final totalRedeemedCount = historyAsync.valueOrNull?.length ?? 0;
-    final isSocialUser = auth.isSocialAccount;
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isCompact = screenWidth < 360;
@@ -192,13 +189,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                               color: AppColors.cardBorder, width: 1.2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x0C000000),
-                              blurRadius: 12,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
                         ),
                         child: Column(
                           children: [
@@ -541,13 +531,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                               color: AppColors.cardBorder, width: 1.2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x06000000),
-                              blurRadius: 10,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
                         ),
                         child: Column(
                           children: [
@@ -673,13 +656,6 @@ class _CareerStatCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

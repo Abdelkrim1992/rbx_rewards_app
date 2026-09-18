@@ -77,6 +77,8 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
 
   Future<void> _openChest() async {
     if (_secondsRemaining > 0) return;
+    await NotificationService.instance.cancelChestReady();
+    if (!mounted) return;
 
     // Fetch limits for chest
     final capService = ref.read(dailyCapServiceProvider);
@@ -118,7 +120,7 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
     // Step 4: Reset chest timer
     if (claimed && mounted) {
       await GamePrefs.setChestUnlockTime(10800); // Reset to 3 hours
-      NotificationService.instance.scheduleChestReady(
+      await NotificationService.instance.scheduleChestReady(
         DateTime.now().add(const Duration(seconds: 10800)),
       );
       setState(() {
@@ -185,8 +187,8 @@ class _ChestScreenState extends ConsumerState<ChestScreen>
                           shape: BoxShape.circle,
                           gradient: RadialGradient(
                             colors: [
-                              const Color(0xFFFFD700).withOpacity(0.25),
-                              const Color(0xFFFFD700).withOpacity(0.05),
+                              const Color(0xFFFFD700).withValues(alpha: 0.25),
+                              const Color(0xFFFFD700).withValues(alpha: 0.05),
                               Colors.transparent,
                             ],
                             stops: const [0.0, 0.5, 1.0],

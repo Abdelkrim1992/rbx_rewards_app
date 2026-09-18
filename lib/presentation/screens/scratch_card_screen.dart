@@ -388,14 +388,7 @@ class _ScratchCardScreenState extends ConsumerState<ScratchCardScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.6)),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x04000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 1),
-                                ),
-                              ],
+                              border: Border.all(color: AppColors.cardBorder, width: 1.2),
                             ),
                             child: Row(
                               children: [
@@ -985,14 +978,7 @@ class _HowToStep extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.cardBorder.withValues(alpha: 0.7)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
+        border: Border.all(color: AppColors.cardBorder, width: 1.2),
       ),
       child: Row(
         children: [

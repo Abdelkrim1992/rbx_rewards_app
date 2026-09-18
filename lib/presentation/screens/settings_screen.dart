@@ -296,13 +296,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
@@ -375,13 +368,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
@@ -417,13 +403,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
@@ -482,13 +461,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
@@ -535,13 +507,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.cardBorder, width: 1.2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x06000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
@@ -577,10 +542,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 16),
 
               // App Footprint
-              Center(
+              const Center(
                 child: Text(
                   '${PolicyConstants.appName} v${PolicyConstants.appVersion} • All Rights Reserved',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF94A3B8),
@@ -606,13 +571,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.cardBorder, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
       ),
       child: Row(
         children: [

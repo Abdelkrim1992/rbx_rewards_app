@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../theme/app_theme.dart';
 import '../models/game_item_data.dart';
 
@@ -31,7 +32,10 @@ class GamesCategoryChips extends StatelessWidget {
           final count = categoryCounts[category] ?? 0;
 
           return GestureDetector(
-            onTap: () => onCategorySelected(category),
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onCategorySelected(category);
+            },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOutCubic,
@@ -43,21 +47,6 @@ class GamesCategoryChips extends StatelessWidget {
                   color: isSelected ? AppColors.purple : AppColors.cardBorder,
                   width: 1.0,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: AppColors.purple.withValues(alpha: 0.28),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : [
-                        const BoxShadow(
-                          color: Color(0x06000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

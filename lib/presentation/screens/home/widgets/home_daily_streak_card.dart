@@ -96,13 +96,6 @@ class _HomeDailyStreakCardState extends State<HomeDailyStreakCard> {
                 : AppColors.cardBorder,
             width: 1.2,
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0C000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: content,
       ),
@@ -696,17 +689,6 @@ class _ActiveJackpotChest extends StatelessWidget {
               ? const [Color(0xFFEF4444), Color(0xFFDC2626)]
               : const [Color(0xFFF59E0B), Color(0xFFD97706)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: (isStreakBroken
-                    ? const Color(0xFFDC2626)
-                    : const Color(0xFFF59E0B))
-                .withValues(alpha: 0.55),
-            blurRadius: 10,
-            spreadRadius: 1,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: isStreakBroken
@@ -843,17 +825,6 @@ class _ActiveStreakCoin extends StatelessWidget {
               ? const [Color(0xFFEF4444), Color(0xFFDC2626)]
               : const [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: (isStreakBroken
-                    ? const Color(0xFFDC2626)
-                    : const Color(0xFF7C3AED))
-                .withValues(alpha: 0.45),
-            blurRadius: 8,
-            spreadRadius: 1,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Center(
         child: isStreakBroken

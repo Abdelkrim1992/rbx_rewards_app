@@ -25,6 +25,7 @@ import 'games/widgets/games_spotlight_banner.dart';
 import 'games/widgets/games_category_chips.dart';
 import 'games/widgets/game_card_enhanced.dart';
 import 'games/widgets/game_preview_sheet.dart';
+import 'games/widgets/games_stats_bar.dart';
 
 class GamesScreen extends ConsumerStatefulWidget {
   final Function(int) onNavTap;
@@ -386,7 +387,9 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                         );
                       },
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 10),
+                    const GamesStatsBar(),
+                    const SizedBox(height: 14),
 
                     // 1. Spotlight Hero Card
                     GamesSpotlightBanner(
@@ -464,7 +467,10 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.cardBorder),
+                          border: Border.all(
+                            color: AppColors.cardBorder,
+                            width: 1.2,
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -474,13 +480,10 @@ class _GamesScreenState extends ConsumerState<GamesScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x0A000000),
-                                    blurRadius: 6,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
+                                border: Border.all(
+                                  color: AppColors.cardBorder,
+                                  width: 1.0,
+                                ),
                               ),
                               child: const Icon(
                                 Icons.lock_outline_rounded,

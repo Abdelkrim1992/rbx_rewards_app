@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers.dart';
 import 'coin_provider.dart';
 import 'user_provider.dart';
+import '../../business/notification_service.dart';
 
 final dailyRewardCooldownProvider = StateNotifierProvider<DailyRewardCooldownNotifier, Duration>((ref) {
   return DailyRewardCooldownNotifier(ref);
@@ -88,6 +89,9 @@ class DailyRewardCooldownNotifier extends StateNotifier<Duration> {
 
       // Invalidate profile so consecutive days streak and stats update immediately
       _ref.invalidate(userProfileStreamProvider);
+
+      // Reschedule streak protector to tomorrow evening to avoid notifying for today's claimed streak
+      await NotificationService.instance.onDailyRewardClaimed();
       return true;
     }
     return false;

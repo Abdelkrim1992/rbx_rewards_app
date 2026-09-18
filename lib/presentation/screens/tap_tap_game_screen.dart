@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,7 @@ import '../providers/coin_provider.dart';
 import '../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/game_prefs.dart';
+import '../../widgets/interactive_button.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
 import '../../models/reward_config.dart';
@@ -316,17 +318,22 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
       _maxCombo = _comboCount;
     }
 
-    // Multiply score based on combo level
+    // Multiply score based on combo level & fire tactile haptics
     int pointsEarned = 1;
     if (_comboCount >= 30) {
+      HapticFeedback.heavyImpact();
       pointsEarned = 4; // 4x multiplier
       _shakeIntensity = 8.0; // Heavy shake
     } else if (_comboCount >= 15) {
+      HapticFeedback.mediumImpact();
       pointsEarned = 3; // 3x multiplier
       _shakeIntensity = 5.0; // Moderate shake
     } else if (_comboCount >= 5) {
+      HapticFeedback.lightImpact();
       pointsEarned = 2; // 2x multiplier
       _shakeIntensity = 2.0; // Subtle shake
+    } else {
+      HapticFeedback.selectionClick();
     }
 
     setState(() {
@@ -411,20 +418,20 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
     }
 
     // Determine current color scheme based on combo
-    Color auraColor = AppColors.primary.withOpacity(0.15);
+    Color auraColor = AppColors.primary.withValues(alpha: 0.15);
     Color crystalCoreColor = AppColors.primary;
     String crystalState = 'NORMAL';
 
     if (_comboCount >= 30) {
-      auraColor = const Color(0xFFFFCC44).withOpacity(0.35); // Golden Fire
+      auraColor = const Color(0xFFFFCC44).withValues(alpha: 0.35); // Golden Fire
       crystalCoreColor = const Color(0xFFFF9900);
       crystalState = 'SUPERCHARGED ⚡';
     } else if (_comboCount >= 15) {
-      auraColor = Colors.deepOrangeAccent.withOpacity(0.25); // Intense Flame
+      auraColor = Colors.deepOrangeAccent.withValues(alpha: 0.25); // Intense Flame
       crystalCoreColor = Colors.deepOrange;
       crystalState = 'COMBO RUSH 🔥';
     } else if (_comboCount >= 5) {
-      auraColor = AppColors.purple.withOpacity(0.20); // Electric Purple
+      auraColor = AppColors.purple.withValues(alpha: 0.20); // Electric Purple
       crystalCoreColor = AppColors.purple;
       crystalState = 'COMBO x$_comboCount';
     }
@@ -440,7 +447,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
           message:
               'Are you sure you want to exit? You will lose unclaimed progress.',
         );
-        if (shouldLeave && mounted) {
+        if (shouldLeave && context.mounted) {
           Navigator.of(context).pop();
         }
       },
@@ -458,7 +465,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [auraColor.withOpacity(0.1), Colors.transparent],
+                    colors: [auraColor.withValues(alpha: 0.1), Colors.transparent],
                   ),
                 ),
               ),
@@ -672,10 +679,10 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: crystalCoreColor.withOpacity(0.12),
+            color: crystalCoreColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-                color: crystalCoreColor.withOpacity(0.3), width: 1.5),
+                color: crystalCoreColor.withValues(alpha: 0.3), width: 1.5),
           ),
           child: Text(
             crystalState,
@@ -705,7 +712,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                 height: 290,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF6E3AFF).withOpacity(0.04),
+                  color: const Color(0xFF6E3AFF).withValues(alpha: 0.04),
                 ),
               ),
               // Ring 2 (Soft)
@@ -714,7 +721,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                 height: 240,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF6E3AFF).withOpacity(0.07),
+                  color: const Color(0xFF6E3AFF).withValues(alpha: 0.07),
                 ),
               ),
               // Ring 3 (Medium)
@@ -723,7 +730,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                 height: 190,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF6E3AFF).withOpacity(0.14),
+                  color: const Color(0xFF6E3AFF).withValues(alpha: 0.14),
                 ),
               ),
 
@@ -739,7 +746,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: const Color(0xFF6E3AFF).withOpacity(0.45),
+                          color: const Color(0xFF6E3AFF).withValues(alpha: 0.45),
                           width: 3,
                         ),
                       ),
@@ -749,14 +756,15 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
               }),
 
               // 3. Central Solid Purple TAP Circle with 3D perspective rotation
-              Transform(
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001) // perspective
-                  ..rotateX(_tiltX)
-                  ..rotateY(_tiltY)
-                  ..scale(_crystalScaleAnimation.value),
-                alignment: Alignment.center,
-                child: Container(
+              Transform.scale(
+                scale: _crystalScaleAnimation.value,
+                child: Transform(
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001) // perspective
+                    ..rotateX(_tiltX)
+                    ..rotateY(_tiltY),
+                  alignment: Alignment.center,
+                  child: Container(
                   width: 130,
                   height: 130,
                   decoration: BoxDecoration(
@@ -771,7 +779,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF562EE6).withOpacity(0.35),
+                        color: const Color(0xFF562EE6).withValues(alpha: 0.35),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -788,6 +796,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                     ),
                   ),
                 ),
+              ),
               ),
 
               // 4. Pulsing Tutorial Tapping Hand (Fades out when score increases!)
@@ -871,24 +880,52 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Premium 3D Gaming Banner
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              gradient: AppColors.dailyCardGradient,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFEFECFF)),
-            ),
-            child: const Column(
-              children: [
-                Icon(
-                  Icons.touch_app,
-                  size: 90,
-                  color: AppColors.primary,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: const Color(0xFF6E3AFF).withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6E3AFF).withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                SizedBox(height: 16),
-                Text(
-                  '3D CRYSTAL RUSH',
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8C62F8), Color(0xFF562EE6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF562EE6).withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.touch_app_rounded,
+                    size: 46,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'TAP TAP REFLEX',
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -896,80 +933,89 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                     letterSpacing: -0.5,
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Tap the central 3D crystal as fast as you can. Build combos to supercharge your score! You need at least 30 points in 15 seconds to claim your reward.',
+                const SizedBox(height: 6),
+                const Text(
+                  'Tap the central 3D core rapidly! Maintain combos to multiply your score and earn RBX rewards.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF4A4B60),
-                    height: 1.45,
+                    fontSize: 13.5,
+                    color: Color(0xFF64748B),
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Win up to +31 RBX',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.purple,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Image.asset(
+                        AppAssets.goldCoin,
+                        width: 15,
+                        height: 15,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.monetization_on,
+                          size: 15,
+                          color: Color(0xFFFFCC44),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 30),
-
-          // Features/Rules Row
+          const SizedBox(height: 22),
           const Row(
             children: [
               _InstructionStep(
-                icon: Icons.timer,
-                title: '15s Timer',
-                desc: 'Race against time',
-                color: Colors.blue,
+                icon: Icons.timer_outlined,
+                title: '15s Dash',
+                desc: 'Rapid speed race',
+                color: Color(0xFF2563EB),
               ),
               SizedBox(width: 10),
               _InstructionStep(
-                icon: Icons.bolt,
+                icon: Icons.bolt_rounded,
                 title: 'Combos',
-                desc: 'Tap fast to scale points',
-                color: Colors.orange,
+                desc: 'Scale up to 4x',
+                color: Color(0xFFFF6B00),
               ),
               SizedBox(width: 10),
               _InstructionStep(
-                icon: Icons.flag,
-                title: 'Target: 30',
-                desc: 'Earn 30 pts to win',
-                color: Colors.red,
+                icon: Icons.flag_rounded,
+                title: 'Goal: 30+',
+                desc: 'Hits to win prize',
+                color: Color(0xFF10B981),
               ),
             ],
           ),
-
-          const SizedBox(height: 30),
-
-          // Big Launch Button
-          GestureDetector(
-            onTap: _startGame,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x666035EE),
-                    blurRadius: 20,
-                    offset: Offset(0, 10),
-                  ),
-                ],
-              ),
-
-              child: const Center(
-                child: Text(
-                  'Start 3D Rush!',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-            ),
+          const SizedBox(height: 24),
+          InteractiveButton(
+            height: 56,
+            icon: Icons.bolt_rounded,
+            iconSize: 22,
+            text: 'START REFLEX DASH',
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              _startGame();
+            },
           ),
         ],
       ),
@@ -1263,122 +1309,36 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
                       children: [
                         if (didWin && !_hasClaimed) ...[
                           // Primary: Claim Reward
-                          GestureDetector(
+                          InteractiveButton(
+                            height: useSmallStyle ? 50 : 56,
+                            isLoading: _isProcessingClaim,
                             onTap: _isProcessingAd ? null : _claimCoins,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 50 : 60,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF562EE6).withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isProcessingClaim
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
-                                        ),
-                                      )
-                                    : Text(
-                                        'Claim Reward (+$_originalCoinsEarned RBX)',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 15 : 17,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
+                            text: 'Claim Reward (+$_originalCoinsEarned RBX)',
+                            fontSize: useSmallStyle ? 14 : 15,
+                            fontWeight: FontWeight.w900,
                           ),
                           SizedBox(height: useSmallStyle ? 10 : 14),
                           // Secondary: Play Again
-                          GestureDetector(
+                          InteractiveButton(
+                            height: useSmallStyle ? 44 : 50,
+                            isLoading: _isProcessingPlayAgain,
                             onTap: _isProcessingAd ? null : _playAgain,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 46 : 54,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F1FB),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 23 : 27),
-                                border: Border.all(color: const Color(0xFFE2E2F5), width: 1.5),
-                              ),
-                              child: Center(
-                                child: _isProcessingPlayAgain
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Color(0xFF6E3AFF),
-                                          strokeWidth: 2.0,
-                                        ),
-                                      )
-                                    : Text(
-                                        'Play Again',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 15 : 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF6E3AFF),
-                                        ),
-                                      ),
-                              ),
-                            ),
+                            backgroundColor: AppColors.primarySoft,
+                            border: Border.all(color: AppColors.cardBorder, width: 1.5),
+                            textColor: AppColors.purple,
+                            text: 'Play Again',
+                            fontSize: useSmallStyle ? 13 : 15,
+                            fontWeight: FontWeight.w800,
                           ),
                         ] else ...[
                           // Primary: Try Again
-                          GestureDetector(
+                          InteractiveButton(
+                            height: useSmallStyle ? 50 : 56,
+                            isLoading: _isProcessingPlayAgain,
                             onTap: _isProcessingAd ? null : _playAgain,
-                            child: Container(
-                              width: double.infinity,
-                              height: useSmallStyle ? 50 : 60,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF562EE6).withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _isProcessingPlayAgain
-                                    ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
-                                        ),
-                                      )
-                                    : Text(
-                                        didWin ? 'Play Again' : 'Need 30+ taps to earn! Try Again',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: useSmallStyle ? 14 : 16,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                              ),
-                            ),
+                            text: didWin ? 'Play Again' : 'Need 30+ taps to earn! Try Again',
+                            fontSize: useSmallStyle ? 13 : 15,
+                            fontWeight: FontWeight.w900,
                           ),
                         ],
                         const SizedBox(height: 30),
@@ -1454,7 +1414,7 @@ class _InstructionStep extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
@@ -1551,7 +1511,7 @@ class _OverlaysPainter extends CustomPainter {
       if (currentScale <= 0) continue;
 
       final paint = Paint()
-        ..color = p.color.withOpacity(1.0 - progress)
+        ..color = p.color.withValues(alpha: (1.0 - progress).clamp(0.0, 1.0))
         ..style = PaintingStyle.fill;
 
       canvas.save();
@@ -1583,13 +1543,13 @@ class _OverlaysPainter extends CustomPainter {
         text: TextSpan(
           text: ft.text,
           style: TextStyle(
-            color: ft.color.withOpacity(alpha),
+            color: ft.color.withValues(alpha: alpha.clamp(0.0, 1.0)),
             fontSize: ft.fontSize,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.5,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.2 * alpha),
+                color: Colors.black.withValues(alpha: (0.2 * alpha).clamp(0.0, 1.0)),
                 offset: const Offset(0, 1.5),
                 blurRadius: 3.0,
               ),

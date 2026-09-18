@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../theme/app_theme.dart';
+import '../../../providers/providers.dart';
 import '../../../providers/quest_provider.dart';
 import 'home_daily_quests_card.dart';
 import 'home_daily_streak_card.dart';
@@ -37,11 +38,9 @@ class HomeDailyHubCard extends ConsumerStatefulWidget {
 }
 
 class _HomeDailyHubCardState extends ConsumerState<HomeDailyHubCard> {
-  int _selectedTabIndex = 0;
-
   void _onTabSelected(int index) {
-    if (_selectedTabIndex != index) {
-      setState(() => _selectedTabIndex = index);
+    if (ref.read(dailyHubTabProvider) != index) {
+      ref.read(dailyHubTabProvider.notifier).state = index;
     }
   }
 
@@ -60,6 +59,7 @@ class _HomeDailyHubCardState extends ConsumerState<HomeDailyHubCard> {
         !questsState.isMasterChestClaimed;
 
     final hasStreakReady = !widget.isDailyBlocked;
+    final selectedTabIndex = ref.watch(dailyHubTabProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppLayout.screenPadding),
@@ -69,25 +69,18 @@ class _HomeDailyHubCardState extends ConsumerState<HomeDailyHubCard> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: widget.isStreakBroken && _selectedTabIndex == 0
+            color: widget.isStreakBroken && selectedTabIndex == 0
                 ? const Color(0xFFFECACA)
                 : AppColors.cardBorder,
             width: 1.2,
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0C000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             _DailyHubTabBar(
-              selectedIndex: _selectedTabIndex,
+              selectedIndex: selectedTabIndex,
               consecutiveDays: widget.consecutiveDays,
               missionsBadge: missionsBadge,
               hasStreakReady: hasStreakReady,
@@ -97,7 +90,7 @@ class _HomeDailyHubCardState extends ConsumerState<HomeDailyHubCard> {
             const SizedBox(height: 14),
             AnimatedCrossFade(
               duration: const Duration(milliseconds: 200),
-              crossFadeState: _selectedTabIndex == 0
+              crossFadeState: selectedTabIndex == 0
                   ? CrossFadeState.showFirst
                   : CrossFadeState.showSecond,
               firstChild: HomeDailyStreakCard(

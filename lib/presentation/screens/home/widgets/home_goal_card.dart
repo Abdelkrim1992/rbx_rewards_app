@@ -90,13 +90,6 @@ class _GoalCardContent extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.cardBorder, width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -150,13 +143,6 @@ class _GoalIconBadge extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: AppColors.cardBorder, width: 1.0),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(5),

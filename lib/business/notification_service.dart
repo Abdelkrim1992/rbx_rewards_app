@@ -37,6 +37,11 @@ class NotificationService {
   static const int dailyQuestsNotificationId = 1002;
   static const int streakReminderNotificationId = 1003;
 
+  static const String payloadWelcome = 'welcome';
+  static const String payloadChest = 'chest';
+  static const String payloadQuests = 'quests';
+  static const String payloadStreak = 'streak';
+
   static const String channelId = 'rewards_channel';
   static const String channelName = 'Rewards & Bonuses';
   static const String channelDescription =
@@ -45,33 +50,70 @@ class NotificationService {
   FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
+  final ValueNotifier<String?> selectNotificationPayload =
+      ValueNotifier<String?>(null);
+
   bool _notificationsEnabled = true;
   bool _initialized = false;
   bool _isTestMode = false;
 
   bool get isNotificationsEnabled => _notificationsEnabled;
 
+  /// Handles incoming notification tap payloads.
+  void handleNotificationPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+    selectNotificationPayload.value = payload;
+  }
+
   /// Initializes the notification engine, timezone database, and notification channels.
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
 
+    _initTimeZones();
+    await _loadPreference();
+    await _initPluginSettings();
+    await _checkAppLaunchPayload();
+  }
+
+  void _initTimeZones() {
     try {
       tz.initializeTimeZones();
+      final timeZoneName = DateTime.now().timeZoneName;
+      if (tz.timeZoneDatabase.locations.containsKey(timeZoneName)) {
+        tz.setLocalLocation(tz.getLocation(timeZoneName));
+        return;
+      }
+      final offsetMs = DateTime.now().timeZoneOffset.inMilliseconds;
+      final matchingLocation = tz.timeZoneDatabase.locations.values
+          .cast<tz.Location?>()
+          .firstWhere(
+            (loc) => loc?.currentTimeZone.offset == offsetMs,
+            orElse: () => null,
+          );
+      if (matchingLocation != null) {
+        tz.setLocalLocation(matchingLocation);
+      } else {
+        tz.setLocalLocation(tz.getLocation('UTC'));
+      }
+    } catch (e) {
       try {
         tz.setLocalLocation(tz.getLocation('UTC'));
       } catch (_) {}
-    } catch (e) {
       debugPrint('NotificationService: Timezone init note: $e');
     }
+  }
 
+  Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _notificationsEnabled = prefs.getBool(prefKey) ?? true;
     } catch (e) {
       debugPrint('NotificationService: Could not load preference: $e');
     }
+  }
 
+  Future<void> _initPluginSettings() async {
     try {
       const androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -87,27 +129,50 @@ class NotificationService {
         macOS: darwinSettings,
       );
 
-      await _notificationsPlugin.initialize(initSettings);
+      await _notificationsPlugin.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (response) {
+          handleNotificationPayload(response.payload);
+        },
+      );
 
-      // Create Android Notification Channel
-      final androidImplementation =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-
-      if (androidImplementation != null) {
-        const channel = AndroidNotificationChannel(
-          channelId,
-          channelName,
-          description: channelDescription,
-          importance: Importance.high,
-          playSound: true,
-          enableVibration: true,
-        );
-        await androidImplementation.createNotificationChannel(channel);
-      }
+      await _createAndroidChannel();
     } catch (e) {
       if (!_isTestMode) {
         debugPrint('NotificationService: Initialization note: $e');
+      }
+    }
+  }
+
+  Future<void> _createAndroidChannel() async {
+    final androidImplementation =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImplementation != null) {
+      const channel = AndroidNotificationChannel(
+        channelId,
+        channelName,
+        description: channelDescription,
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+      );
+      await androidImplementation.createNotificationChannel(channel);
+    }
+  }
+
+  Future<void> _checkAppLaunchPayload() async {
+    if (_isTestMode) return;
+    try {
+      final launchDetails =
+          await _notificationsPlugin.getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp ?? false) {
+        handleNotificationPayload(launchDetails?.notificationResponse?.payload);
+      }
+    } catch (e) {
+      if (!_isTestMode) {
+        debugPrint('NotificationService: Check launch payload note: $e');
       }
     }
   }
@@ -116,7 +181,6 @@ class NotificationService {
   Future<bool> requestPermissions() async {
     if (_isTestMode) return true;
     try {
-      // Android 13+ permission request
       final androidImplementation =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
@@ -126,7 +190,6 @@ class NotificationService {
         return granted ?? false;
       }
 
-      // iOS permission request
       final iosImplementation =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               IOSFlutterLocalNotificationsPlugin>();
@@ -196,6 +259,7 @@ class NotificationService {
         '🎉 Welcome to RBX Rewards$name!',
         'Your 500 RBX Welcome Bonus is active! Complete daily tasks to earn more.',
         _notificationDetails(),
+        payload: payloadWelcome,
       );
     } catch (e) {
       if (!_isTestMode) {
@@ -248,6 +312,7 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        payload: payloadChest,
       );
     } catch (e) {
       if (!_isTestMode) {
@@ -279,6 +344,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: payloadQuests,
       );
     } catch (e) {
       if (!_isTestMode) {
@@ -288,7 +354,8 @@ class NotificationService {
   }
 
   /// 3. Streak Protector (Loss Aversion): Scheduled daily at 8:00 PM local time.
-  Future<void> scheduleStreakReminder() async {
+  /// If today's reward is already claimed ([isClaimedToday] = true), schedules for tomorrow.
+  Future<void> scheduleStreakReminder({bool isClaimedToday = false}) async {
     if (!_notificationsEnabled) return;
 
     try {
@@ -296,7 +363,7 @@ class NotificationService {
       var scheduledDate =
           tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 0);
 
-      if (scheduledDate.isBefore(now)) {
+      if (scheduledDate.isBefore(now) || isClaimedToday) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
@@ -310,12 +377,20 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: payloadStreak,
       );
     } catch (e) {
       if (!_isTestMode) {
         debugPrint('NotificationService: scheduleStreakReminder error: $e');
       }
     }
+  }
+
+  /// Called immediately when a user claims their daily reward.
+  /// Advances the daily streak protector notification to tomorrow at 8:00 PM.
+  Future<void> onDailyRewardClaimed() async {
+    await cancelStreakReminder();
+    await scheduleStreakReminder(isClaimedToday: true);
   }
 
   /// Cancels the scheduled chest ready notification.

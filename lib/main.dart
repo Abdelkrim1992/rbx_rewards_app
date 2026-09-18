@@ -40,6 +40,9 @@ import 'business/sound_service.dart';
 import 'business/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/image_precache_helper.dart';
+import 'presentation/providers/reward_provider.dart';
+import 'presentation/screens/chest_screen.dart' deferred as chest_screen;
+import 'widgets/deferred_game_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -138,6 +141,9 @@ class RbxRewardsApp extends StatefulWidget {
   final ProviderContainer? container;
   const RbxRewardsApp({super.key, this.container});
 
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   static const SystemUiOverlayStyle globalSystemOverlayStyle =
       SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -181,6 +187,7 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
     final Widget app = AnnotatedRegion<SystemUiOverlayStyle>(
       value: RbxRewardsApp.globalSystemOverlayStyle,
       child: MaterialApp(
+        navigatorKey: RbxRewardsApp.navigatorKey,
         title: 'RBX Rewards',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -320,6 +327,8 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    NotificationService.instance.selectNotificationPayload
+        .addListener(_onNotificationPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final isTest =
           !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
@@ -327,6 +336,40 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
         _initDeferredServices();
       }
     });
+  }
+
+  void _onNotificationPayload() {
+    final payload =
+        NotificationService.instance.selectNotificationPayload.value;
+    if (payload == null || !mounted) return;
+    NotificationService.instance.selectNotificationPayload.value = null;
+
+    if (payload == NotificationService.payloadChest) {
+      _openChestFromNotification();
+    } else if (payload == NotificationService.payloadQuests) {
+      _onNavTap(0);
+      ref.read(dailyHubTabProvider.notifier).state = 1;
+    } else if (payload == NotificationService.payloadStreak) {
+      _onNavTap(0);
+      ref.read(dailyHubTabProvider.notifier).state = 0;
+    } else if (payload == NotificationService.payloadWelcome) {
+      _onNavTap(0);
+    }
+  }
+
+  void _openChestFromNotification() {
+    _onNavTap(0);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DeferredGameLoader(
+          title: 'Mystery Chest',
+          themeColor: AppColors.primary,
+          iconAsset: AppAssets.chestIcon,
+          loadLibrary: chest_screen.loadLibrary,
+          builder: () => chest_screen.ChestScreen(),
+        ),
+      ),
+    );
   }
 
   void _initDeferredServices() {
@@ -339,7 +382,12 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
         await SoundService.instance.init();
         await NotificationService.instance.init();
         await NotificationService.instance.scheduleDailyQuestsReminder();
-        await NotificationService.instance.scheduleStreakReminder();
+
+        final cooldown = ref.read(dailyRewardCooldownProvider);
+        final isClaimedToday = cooldown.inSeconds > 0;
+        await NotificationService.instance.scheduleStreakReminder(
+          isClaimedToday: isClaimedToday,
+        );
       } catch (e) {
         debugPrint('Deferred background services note: $e');
       }
@@ -373,6 +421,8 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    NotificationService.instance.selectNotificationPayload
+        .removeListener(_onNotificationPayload);
     super.dispose();
   }
 
