@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ad_models.dart';
+import '../../models/reward_config.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/game_prefs.dart';
@@ -239,11 +240,10 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
-    final capService = ref.read(dailyCapServiceProvider);
-    final maxReward = capService.getBaseReward('quiz', fallback: 15);
-    // Dynamic action calculation: proportional to correct answers (up to 15 base coins)
-    final perCorrect = (maxReward / _sessionQuestions.length);
-    final coins = (_correctCount * perCorrect).round().clamp(0, maxReward);
+    final coins = RewardConfig.calculateMathQuizBaseReward(
+      _correctCount,
+      _sessionQuestions.length,
+    );
     setState(() {
       _originalCoinsEarned = coins;
       _coinsEarned = coins;
@@ -687,8 +687,27 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
   // --- GAMEOVER SCREEN ---
   Widget _buildGameOverScreen() {
-    final bool didWin = _correctCount >= 5;
-    
+    final bool didWin = _originalCoinsEarned > 0;
+    final tierName = !didWin
+        ? 'Target Not Reached'
+        : (_originalCoinsEarned == 3
+            ? 'Bronze Tier 🥉'
+            : (_originalCoinsEarned == 7 ? 'Silver Tier 🥈' : 'Gold Genius 🥇'));
+
+    final headerTitle = !didWin
+        ? 'Quiz Incomplete'
+        : (_originalCoinsEarned == 12
+            ? 'Genius Score! 🥇'
+            : (_originalCoinsEarned == 7 ? 'Great Job! 🥈' : 'Good Effort! 🥉'));
+
+    final accuracy = _sessionQuestions.isNotEmpty
+        ? ((_correctCount / _sessionQuestions.length) * 100).round()
+        : 0;
+
+    final headerSubtitle = !didWin
+        ? 'Score at least 40% to earn Robux coins'
+        : '$_correctCount/${_sessionQuestions.length} Correct • $accuracy% Accuracy';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenHeight = constraints.maxHeight;
@@ -715,12 +734,12 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                       width: useSmallStyle ? 70 : 90,
                       height: useSmallStyle ? 70 : 90,
                       decoration: BoxDecoration(
-                        color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
+                        color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFFEF2F2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        didWin ? Icons.emoji_events : Icons.replay,
-                        color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
+                        didWin ? Icons.emoji_events_rounded : Icons.close_rounded,
+                        color: didWin ? const Color(0xFFFFCC44) : const Color(0xFFEF4444),
                         size: useSmallStyle ? 38 : 50,
                       ),
                     ),
@@ -729,20 +748,20 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
 
                   // Result Header
                   Text(
-                    'Quiz Complete!',
+                    headerTitle,
                     style: GoogleFonts.outfit(
-                      fontSize: useSmallStyle ? 30 : 42,
+                      fontSize: useSmallStyle ? 28 : 34,
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF181C32),
                     ),
                   ),
-                  SizedBox(height: useSmallStyle ? 6 : 12),
+                  SizedBox(height: useSmallStyle ? 6 : 8),
 
                   // Stats Summary Subtitle
                   Text(
-                    '$_correctCount/${_sessionQuestions.length} Correct',
+                    headerSubtitle,
                     style: GoogleFonts.inter(
-                      fontSize: useSmallStyle ? 14 : 16,
+                      fontSize: useSmallStyle ? 13 : 15,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF64748B),
                     ),
@@ -755,13 +774,15 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                     child: Container(
                       padding: EdgeInsets.all(useSmallStyle ? 14 : 18),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFECFF),
+                        color: didWin ? const Color(0xFFEFECFF) : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE2E2F5)),
+                        border: Border.all(color: didWin ? const Color(0xFFE2E2F5) : const Color(0xFFE2E8F0)),
                       ),
                       child: Column(
                         children: [
                           _buildRewardRow('Correct Answers', '$_correctCount/${_sessionQuestions.length}'),
+                          const SizedBox(height: 8),
+                          _buildRewardRow('Performance Tier', tierName),
                           const SizedBox(height: 8),
                           _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
                           Padding(
@@ -772,7 +793,7 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Total',
+                                'Total Earned',
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
@@ -809,60 +830,27 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       children: [
-                        // Play Again
-                        GestureDetector(
-                          onTap: _isProcessingAd ? null : _playAgain,
-                          child: Container(
-                            width: double.infinity,
-                            height: useSmallStyle ? 50 : 60,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF562EE6).withOpacity(0.3),
-                                  blurRadius: 15,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: _isProcessingPlayAgain
-                                  ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : Text(
-                                      'Play Again',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: useSmallStyle ? 16 : 18,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-                        if (!_hasClaimed) ...[
-                          SizedBox(height: useSmallStyle ? 10 : 14),
-
-                          // Claim Reward
+                        if (didWin && !_hasClaimed) ...[
+                          // Primary Claim Button
                           GestureDetector(
                             onTap: _isProcessingAd ? null : _claimQuizCoins,
                             child: Container(
                               width: double.infinity,
                               height: useSmallStyle ? 50 : 60,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFECFF),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                                 borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF562EE6).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
                               ),
                               child: Center(
                                 child: _isProcessingClaim
@@ -870,18 +858,118 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
                                         width: 24,
                                         height: 24,
                                         child: CircularProgressIndicator(
-                                          color: Color(0xFF562EE6),
+                                          color: Colors.white,
                                           strokeWidth: 2.5,
                                         ),
                                       )
                                     : Text(
-                                        'Claim Reward',
+                                        'Claim Reward (+$_originalCoinsEarned RBX)',
                                         style: GoogleFonts.outfit(
                                           fontSize: useSmallStyle ? 16 : 18,
                                           fontWeight: FontWeight.w900,
-                                          color: const Color(0xFF562EE6),
+                                          color: Colors.white,
                                         ),
                                       ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: useSmallStyle ? 10 : 14),
+                          // Secondary Play Again Button
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _playAgain,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 46 : 54,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F1FB),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 23 : 27),
+                                border: Border.all(color: const Color(0xFFE2E2F5), width: 1.5),
+                              ),
+                              child: Center(
+                                child: _isProcessingPlayAgain
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF6E3AFF),
+                                          strokeWidth: 2.0,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Play Again',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 15 : 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF6E3AFF),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          // Primary Try Again / Play Again Button
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _playAgain,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 50 : 60,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF562EE6).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: _isProcessingPlayAgain
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        didWin ? 'Play Again' : 'Try Again',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 16 : 18,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: useSmallStyle ? 10 : 14),
+                          // Back to Categories
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _backToMenu,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 46 : 54,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F1FB),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 23 : 27),
+                                border: Border.all(color: const Color(0xFFE2E2F5), width: 1.5),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Choose Another Topic',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: useSmallStyle ? 15 : 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -920,37 +1008,6 @@ class _QuizzesScreenState extends ConsumerState<QuizzesScreen>
           ),
         ),
       ],
-    );
-  }
-}
-
-class _InteractiveCard extends StatefulWidget {
-  final Widget child;
-  final VoidCallback? onTap;
-
-  const _InteractiveCard({required this.child, this.onTap});
-
-  @override
-  State<_InteractiveCard> createState() => _InteractiveCardState();
-}
-
-class _InteractiveCardState extends State<_InteractiveCard> {
-  double _scale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _scale = 0.97),
-      onTapUp: (_) {
-        setState(() => _scale = 1.0);
-        if (widget.onTap != null) widget.onTap!();
-      },
-      onTapCancel: () => setState(() => _scale = 1.0),
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 100),
-        child: widget.child,
-      ),
     );
   }
 }

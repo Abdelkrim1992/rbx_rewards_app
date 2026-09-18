@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/game_prefs.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
+import '../../models/reward_config.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../business/sound_service.dart';
@@ -257,19 +258,7 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
         _coinsEarned = 0;
       });
     } else {
-      final capService = ref.read(dailyCapServiceProvider);
-      final maxReward = capService.getBaseReward('tap_tap', fallback: 15);
-      // Dynamic action calculation: 1 base coin per 20 points + combo tier bonus
-      final baseCoins = (_score / 20).floor().clamp(1, maxReward);
-      int comboBonus = 0;
-      if (_maxCombo >= 30) {
-        comboBonus = 4;
-      } else if (_maxCombo >= 15) {
-        comboBonus = 2;
-      } else if (_maxCombo >= 5) {
-        comboBonus = 1;
-      }
-      final totalCoins = (baseCoins + comboBonus).clamp(1, maxReward);
+      final totalCoins = RewardConfig.calculateTapTapBaseReward(_score, _maxCombo);
       
       setState(() {
         _isGameOver = true;
@@ -1134,232 +1123,270 @@ class _TapTapGameScreenState extends ConsumerState<TapTapGameScreen>
 
   Widget _buildGameOverScreen() {
     final bool didWin = !_isGameFailed;
-    
-    return Column(
-      key: const ValueKey('GAMEOVER'),
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Spacer(),
+    final tierName = !didWin
+        ? 'Target Not Reached'
+        : (_originalCoinsEarned <= 3
+            ? 'Quick Tapper 🥉'
+            : (_originalCoinsEarned <= 7 ? 'Reflex Master 🥈' : 'Speed Demon 🥇'));
 
-        // Trophy icon with pop animation
-        ScaleTransition(
-          scale: _endDialogScale,
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              didWin ? Icons.emoji_events : Icons.replay,
-              color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
-              size: 50,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
+    final headerTitle = !didWin
+        ? 'Target Failed!'
+        : (_originalCoinsEarned == 12
+            ? 'Speed Demon! 🥇'
+            : (_originalCoinsEarned >= 7 ? 'Reflex Master! 🥈' : 'Quick Tapper! 🥉'));
 
-        // Result Header
-        Text(
-          didWin ? 'Time\'s Up!' : 'Target Failed!',
-          style: GoogleFonts.outfit(
-            fontSize: 42,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFF181C32),
-          ),
-        ),
-        const SizedBox(height: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+        final useSmallStyle = screenHeight < 680;
 
-        // Stats Summary Subtitle
-        Text(
-          'Score: $_score pts  •  Max Combo: ${_maxCombo}x',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(height: 24),
+        return SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: screenHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                key: const ValueKey('GAMEOVER'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(),
 
-        // Breakdown Card
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFECFF),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E2F5)),
-            ),
-            child: Column(
-              children: [
-                _buildRewardRow('Total Points', '$_score / 30'),
-                const SizedBox(height: 8),
-                _buildRewardRow('Max Combo', '${_maxCombo}x'),
-                const SizedBox(height: 8),
-                _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                  child: Divider(color: Color(0xFFE2E2F5)),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF181C32),
+                  // Icon with pop animation
+                  ScaleTransition(
+                    scale: _endDialogScale,
+                    child: Container(
+                      width: useSmallStyle ? 70 : 90,
+                      height: useSmallStyle ? 70 : 90,
+                      decoration: BoxDecoration(
+                        color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFFEF2F2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        didWin ? Icons.emoji_events_rounded : Icons.close_rounded,
+                        color: didWin ? const Color(0xFFFFCC44) : const Color(0xFFEF4444),
+                        size: useSmallStyle ? 38 : 50,
                       ),
                     ),
-                    Row(
-                      children: [
-                        const Icon(Icons.currency_bitcoin,
-                            color: Color(0xFFFFB000), size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          '+$_coinsEarned RBX',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF181C32),
-                          ),
+                  ),
+                  SizedBox(height: useSmallStyle ? 12 : 20),
+
+                  // Result Header
+                  Text(
+                    headerTitle,
+                    style: GoogleFonts.outfit(
+                      fontSize: useSmallStyle ? 28 : 34,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF181C32),
+                    ),
+                  ),
+                  SizedBox(height: useSmallStyle ? 6 : 8),
+
+                  // Stats Subtitle
+                  Text(
+                    'Score: $_score pts  •  Max Combo: ${_maxCombo}x',
+                    style: GoogleFonts.inter(
+                      fontSize: useSmallStyle ? 13 : 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                  SizedBox(height: useSmallStyle ? 14 : 24),
+
+                  // Breakdown Card
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: useSmallStyle ? 24 : 40),
+                    child: Container(
+                      padding: EdgeInsets.all(useSmallStyle ? 14 : 18),
+                      decoration: BoxDecoration(
+                        color: didWin ? const Color(0xFFEFECFF) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: didWin ? const Color(0xFFE2E2F5) : const Color(0xFFE2E8F0),
                         ),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildRewardRow('Total Points', '$_score taps'),
+                          const SizedBox(height: 8),
+                          _buildRewardRow('Max Combo', '${_maxCombo}x'),
+                          const SizedBox(height: 8),
+                          _buildRewardRow('Performance Tier', tierName),
+                          const SizedBox(height: 8),
+                          _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Divider(color: Color(0xFFE2E2F5)),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Earned',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF181C32),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  const Icon(Icons.currency_bitcoin,
+                                      color: Color(0xFFFFB000), size: 20),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '+$_coinsEarned RBX',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF181C32),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // Action Buttons
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        if (didWin && !_hasClaimed) ...[
+                          // Primary: Claim Reward
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _claimCoins,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 50 : 60,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF562EE6).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: _isProcessingClaim
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Claim Reward (+$_originalCoinsEarned RBX)',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 15 : 17,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: useSmallStyle ? 10 : 14),
+                          // Secondary: Play Again
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _playAgain,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 46 : 54,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F1FB),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 23 : 27),
+                                border: Border.all(color: const Color(0xFFE2E2F5), width: 1.5),
+                              ),
+                              child: Center(
+                                child: _isProcessingPlayAgain
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF6E3AFF),
+                                          strokeWidth: 2.0,
+                                        ),
+                                      )
+                                    : Text(
+                                        'Play Again',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 15 : 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF6E3AFF),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          // Primary: Try Again
+                          GestureDetector(
+                            onTap: _isProcessingAd ? null : _playAgain,
+                            child: Container(
+                              width: double.infinity,
+                              height: useSmallStyle ? 50 : 60,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(useSmallStyle ? 25 : 30),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF562EE6).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: _isProcessingPlayAgain
+                                    ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : Text(
+                                        didWin ? 'Play Again' : 'Need 30+ taps to earn! Try Again',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: useSmallStyle ? 14 : 16,
+                                          fontWeight: FontWeight.w900,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 30),
                       ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-
-        const Spacer(),
-
-        // Action Buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              // Play Again
-              GestureDetector(
-                onTap: _isProcessingAd ? null : _playAgain,
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF562EE6).withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: _isProcessingPlayAgain
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Play Again',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-              if (didWin && !_hasClaimed) ...[
-                const SizedBox(height: 14),
-
-                // Claim Reward
-                GestureDetector(
-                  onTap: _isProcessingAd ? null : _claimCoins,
-                  child: Container(
-                    width: double.infinity,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFECFF),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Center(
-                      child: _isProcessingClaim
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF562EE6),
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Text(
-                              'Claim Reward',
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFF562EE6),
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                // const SizedBox(height: 14),
-
-                // Exit to Menu
-                // GestureDetector(
-                //   onTap: () {
-                //     setState(() {
-                //       _hasStarted = false;
-                //       _isGameOver = false;
-                //       _score = 0;
-                //       _timeLeftSeconds = 15;
-                //       _timerProgress = 1.0;
-                //       _originalCoinsEarned = 0;
-                //       _coinsEarned = 0;
-                //     });
-                //   },
-                //   child: Container(
-                //     width: double.infinity,
-                //     height: 60,
-                //     decoration: BoxDecoration(
-                //       color: const Color(0xFFF1F1FB),
-                //       borderRadius: BorderRadius.circular(30),
-                //     ),
-                //     child: Center(
-                //       child: Text(
-                //         'Exit to Menu',
-                //         style: GoogleFonts.outfit(
-                //           fontSize: 18,
-                //           fontWeight: FontWeight.w900,
-                //           color: const Color(0xFF868A9F),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
-                // ),
-              ],
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 

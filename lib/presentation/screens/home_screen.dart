@@ -178,7 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() => _isProcessing = true);
 
     // Read dynamic reward amount from database via DailyCapService
-    final reward = ref.read(dailyCapServiceProvider).getBaseReward('ad', fallback: 50);
+    final reward = ref.read(dailyCapServiceProvider).getBaseReward('ad', fallback: RewardConfig.watchVideoPremium);
 
     Future<void> claimReward() async {
       await ref.read(coinProvider.notifier).credit(reward, 'ad');
@@ -247,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _completeMegaChestClaim() async {
     if (_isProcessing) return;
     // Read dynamic mega chest base reward from database
-    final megaChestBase = ref.read(dailyCapServiceProvider).getBaseReward('mega_chest', fallback: 1000);
+    final megaChestBase = ref.read(dailyCapServiceProvider).getBaseReward('mega_chest', fallback: RewardConfig.megaChestReward);
     await showRewardChoice(
       context: context,
       featureName: 'Chest Reward',

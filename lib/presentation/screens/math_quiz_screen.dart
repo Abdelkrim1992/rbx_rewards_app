@@ -9,6 +9,7 @@ import '../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
+import '../../models/reward_config.dart';
 import '../../widgets/game_prefs.dart';
 import '../../core/utils/game_reward_helper.dart';
 import '../../core/utils/reward_helper.dart';
@@ -41,7 +42,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   int _correctCount = 0;
   int _questionIndex = 1;
   final int _totalQuestions = 10;
-  int _coinsEarned = 0;
   int _originalCoinsEarned = 0;
   String? _sessionId;
   DateTime? _gameStartTime;
@@ -132,7 +132,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
       _gameState = 'PLAYING';
       _correctCount = 0;
       _questionIndex = 1;
-      _coinsEarned = 0;
       _originalCoinsEarned = 0;
       _secondsLeft = 60;
       _timerProgress = 1.0;
@@ -252,15 +251,10 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
   void _triggerQuizComplete() {
     _quizTimer?.cancel();
 
-    final capService = ref.read(dailyCapServiceProvider);
-    final maxReward = capService.getBaseReward('math_quiz', fallback: 15);
-    // Dynamic action calculation: 3 base coins per correct answer (5 questions = max 15 base coins)
-    final perCorrect = (maxReward / _totalQuestions).ceil();
-    final coins = (_correctCount * perCorrect).clamp(0, maxReward);
+    final coins = RewardConfig.calculateMathQuizBaseReward(_correctCount, _totalQuestions);
 
     setState(() {
       _originalCoinsEarned = coins;
-      _coinsEarned = coins;
       _gameState = 'GAMEOVER';
     });
 
@@ -301,7 +295,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         if (mounted) {
           setState(() {
             _hasClaimed = true;
-            _coinsEarned = earned;
           });
         }
         return true;
@@ -390,7 +383,6 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
         if (mounted) {
           setState(() {
             _hasClaimed = true;
-            _coinsEarned = earned;
           });
         }
       }
@@ -835,8 +827,23 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
   // --- 3. GAMEOVER SCREEN ---
   Widget _buildGameOverScreen() {
-    final bool didWin = _correctCount >= 5;
-    
+    final bool didWin = _correctCount >= 2;
+    final tierName = _correctCount < 2
+        ? 'Target Not Reached'
+        : (_correctCount == 2
+            ? 'Bronze Tier 🥉'
+            : (_correctCount <= 4 ? 'Silver Tier 🥈' : 'Gold Genius 🥇'));
+
+    final headerTitle = !didWin
+        ? 'Quiz Incomplete'
+        : (_correctCount == 5
+            ? 'Genius Score! 🥇'
+            : (_correctCount >= 3 ? 'Great Job! 🥈' : 'Good Effort! 🥉'));
+
+    final headerSubtitle = !didWin
+        ? 'Score at least 2/5 to earn Robux coins'
+        : '$_correctCount/$_totalQuestions Correct • ${((_correctCount / _totalQuestions) * 100).round()}% Accuracy';
+
     return Column(
       key: const ValueKey('GAMEOVER'),
       mainAxisAlignment: MainAxisAlignment.center,
@@ -850,12 +857,12 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
             width: 90,
             height: 90,
             decoration: BoxDecoration(
-              color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFEFECFF),
+              color: didWin ? const Color(0xFFFDF6E2) : const Color(0xFFFEF2F2),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              didWin ? Icons.emoji_events : Icons.replay,
-              color: didWin ? const Color(0xFFFFCC44) : const Color(0xFF6E3AFF),
+              didWin ? Icons.emoji_events_rounded : Icons.close_rounded,
+              color: didWin ? const Color(0xFFFFCC44) : const Color(0xFFEF4444),
               size: 50,
             ),
           ),
@@ -864,20 +871,20 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
 
         // Result Header
         Text(
-          'Quiz Complete!',
+          headerTitle,
           style: GoogleFonts.outfit(
-            fontSize: 42,
+            fontSize: 34,
             fontWeight: FontWeight.w900,
             color: const Color(0xFF181C32),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // Stats Summary Subtitle
         Text(
-          '$_correctCount/$_totalQuestions Correct',
+          headerSubtitle,
           style: GoogleFonts.inter(
-            fontSize: 16,
+            fontSize: 15,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF64748B),
           ),
@@ -890,13 +897,15 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFECFF),
+              color: didWin ? const Color(0xFFEFECFF) : const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFE2E2F5)),
+              border: Border.all(color: didWin ? const Color(0xFFE2E2F5) : const Color(0xFFE2E8F0)),
             ),
             child: Column(
               children: [
                 _buildRewardRow('Correct Answers', '$_correctCount/$_totalQuestions'),
+                const SizedBox(height: 8),
+                _buildRewardRow('Performance Tier', tierName),
                 const SizedBox(height: 8),
                 _buildRewardRow('Base Reward', '+$_originalCoinsEarned RBX'),
                 const Padding(
@@ -907,7 +916,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Total',
+                      'Total Earned',
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
@@ -920,7 +929,7 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                             color: Color(0xFFFFB000), size: 20),
                         const SizedBox(width: 4),
                         Text(
-                          '+$_coinsEarned RBX',
+                          '+$_originalCoinsEarned RBX',
                           style: GoogleFonts.outfit(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -943,60 +952,27 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              // Play Again
-              GestureDetector(
-                onTap: _isProcessingAd ? null : _playAgain,
-                child: Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF562EE6).withOpacity(0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: _isProcessingPlayAgain
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Play Again',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-              if (!_hasClaimed) ...[
-                const SizedBox(height: 14),
-
-                // Claim Reward
+              if (didWin && !_hasClaimed) ...[
+                // Claim Reward (Primary Action)
                 GestureDetector(
                   onTap: _isProcessingAd ? null : _claimQuizCoins,
                   child: Container(
                     width: double.infinity,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFECFF),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF562EE6).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: _isProcessingClaim
@@ -1004,23 +980,98 @@ class _MathQuizScreenState extends ConsumerState<MathQuizScreen>
                               width: 24,
                               height: 24,
                               child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              'Claim Reward (+$_originalCoinsEarned RBX)',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                // Play Again (Secondary Action)
+                GestureDetector(
+                  onTap: _isProcessingAd ? null : _playAgain,
+                  child: Container(
+                    width: double.infinity,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFECFF),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Center(
+                      child: _isProcessingPlayAgain
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
                                 color: Color(0xFF562EE6),
                                 strokeWidth: 2.5,
                               ),
                             )
                           : Text(
-                              'Claim Reward',
+                              'Play Again',
                               style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
                                 color: const Color(0xFF562EE6),
                               ),
                             ),
                     ),
                   ),
                 ),
+              ] else ...[
+                // Play / Try Again
+                GestureDetector(
+                  onTap: _isProcessingAd ? null : _playAgain,
+                  child: Container(
+                    width: double.infinity,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF7A4BFF), Color(0xFF562EE6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF562EE6).withOpacity(0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: _isProcessingPlayAgain
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              didWin ? 'Play Again' : 'Try Again',
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
               ],
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
             ],
           ),
         ),

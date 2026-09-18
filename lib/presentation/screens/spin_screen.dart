@@ -16,6 +16,7 @@ import '../../widgets/game_prefs.dart';
 import '../../widgets/feature_top_bar.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../business/sound_service.dart';
+import '../../models/reward_config.dart';
 
 class SpinScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
@@ -40,18 +41,18 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   int _extraSpinsRemaining = GamePrefs.maxExtraSpinsPerDay;
 
   List<_WheelSegment> get segments {
-    final jackpotReward = ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
+    const jackpotReward = RewardConfig.spinJackpotBase;
     return [
-      const _WheelSegment(label: '5', sublabel: 'RBX', color: Color(0xFF8B5CF6)),
-      const _WheelSegment(label: '8', sublabel: 'RBX', color: Color(0xFF6D28D9)),
-      const _WheelSegment(label: '10', sublabel: 'RBX', color: Color(0xFFA78BFA)),
-      const _WheelSegment(label: '20', sublabel: 'RBX', color: Color(0xFF5B21B6)),
-      _WheelSegment(
+      const _WheelSegment(label: '2', sublabel: 'RBX', color: Color(0xFF8B5CF6)),
+      const _WheelSegment(label: '4', sublabel: 'RBX', color: Color(0xFF6D28D9)),
+      const _WheelSegment(label: '6', sublabel: 'RBX', color: Color(0xFFA78BFA)),
+      const _WheelSegment(label: '8', sublabel: 'RBX', color: Color(0xFF5B21B6)),
+      const _WheelSegment(
         label: 'JACKPOT',
         sublabel: '$jackpotReward RBX!',
-        color: const Color(0xFFF59E0B), // Radiant Amber Gold
+        color: Color(0xFFF59E0B), // Radiant Amber Gold
       ),
-      const _WheelSegment(label: '15', sublabel: 'RBX', color: Color(0xFF7C3AED)),
+      const _WheelSegment(label: '10', sublabel: 'RBX', color: Color(0xFF7C3AED)),
     ];
   }
 
@@ -283,9 +284,9 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   int _prizeToCoins(String prize) {
     switch (prize) {
       case 'JACKPOT':
-        return ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
+        return RewardConfig.spinJackpotBase;
       default:
-        return int.tryParse(prize) ?? 5;
+        return int.tryParse(prize) ?? 2;
     }
   }
 
@@ -319,7 +320,7 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
   }
 
   void _showHowToPlay(BuildContext context) {
-    final jackpotReward = ref.read(dailyCapServiceProvider).getPremiumReward('spin', fallback: 25);
+    const jackpotReward = RewardConfig.spinPremium;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -386,11 +387,11 @@ class _SpinScreenState extends ConsumerState<SpinScreen>
                     color: Color(0xFF9B5CFF),
                   ),
                   const SizedBox(height: 8),
-                  _HowToStep(
+                  const _HowToStep(
                     icon: Icons.emoji_events_outlined,
                     title: 'Hit the Jackpot',
                     description: 'Land on the golden JACKPOT segment to win up to $jackpotReward RBX.',
-                    color: const Color(0xFFF59E0B),
+                    color: Color(0xFFF59E0B),
                   ),
                   const SizedBox(height: 8),
                   const _HowToStep(

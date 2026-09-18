@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../core/utils/reward_helper.dart';
 import '../../widgets/quit_confirmation_dialog.dart';
 import '../../models/ad_models.dart';
+import '../../models/reward_config.dart';
 import '../../widgets/game_prefs.dart';
 
 // --- Vector 3D Helper ---
@@ -456,7 +457,8 @@ class FlappyJumpGame extends FlameGame {
           if (!isMuted) HapticFeedback.selectionClick();
         }
 
-        coinsEarned = (score ~/ 2).clamp(0, 15); // max 15 base coins
+        // Update live coin preview using the tiered reward config
+        coinsEarned = RewardConfig.calculateFlappyBaseReward(score);
         // Display floating texts
         final playerScreen = _projectPoint(playerPos);
         floatingTexts.add(GameFloatingText(
@@ -505,7 +507,8 @@ class FlappyJumpGame extends FlameGame {
       if (!coin.collected && dist < playerRadius + 14.0) {
         coin.collected = true;
         score += 2; // Increases score too!
-        coinsEarned = (score ~/ 2).clamp(0, 15); // max 15 base coins
+        // Update live coin preview using the tiered reward config
+        coinsEarned = RewardConfig.calculateFlappyBaseReward(score);
         combo++;
         if (combo > maxCombo) maxCombo = combo;
 
@@ -1211,7 +1214,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   final bool _showCoinClaimAnimation = false;
   bool _hasClaimedReward = false;
   bool _handledGameOver = false;
-  int _originalCoinsEarned = 0;
   late AnimationController _claimAnimController;
   final List<_GameClaimCoin> _flyingCoins = [];
 
@@ -1238,7 +1240,10 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
       if (_game.isGameOver && !_handledGameOver && mounted) {
         _handledGameOver = true;
         _checkAndUpdateHighScore();
-        if (_game.coinsEarned > 0) {
+        // Recalculate final base reward from final score
+        final finalBase = RewardConfig.calculateFlappyBaseReward(_game.score);
+        _game.coinsEarned = finalBase;
+        if (finalBase > 0) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) _claimCoins();
           });
@@ -1256,46 +1261,96 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
               setState(() {});
               showDialog(
                 context: context,
+                barrierDismissible: false,
                 builder: (context) => AlertDialog(
                   backgroundColor: const Color(0xFF19163D),
                   surfaceTintColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(28),
                     side: BorderSide(
-                      color: const Color(0xFFFF52A2).withValues(alpha: 0.4),
+                      color: const Color(0xFFFF52A2).withValues(alpha: 0.5),
                       width: 1.5,
                     ),
                   ),
-                  title: Text(
-                    'Game Over',
-                    style: GoogleFonts.outfit(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFFFF52A2),
-                    ),
-                  ),
-                  content: Text(
-                    "You scored ${_game.score}. You didn't earn any coins this round.",
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      color: Colors.white70,
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        _handledGameOver = false;
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        'OK',
-                        style: GoogleFonts.outfit(
-                          color: const Color(0xFF00FFCC),
-                          fontWeight: FontWeight.w800,
+                  contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Crash icon
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF52A2).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFFF52A2).withValues(alpha: 0.4),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.flight_land_rounded,
+                          color: Color(0xFFFF52A2),
+                          size: 38,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Crash Landing!',
+                        style: GoogleFonts.outfit(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _game.score < 3
+                            ? 'Score at least 3 to earn RBX coins!'
+                            : "Score: ${_game.score} • Reach 3+ to earn RBX!",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Colors.white60,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Fly Again button
+                      GestureDetector(
+                        onTap: () {
+                          _handledGameOver = false;
+                          Navigator.of(context).pop();
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF52A2), Color(0xFFFF0080)],
+                            ),
+                            borderRadius: BorderRadius.circular(26),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF52A2).withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Text(
+                              '🚀 Fly Again',
+                              style: GoogleFonts.outfit(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             }
@@ -1342,7 +1397,8 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
   void _claimCoins() async {
     if (_hasClaimedReward || _showCoinClaimAnimation || _game.coinsEarned <= 0) return;
 
-    final baseAmt = _originalCoinsEarned > 0 ? _originalCoinsEarned : _game.coinsEarned;
+    // Final calculation is already done by onStateChanged – use game.coinsEarned as base
+    final baseAmt = _game.coinsEarned;
 
     await showRewardChoice(
       context: context,
@@ -1391,7 +1447,6 @@ class _FlappyJumpGameScreenState extends ConsumerState<FlappyJumpGameScreen>
             setState(() {
               _hasClaimedReward = false;
               _handledGameOver = false;
-              _originalCoinsEarned = 0;
             });
           } else {
             final isCap = result.error?.toLowerCase().contains('cap') ?? false;

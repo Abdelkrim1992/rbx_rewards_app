@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../data/supabase_repository.dart';
+import '../models/reward_config.dart';
 
 /// Tracks daily coin earnings and enforces in-app feature level daily caps.
 /// Extends [ChangeNotifier] so any [ref.watch(dailyCapServiceProvider)]
@@ -212,25 +213,24 @@ class DailyCapService extends ChangeNotifier {
     // Harmonized fallbacks according to Phase 6 economy
     switch (key) {
       case 'ad':
-        return 8;
+        return RewardConfig.watchVideoPremium;
       case 'chest':
-        return 15;
+        return RewardConfig.chestBase;
       case 'scratch':
-        return 12;
+        return RewardConfig.scratchBase;
       case 'spin':
-        return 10;
+        return RewardConfig.spinBase;
       case 'quiz':
       case 'math_quiz':
       case 'flappy_jump':
       case 'flip_card':
-        return 6;
       case 'tap_tap':
-        return 5;
+        return RewardConfig.miniGameMaxBaseReward;
       case 'mega_chest':
       case 'mega_chest_double':
-        return 250;
+        return RewardConfig.megaChestBase;
       case 'daily_reward':
-        return 10;
+        return RewardConfig.getDailyStreakBaseReward(1);
       default:
         return fallback;
     }
@@ -245,25 +245,24 @@ class DailyCapService extends ChangeNotifier {
     }
     switch (key) {
       case 'ad':
-        return 25; // 8 x 3 ≈ 25
+        return RewardConfig.watchVideoPremium;
       case 'chest':
-        return 60; // 15 x 4
+        return RewardConfig.chestPremium;
       case 'scratch':
-        return 48; // 12 x 4
+        return RewardConfig.scratchPremium;
       case 'spin':
-        return 40; // 10 x 4
+        return RewardConfig.spinPremium;
       case 'quiz':
       case 'math_quiz':
       case 'flappy_jump':
       case 'flip_card':
-        return 60; // Up to 60 (15 max base x 4)
       case 'tap_tap':
-        return 60; // Up to 60 (15 max base x 4)
+        return RewardConfig.miniGameMaxPremiumReward;
       case 'mega_chest':
       case 'mega_chest_double':
-        return 250;
+        return RewardConfig.megaChestPremium;
       case 'daily_reward':
-        return 30; // 10 x 3
+        return RewardConfig.getDailyStreakPremiumReward(1);
       default:
         return fallback;
     }
@@ -275,9 +274,10 @@ class DailyCapService extends ChangeNotifier {
     if (_rewardLimits.containsKey(key)) {
       return _rewardLimits[key]!;
     }
-    if (key == 'chest') return (12, 18);
-    if (key == 'scratch') return (10, 14);
-    if (key == 'mega_chest') return (250, 250);
+    if (key == 'chest') return (RewardConfig.chestMinBase, RewardConfig.chestMaxBase);
+    if (key == 'scratch') return (RewardConfig.scratchMinBase, RewardConfig.scratchMaxBase);
+    if (key == 'spin') return (RewardConfig.spinWheelBaseSlices.first, RewardConfig.spinJackpotBase);
+    if (key == 'mega_chest') return (RewardConfig.megaChestBase, RewardConfig.megaChestBase);
     return (5, 10);
   }
 
@@ -315,7 +315,7 @@ class DailyCapService extends ChangeNotifier {
     // Load cached dynamic limits from secure storage if available.
     // Sanitize stale legacy caps (≤ 150) to 1200 for all repeatable features
     // so devices that cached the old 120 value are automatically corrected.
-    final nonScaledKeys = const {'daily_reward', 'global_offerwalls', 'survey', 'mega_chest', 'mega_chest_double'};
+    const nonScaledKeys = {'daily_reward', 'global_offerwalls', 'survey', 'mega_chest', 'mega_chest_double'};
     for (final key in _limits.keys) {
       try {
         final val = await _secureStorage.read(key: 'cap_limit_$key');

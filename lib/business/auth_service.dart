@@ -190,12 +190,23 @@ class AuthService {
     try {
       final webClientId = _googleWebClientId.trim();
       final iosClientId = _googleIosClientId.trim();
+
+      // On iOS, clientId MUST be set explicitly — the SDK no longer auto-reads
+      // GIDClientID from Info.plist when constructed programmatically in newer versions.
+      // We use the iOS OAuth client ID as clientId, and the web client ID as serverClientId
+      // so that Supabase receives a valid ID token audience.
+      final bool isRunningOnIos = !kIsWeb && Platform.isIOS;
+      final String? resolvedClientId = isRunningOnIos
+          ? (iosClientId.isNotEmpty ? iosClientId : (webClientId.isNotEmpty ? webClientId : null))
+          : null;
+
+      debugPrint('ℹ️ Google Sign-In clientId (iOS): $resolvedClientId');
       debugPrint('ℹ️ Google Sign-In serverClientId: ${webClientId.isNotEmpty ? webClientId : "(none)"}');
 
       final googleSignIn = _googleSignIn ??
           GoogleSignIn(
             serverClientId: webClientId.isNotEmpty ? webClientId : null,
-            clientId: iosClientId.isNotEmpty ? iosClientId : null,
+            clientId: resolvedClientId,
             scopes: const ['email', 'profile'],
           );
 
