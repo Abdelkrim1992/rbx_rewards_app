@@ -7,6 +7,7 @@ import 'package:rbx_rewards/business/auth_service.dart';
 import 'package:rbx_rewards/presentation/providers/providers.dart';
 import 'package:rbx_rewards/presentation/providers/user_provider.dart';
 import 'package:rbx_rewards/presentation/providers/coin_provider.dart';
+import 'package:rbx_rewards/presentation/screens/home_screen.dart';
 import 'package:rbx_rewards/models/user_profile.dart';
 
 class _TestAuthService extends AuthService {
@@ -97,7 +98,7 @@ void main() {
 
     // 9. Verify transition to HomeScreen and immediate 500 coins balance
     expect(find.byKey(const ValueKey('google_btn')), findsNothing);
-    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(find.text('500'), findsWidgets);
     expect(container.read(coinProvider), 500);
 

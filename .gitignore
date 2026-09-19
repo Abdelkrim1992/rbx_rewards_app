@@ -18,11 +18,6 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
@@ -39,12 +34,25 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# ──────────────────────────────────────────────────────────────────────────────
 # Environment secrets & API keys
+# ──────────────────────────────────────────────────────────────────────────────
+# Real secrets — NEVER commit these
 .env
 .env.local
 .env.*.local
+env.json
+env.test.json
 *.key
 *.pem
+
+# Generated secrets file — auto-created from env.json by tool/generate_secrets.dart
+# Contains real API keys baked in — NEVER commit this
+lib/core/config/app_secrets.dart
+
+# Safe templates — commit these so new devs know what keys are needed
+# env.example.json       ← commit this
+# env.example.test.json  ← commit this
 
 # Service account files
 google-services.json
@@ -82,7 +90,7 @@ supabase/.branches/
 
 # IDE / tool caches
 .kilo/
-.vscode/
+# .vscode/ is tracked — contains launch.json needed by the team
 .idea/
 *.iml
 
@@ -94,4 +102,4 @@ Thumbs.db
 *.log
 *.tmp
 temp/
-.tmp/
+.tmp/

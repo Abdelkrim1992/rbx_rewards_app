@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RBX Rewards (Android debug)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "flutterMode": "debug"
+    },
+    {
+      "name": "RBX Rewards (iOS debug)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "flutterMode": "debug",
+      "deviceId": "apple_ios_simulator"
+    },
+    {
+      "name": "RBX Rewards (profile)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "RBX Rewards (release)",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "flutterMode": "release"
+    },
+    {
+      "name": "E2E Tests — All Suites",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "program": "integration_test/01_onboarding_e2e_test.dart"
+    },
+    {
+      "name": "E2E Tests — Profile & Settings",
+      "request": "launch",
+      "type": "dart",
+      "preLaunchTask": "generate-secrets",
+      "program": "integration_test/05_profile_and_settings_e2e_test.dart"
+    }
+  ]
+}

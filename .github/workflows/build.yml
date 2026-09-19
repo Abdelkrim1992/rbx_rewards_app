@@ -1,0 +1,197 @@
+name: Build & Deploy RBX Rewards
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ─── E2E Tests on Android Emulator ──────────────────────────────────────────
+  e2e_tests:
+    name: E2E Tests (Patrol)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # Secrets are injected from GitHub Repository Secrets → env.test.json
+      # Keys NEVER appear in code or committed files
+      - name: Generate env.test.json from GitHub Secrets
+        run: |
+          cat > env.test.json << 'EOF'
+          {
+            "USE_TEST_ADS": "true",
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+            "PREMIUM_AD_UNIT_ID": "${{ secrets.TEST_AD_UNIT_ID_ANDROID }}",
+            "QUICK_AD_UNIT_ID": "${{ secrets.TEST_INTERSTITIAL_ID_ANDROID }}",
+            "PREMIUM_AD_UNIT_ID_IOS": "${{ secrets.TEST_AD_UNIT_ID_IOS }}",
+            "QUICK_AD_UNIT_ID_IOS": "${{ secrets.TEST_INTERSTITIAL_ID_IOS }}",
+            "TEST_AD_UNIT_ID_ANDROID": "${{ secrets.TEST_AD_UNIT_ID_ANDROID }}",
+            "TEST_INTERSTITIAL_ID_ANDROID": "${{ secrets.TEST_INTERSTITIAL_ID_ANDROID }}",
+            "TEST_REWARDED_INTERSTITIAL_ID_ANDROID": "${{ secrets.TEST_REWARDED_INTERSTITIAL_ID_ANDROID }}",
+            "TEST_AD_UNIT_ID_IOS": "${{ secrets.TEST_AD_UNIT_ID_IOS }}",
+            "TEST_INTERSTITIAL_ID_IOS": "${{ secrets.TEST_INTERSTITIAL_ID_IOS }}",
+            "TEST_REWARDED_INTERSTITIAL_ID_IOS": "${{ secrets.TEST_REWARDED_INTERSTITIAL_ID_IOS }}",
+            "TAPJOY_SDK_KEY_ANDROID": "",
+            "TAPJOY_SDK_KEY_IOS": "",
+            "TAPJOY_REPORTING_API_KEY": "",
+            "TAPJOY_SECRET": "",
+            "TAPJOY_PLACEMENT_NAME": "Offerwall",
+            "PUBSCALE_APP_ID": "",
+            "PUBSCALE_APP_ID_IOS": "",
+            "PUBSCALE_SECRET": "",
+            "PUBSCALE_SECRET_IOS": "",
+            "PUBSCALE_SANDBOX": "true",
+            "GOOGLE_WEB_CLIENT_ID": "${{ secrets.GOOGLE_WEB_CLIENT_ID }}",
+            "GOOGLE_IOS_CLIENT_ID": "${{ secrets.GOOGLE_IOS_CLIENT_ID }}",
+            "UPSTASH_REDIS_REST_URL": "",
+            "UPSTASH_REDIS_REST_TOKEN": "",
+            "INTEGRATION_TEST": "true"
+          }
+          EOF
+
+      - name: Enable KVM (Android Emulator acceleration)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD Cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api31
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run Patrol E2E Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: |
+            flutter test integration_test/ \
+              --dart-define-from-file=env.test.json \
+              -v
+
+  # ─── Build Release APK (Android) ────────────────────────────────────────────
+  build_android:
+    name: Build Android Release APK
+    runs-on: ubuntu-latest
+    needs: e2e_tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # Decode the Android signing keystore from GitHub Secret (base64 encoded)
+      - name: Decode Android Keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/rbx-release.jks
+
+      # Generate production env.json from GitHub Secrets — runs in CI memory only
+      - name: Generate env.json from GitHub Secrets
+        run: |
+          cat > env.json << 'EOF'
+          {
+            "USE_TEST_ADS": "false",
+            "SUPABASE_URL": "${{ secrets.SUPABASE_URL }}",
+            "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+            "PREMIUM_AD_UNIT_ID": "${{ secrets.PREMIUM_AD_UNIT_ID }}",
+            "QUICK_AD_UNIT_ID": "${{ secrets.QUICK_AD_UNIT_ID }}",
+            "PREMIUM_AD_UNIT_ID_IOS": "${{ secrets.PREMIUM_AD_UNIT_ID_IOS }}",
+            "QUICK_AD_UNIT_ID_IOS": "${{ secrets.QUICK_AD_UNIT_ID_IOS }}",
+            "TEST_AD_UNIT_ID_ANDROID": "${{ secrets.TEST_AD_UNIT_ID_ANDROID }}",
+            "TEST_INTERSTITIAL_ID_ANDROID": "${{ secrets.TEST_INTERSTITIAL_ID_ANDROID }}",
+            "TEST_REWARDED_INTERSTITIAL_ID_ANDROID": "${{ secrets.TEST_REWARDED_INTERSTITIAL_ID_ANDROID }}",
+            "TEST_AD_UNIT_ID_IOS": "${{ secrets.TEST_AD_UNIT_ID_IOS }}",
+            "TEST_INTERSTITIAL_ID_IOS": "${{ secrets.TEST_INTERSTITIAL_ID_IOS }}",
+            "TEST_REWARDED_INTERSTITIAL_ID_IOS": "${{ secrets.TEST_REWARDED_INTERSTITIAL_ID_IOS }}",
+            "TAPJOY_SDK_KEY_ANDROID": "${{ secrets.TAPJOY_SDK_KEY_ANDROID }}",
+            "TAPJOY_SDK_KEY_IOS": "${{ secrets.TAPJOY_SDK_KEY_IOS }}",
+            "TAPJOY_REPORTING_API_KEY": "${{ secrets.TAPJOY_REPORTING_API_KEY }}",
+            "TAPJOY_SECRET": "${{ secrets.TAPJOY_SECRET }}",
+            "TAPJOY_PLACEMENT_NAME": "Offerwall",
+            "PUBSCALE_APP_ID": "${{ secrets.PUBSCALE_APP_ID }}",
+            "PUBSCALE_APP_ID_IOS": "${{ secrets.PUBSCALE_APP_ID_IOS }}",
+            "PUBSCALE_SECRET": "${{ secrets.PUBSCALE_SECRET }}",
+            "PUBSCALE_SECRET_IOS": "${{ secrets.PUBSCALE_SECRET_IOS }}",
+            "PUBSCALE_SANDBOX": "false",
+            "GOOGLE_WEB_CLIENT_ID": "${{ secrets.GOOGLE_WEB_CLIENT_ID }}",
+            "GOOGLE_IOS_CLIENT_ID": "${{ secrets.GOOGLE_IOS_CLIENT_ID }}",
+            "UPSTASH_REDIS_REST_URL": "${{ secrets.UPSTASH_REDIS_REST_URL }}",
+            "UPSTASH_REDIS_REST_TOKEN": "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}",
+            "INTEGRATION_TEST": "false"
+          }
+          EOF
+
+      - name: Build Release APK
+        run: |
+          flutter build apk --release \
+            --dart-define-from-file=env.json \
+            --obfuscate \
+            --split-debug-info=build/debug-info
+        env:
+          ANDROID_KEYSTORE_PATH: android/app/rbx-release.jks
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rbx-rewards-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

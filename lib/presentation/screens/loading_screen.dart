@@ -101,12 +101,10 @@ class _LoadingScreenState extends State<LoadingScreen>
         precacheFuture,
         minDurationFuture,
       ]).timeout(
-        const Duration(seconds: 4),
-        onTimeout: () async {
-          debugPrint('⚠️ Cold boot sequence timeout reached, continuing...');
-          final container =
-              await bootstrapFuture.catchError((_) => ProviderContainer());
-          return [container, null, null];
+        const Duration(milliseconds: 1500),
+        onTimeout: () {
+          debugPrint('⚠️ Cold boot sequence timeout reached (1500ms), proceeding immediately...');
+          return [ProviderContainer(), null, null];
         },
       );
 

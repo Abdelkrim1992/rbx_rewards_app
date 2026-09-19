@@ -17,6 +17,8 @@ class AppCachedImage extends StatelessWidget {
   final bool useCdn;
   final double? width;
   final double? height;
+  final int? cacheWidth;
+  final int? cacheHeight;
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? errorWidget;
@@ -30,6 +32,8 @@ class AppCachedImage extends StatelessWidget {
     this.useCdn = false,
     this.width,
     this.height,
+    this.cacheWidth,
+    this.cacheHeight,
     this.fit = BoxFit.cover,
     this.placeholder,
     this.errorWidget,
@@ -55,6 +59,8 @@ class AppCachedImage extends StatelessWidget {
         effectiveFallback,
         width: width,
         height: height,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         fit: fit,
         color: color,
         colorBlendMode: colorBlendMode,
@@ -68,6 +74,8 @@ class AppCachedImage extends StatelessWidget {
         imageUrl,
         width: width,
         height: height,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         fit: fit,
         color: color,
         colorBlendMode: colorBlendMode,
@@ -86,11 +94,10 @@ class AppCachedImage extends StatelessWidget {
 
     if (shouldFetchNetwork) {
       final pixelRatio = MediaQuery.of(context).devicePixelRatio;
-      final targetMemWidth =
-          width != null ? (width! * pixelRatio).toInt().clamp(50, 1200) : null;
-      final targetMemHeight = height != null
-          ? (height! * pixelRatio).toInt().clamp(50, 1200)
-          : null;
+      final targetMemWidth = cacheWidth ??
+          (width != null ? (width! * pixelRatio).toInt().clamp(50, 1200) : null);
+      final targetMemHeight = cacheHeight ??
+          (height != null ? (height! * pixelRatio).toInt().clamp(50, 1200) : null);
 
       return CachedNetworkImage(
         imageUrl: targetUrl,
@@ -111,6 +118,8 @@ class AppCachedImage extends StatelessWidget {
               effectiveFallback,
               width: width,
               height: height,
+              cacheWidth: cacheWidth,
+              cacheHeight: cacheHeight,
               fit: fit,
               color: color,
               colorBlendMode: colorBlendMode,
@@ -128,6 +137,8 @@ class AppCachedImage extends StatelessWidget {
       imageUrl,
       width: width,
       height: height,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
       fit: fit,
       color: color,
       colorBlendMode: colorBlendMode,
@@ -142,6 +153,8 @@ class AppCachedImage extends StatelessWidget {
         fallback,
         width: width,
         height: height,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         fit: fit,
         color: color,
         colorBlendMode: colorBlendMode,

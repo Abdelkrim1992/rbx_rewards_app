@@ -77,20 +77,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             .timeout(const Duration(milliseconds: 1500), onTimeout: () {});
       } catch (_) {}
 
-      try {
-        final result = await ref
-            .read(supabaseRepositoryProvider)
-            .claimWelcomeBonus()
-            .timeout(const Duration(seconds: 10));
-        debugPrint('claimWelcomeBonus result from backend: $result');
-        final balance =
-            result['balance'] as int? ?? result['new_balance'] as int?;
-        if (balance != null && balance > 0) {
-          ref.read(coinProvider.notifier).updateBalance(balance);
-          await ref.read(secureRepositoryProvider).saveBalance(balance);
+      if (auth.currentUser != null) {
+        try {
+          final result = await ref
+              .read(supabaseRepositoryProvider)
+              .claimWelcomeBonus()
+              .timeout(const Duration(milliseconds: 2500));
+          debugPrint('claimWelcomeBonus result from backend: $result');
+          final balance =
+              result['balance'] as int? ?? result['new_balance'] as int?;
+          if (balance != null && balance > 0) {
+            ref.read(coinProvider.notifier).updateBalance(balance);
+            await ref.read(secureRepositoryProvider).saveBalance(balance);
+          }
+        } catch (e) {
+          debugPrint('claimWelcomeBonus network notice: $e');
         }
-      } catch (e) {
-        debugPrint('claimWelcomeBonus network notice: $e');
       }
     } catch (e) {
       debugPrint('Error during account setup & bonus claim: $e');
@@ -344,8 +346,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Expanded(
                   child: PageView(
                     controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
                     onPageChanged: (index) {
-                      setState(() => _currentPage = index);
+                      if (_currentPage != index) {
+                        setState(() => _currentPage = index);
+                      }
                     },
                     children: [
                       _StepOneContent(isCompact: isCompact),
@@ -598,10 +603,13 @@ class _StepOneContent extends StatefulWidget {
 }
 
 class _StepOneContentState extends State<_StepOneContent>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late final AnimationController _floatCtrl;
   late final Animation<double> _floatAnim;
   late final Animation<double> _glowAnim;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -636,6 +644,7 @@ class _StepOneContentState extends State<_StepOneContent>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.sizeOf(context).height;
     final isCompact = widget.isCompact;
     final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
@@ -643,99 +652,100 @@ class _StepOneContentState extends State<_StepOneContent>
     final gapCardsBottom = (screenHeight * 0.014).clamp(10.0, 15.0);
     final cardHeight = (screenHeight * 0.10).clamp(78.0, 90.0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          SizedBox(height: vGapTop),
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            SizedBox(height: vGapTop),
 
-          // Unified Title & Subtitle (strictly aligned with Steps 2 & 3)
-          _OnboardingHeader(
-            title: RichText(
-              textAlign: TextAlign.center,
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF101828),
-                  letterSpacing: -0.6,
-                  height: 1.22,
-                ),
-                children: [
-                  TextSpan(text: 'Earn '),
-                  TextSpan(
-                    text: 'RBX Rewards\n',
-                    style: TextStyle(color: Color(0xFF5637E6)),
+            // Unified Title & Subtitle (strictly aligned with Steps 2 & 3)
+            _OnboardingHeader(
+              title: RichText(
+                textAlign: TextAlign.center,
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF101828),
+                    letterSpacing: -0.6,
+                    height: 1.22,
                   ),
-                  TextSpan(text: 'Every Day'),
-                ],
+                  children: [
+                    TextSpan(text: 'Earn '),
+                    TextSpan(
+                      text: 'RBX Rewards\n',
+                      style: TextStyle(color: Color(0xFF5637E6)),
+                    ),
+                    TextSpan(text: 'Every Day'),
+                  ],
+                ),
               ),
+              subtitle: 'Play mini games, complete tasks & earn coins.',
             ),
-            subtitle: 'Play mini games, complete tasks & earn coins.',
-          ),
 
-          // Hero 3D Roblox Avatar with Ambient Glow & Floating Animation
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _floatCtrl,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _floatAnim.value),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Ambient Gaming Radial Glow
-                      Container(
-                        width: isCompact ? 160 : 185,
-                        height: isCompact ? 160 : 185,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF5637E6)
-                                  .withValues(alpha: _glowAnim.value),
-                              blurRadius: 55,
-                              spreadRadius: 20,
-                            ),
-                            BoxShadow(
-                              color: const Color(0xFF00C2FF)
-                                  .withValues(alpha: _glowAnim.value * 0.6),
-                              blurRadius: 40,
-                              spreadRadius: 10,
-                            ),
-                          ],
-                        ),
-                      ),
-                      // 3D Avatar Image
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: isCompact ? 4 : 8,
-                        ),
-                        child: AppCachedImage(
-                          imageUrl: AppAssets.onboardingHero,
-                          fallbackAsset: AppAssets.onboardingHero,
-                          fit: BoxFit.contain,
-                          errorWidget: Container(
+            // Hero 3D Roblox Avatar with Ambient Glow & Floating Animation
+            Expanded(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _floatCtrl,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _floatAnim.value),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Ambient Gaming Radial Glow (hardware-accelerated single pass)
+                          Container(
+                            width: isCompact ? 190 : 225,
+                            height: isCompact ? 190 : 225,
                             decoration: BoxDecoration(
-                              gradient: AppColors.dailyCardGradient,
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.celebration,
-                                size: 70,
-                                color: AppColors.primary,
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  const Color(0xFF5637E6)
+                                      .withValues(alpha: _glowAnim.value * 0.75),
+                                  const Color(0xFF00C2FF)
+                                      .withValues(alpha: _glowAnim.value * 0.4),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.45, 1.0],
                               ),
                             ),
                           ),
-                        ),
+                          // 3D Avatar Image
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: isCompact ? 4 : 8,
+                            ),
+                            child: AppCachedImage(
+                              imageUrl: AppAssets.onboardingHero,
+                              fallbackAsset: AppAssets.onboardingHero,
+                              cacheWidth: 360,
+                              cacheHeight: 360,
+                              fit: BoxFit.contain,
+                              errorWidget: Container(
+                                decoration: BoxDecoration(
+                                  gradient: AppColors.dailyCardGradient,
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.celebration,
+                                    size: 70,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
 
           SizedBox(height: gapHeroCards),
 
@@ -771,8 +781,9 @@ class _StepOneContentState extends State<_StepOneContent>
           SizedBox(height: gapCardsBottom),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _MiniFeatureCard extends StatelessWidget {
@@ -847,133 +858,146 @@ class _MiniFeatureCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Step 2: Play. Earn. Redeem. (3 Elevated Step Cards + Trust Banner)
 // ---------------------------------------------------------------------------
-class _StepTwoContent extends StatelessWidget {
+class _StepTwoContent extends StatefulWidget {
   final bool isCompact;
 
   const _StepTwoContent({required this.isCompact});
 
   @override
+  State<_StepTwoContent> createState() => _StepTwoContentState();
+}
+
+class _StepTwoContentState extends State<_StepTwoContent>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.sizeOf(context).height;
+    final isCompact = widget.isCompact;
     final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
     final gapCardsBottom = (screenHeight * 0.014).clamp(10.0, 15.0);
     final vGapCards = (screenHeight * 0.014).clamp(6.0, 14.0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(height: vGapTop),
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(height: vGapTop),
 
-          // Unified Title & Subtitle (strictly aligned with Steps 1 & 3)
-          _OnboardingHeader(
-            title: RichText(
-              textAlign: TextAlign.center,
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF101828),
-                  letterSpacing: -0.6,
-                  height: 1.22,
-                ),
-                children: [
-                  TextSpan(text: 'Play. '),
-                  TextSpan(
-                    text: 'Earn. ',
-                    style: TextStyle(color: Color(0xFF5637E6)),
+            // Unified Title & Subtitle (strictly aligned with Steps 1 & 3)
+            _OnboardingHeader(
+              title: RichText(
+                textAlign: TextAlign.center,
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF101828),
+                    letterSpacing: -0.6,
+                    height: 1.22,
                   ),
-                  TextSpan(text: 'Redeem.\nIn 3 Simple Steps'),
-                ],
-              ),
-            ),
-            subtitle: 'Three simple steps to exciting rewards.',
-          ),
-
-          SizedBox(height: vGapCards),
-
-          // 3 Step Cards + Highlight Ribbon
-          Expanded(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.center,
-              child: SizedBox(
-                width: 340,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _StepCard(
-                      stepNumber: '1',
-                      badgeColor: const Color(0xFF5637E6),
-                      badgeBg: const Color(0xFFEEECFE),
-                      title: 'Play',
-                      description: 'Complete mini games\nand activities.',
-                      imagePath: AppAssets.onboardingGame,
-                      isCompact: isCompact,
+                    TextSpan(text: 'Play. '),
+                    TextSpan(
+                      text: 'Earn. ',
+                      style: TextStyle(color: Color(0xFF5637E6)),
                     ),
-                    SizedBox(height: vGapCards),
-                    _StepCard(
-                      stepNumber: '2',
-                      badgeColor: const Color(0xFFD97706),
-                      badgeBg: const Color(0xFFFEF3C7),
-                      title: 'Earn',
-                      description: 'Collect RBX Coins as\nyou complete activities.',
-                      imagePath: AppAssets.onboardingCoin,
-                      isCompact: isCompact,
-                    ),
-                    SizedBox(height: vGapCards),
-                    _StepCard(
-                      stepNumber: '3',
-                      badgeColor: const Color(0xFF059669),
-                      badgeBg: const Color(0xFFD1FAE5),
-                      title: 'Redeem',
-                      description: 'Use your RBX Coins\ntoward available rewards.',
-                      imagePath: AppAssets.onboardingReward,
-                      isCompact: isCompact,
-                    ),
-                    SizedBox(height: vGapCards),
-                    // Trust and speed incentive banner
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.bolt_rounded,
-                              size: 16,
-                              color: Color(0xFFF59E0B),
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Fast Payouts • Instant Delivery • 100% Free',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF475467),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    TextSpan(text: 'Redeem.\nIn 3 Simple Steps'),
                   ],
                 ),
               ),
+              subtitle: 'Three simple steps to exciting rewards.',
             ),
-          ),
-          SizedBox(height: gapCardsBottom),
-        ],
+
+            SizedBox(height: vGapCards),
+
+            // 3 Step Cards + Highlight Ribbon
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: 340,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _StepCard(
+                        stepNumber: '1',
+                        badgeColor: const Color(0xFF5637E6),
+                        badgeBg: const Color(0xFFEEECFE),
+                        title: 'Play',
+                        description: 'Complete mini games\nand activities.',
+                        imagePath: AppAssets.onboardingGame,
+                        isCompact: isCompact,
+                      ),
+                      SizedBox(height: vGapCards),
+                      _StepCard(
+                        stepNumber: '2',
+                        badgeColor: const Color(0xFFD97706),
+                        badgeBg: const Color(0xFFFEF3C7),
+                        title: 'Earn',
+                        description: 'Collect RBX Coins as\nyou complete activities.',
+                        imagePath: AppAssets.onboardingCoin,
+                        isCompact: isCompact,
+                      ),
+                      SizedBox(height: vGapCards),
+                      _StepCard(
+                        stepNumber: '3',
+                        badgeColor: const Color(0xFF059669),
+                        badgeBg: const Color(0xFFD1FAE5),
+                        title: 'Redeem',
+                        description: 'Use your RBX Coins\ntoward available rewards.',
+                        imagePath: AppAssets.onboardingReward,
+                        isCompact: isCompact,
+                      ),
+                      SizedBox(height: vGapCards),
+                      // Trust and speed incentive banner
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.bolt_rounded,
+                                size: 16,
+                                color: Color(0xFFF59E0B),
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Fast Payouts • Instant Delivery • 100% Free',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF475467),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: gapCardsBottom),
+          ],
+        ),
       ),
     );
   }
@@ -1089,6 +1113,8 @@ class _StepCard extends StatelessWidget {
               fit: BoxFit.contain,
               width: imageSize,
               height: imageSize,
+              cacheWidth: 160,
+              cacheHeight: 160,
               errorWidget: const Icon(
                 Icons.stars_rounded,
                 color: AppColors.primary,
@@ -1115,10 +1141,13 @@ class _StepThreeContent extends StatefulWidget {
 }
 
 class _StepThreeContentState extends State<_StepThreeContent>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late final AnimationController _floatCtrl;
   late final Animation<double> _floatAnim;
   late final Animation<double> _glowAnim;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -1155,6 +1184,7 @@ class _StepThreeContentState extends State<_StepThreeContent>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.sizeOf(context).height;
     final isCompact = widget.isCompact;
     final vGapTop = (screenHeight * 0.008).clamp(5.0, 9.0);
@@ -1163,223 +1193,229 @@ class _StepThreeContentState extends State<_StepThreeContent>
     final coinSize = (screenHeight * 0.065).clamp(40.0, 56.0);
     final cardPad = (screenHeight * 0.016).clamp(10.0, 16.0);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          SizedBox(height: vGapTop),
+    return RepaintBoundary(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          children: [
+            SizedBox(height: vGapTop),
 
-          // Unified Title & Subtitle (strictly aligned with Steps 1 & 2)
-          _OnboardingHeader(
-            title: RichText(
-              textAlign: TextAlign.center,
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF101828),
-                  letterSpacing: -0.6,
-                  height: 1.22,
-                ),
-                children: [
-                  TextSpan(text: 'Your first '),
-                  TextSpan(
-                    text: 'reward\n',
-                    style: TextStyle(color: Color(0xFF5637E6)),
+            // Unified Title & Subtitle (strictly aligned with Steps 1 & 2)
+            _OnboardingHeader(
+              title: RichText(
+                textAlign: TextAlign.center,
+                text: const TextSpan(
+                  style: TextStyle(
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF101828),
+                    letterSpacing: -0.6,
+                    height: 1.22,
                   ),
-                  TextSpan(text: 'is waiting'),
-                ],
+                  children: [
+                    TextSpan(text: 'Your first '),
+                    TextSpan(
+                      text: 'reward\n',
+                      style: TextStyle(color: Color(0xFF5637E6)),
+                    ),
+                    TextSpan(text: 'is waiting'),
+                  ],
+                ),
+              ),
+              subtitle: 'Sign in to lock in your starter bonus & cloud save.',
+            ),
+
+            // Bursting Open Gift Box with Floating Animation & Ambient Radial Glow
+            Expanded(
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _floatCtrl,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _floatAnim.value),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Ambient Radial Glow (hardware-accelerated single pass)
+                          Container(
+                            width: isCompact ? 190 : 220,
+                            height: isCompact ? 190 : 220,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  const Color(0xFFFFB800)
+                                      .withValues(alpha: _glowAnim.value * 0.75),
+                                  const Color(0xFF5637E6)
+                                      .withValues(alpha: _glowAnim.value * 0.4),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.0, 0.45, 1.0],
+                              ),
+                            ),
+                          ),
+                          // 3D Gift Box
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: vGapMd),
+                            child: AppCachedImage(
+                              imageUrl: AppAssets.onboardingGiftBox,
+                              fallbackAsset: AppAssets.onboardingGiftBox,
+                              cacheWidth: 360,
+                              cacheHeight: 360,
+                              fit: BoxFit.contain,
+                              errorWidget: Image.asset(
+                                AppAssets.dailyRewardGift,
+                                fit: BoxFit.contain,
+                                cacheWidth: 360,
+                                cacheHeight: 360,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-            subtitle: 'Sign in to lock in your starter bonus & cloud save.',
-          ),
 
-          // Bursting Open Gift Box with Floating Animation & Glow
-          Expanded(
-            child: AnimatedBuilder(
-              animation: _floatCtrl,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _floatAnim.value),
-                  child: Stack(
-                    alignment: Alignment.center,
+            // Welcome Bonus Card (+500 RBX Coins & Gold Medal Tag)
+            Container(
+              padding: EdgeInsets.all(cardPad),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
+                border: Border.all(
+                  color: const Color(0xFFFFD54F),
+                  width: 1.5,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x14FFB800),
+                    blurRadius: 16,
+                    offset: Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: Color(0x06000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Coins + +500 RBX Coins Row + Gold Tag
+                  Row(
                     children: [
-                      // Ambient Radial Glow
-                      Container(
-                        width: 170,
-                        height: 170,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF5637E6)
-                                  .withValues(alpha: _glowAnim.value),
-                              blurRadius: 50,
-                              spreadRadius: 20,
+                      AppCachedImage(
+                        imageUrl: AppAssets.goldRbxCoin,
+                        fallbackAsset: AppAssets.goldRbxCoin,
+                        width: coinSize,
+                        height: coinSize,
+                        cacheWidth: 140,
+                        cacheHeight: 140,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '+500',
+                              style: TextStyle(
+                                fontSize: isCompact ? 26 : 30,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF5637E6),
+                                letterSpacing: -0.8,
+                                height: 1.05,
+                              ),
                             ),
-                            BoxShadow(
-                              color: const Color(0xFFFFB800)
-                                  .withValues(alpha: _glowAnim.value * 0.7),
-                              blurRadius: 40,
-                              spreadRadius: 10,
+                            Text(
+                              'RBX Coins',
+                              style: TextStyle(
+                                fontSize: isCompact ? 13.5 : 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF101828),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                      // 3D Gift Box
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: vGapMd),
-                        child: AppCachedImage(
-                          imageUrl: AppAssets.onboardingGiftBox,
-                          fallbackAsset: AppAssets.onboardingGiftBox,
-                          fit: BoxFit.contain,
-                          errorWidget: Image.asset(
-                            AppAssets.dailyRewardGift,
-                            fit: BoxFit.contain,
+                      // Gold Welcome Gift Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFF7E6), Color(0xFFFFECC2)],
                           ),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFFFD54F),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '🎁 Welcome Gift',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFB45309),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            ),
-          ),
 
-          // Welcome Bonus Card (+500 RBX Coins & Gold Medal Tag)
-          Container(
-            padding: EdgeInsets.all(cardPad),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(isCompact ? 16 : 20),
-              border: Border.all(
-                color: const Color(0xFFFFD54F),
-                width: 1.5,
-              ),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x14FFB800),
-                  blurRadius: 16,
-                  offset: Offset(0, 4),
-                ),
-                BoxShadow(
-                  color: Color(0x06000000),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Coins + +500 RBX Coins Row + Gold Tag
-                Row(
-                  children: [
-                    AppCachedImage(
-                      imageUrl: AppAssets.goldRbxCoin,
-                      fallbackAsset: AppAssets.goldRbxCoin,
-                      width: coinSize,
-                      height: coinSize,
-                      fit: BoxFit.contain,
+                  SizedBox(height: isCompact ? 8 : 10),
+
+                  // Incentive Banner
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '+500',
-                            style: TextStyle(
-                              fontSize: isCompact ? 26 : 30,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF5637E6),
-                              letterSpacing: -0.8,
-                              height: 1.05,
-                            ),
-                          ),
-                          Text(
-                            'RBX Coins',
-                            style: TextStyle(
-                              fontSize: isCompact ? 13.5 : 14.5,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF101828),
-                            ),
-                          ),
-                        ],
-                      ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    // Gold Welcome Gift Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFF7E6), Color(0xFFFFECC2)],
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 15,
+                          color: Color(0xFF16A34A),
                         ),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFFFFD54F),
-                          width: 1,
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '🎁 Welcome Gift',
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Credited instantly to your wallet upon 1-tap sign in.',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFB45309),
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475467),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: isCompact ? 8 : 10),
-
-                // Incentive Banner
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        size: 15,
-                        color: Color(0xFF16A34A),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Credited instantly to your wallet upon 1-tap sign in.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF475467),
-                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          SizedBox(height: gapCardsBottom),
-        ],
+            SizedBox(height: gapCardsBottom),
+          ],
+        ),
       ),
     );
   }

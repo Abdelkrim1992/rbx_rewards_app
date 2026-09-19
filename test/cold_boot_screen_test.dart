@@ -76,5 +76,31 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(CircularGradientSpinner), findsOneWidget);
     });
+
+    testWidgets('LoadingScreen gracefully recovers and provides fallback container on bootstrap error',
+        (WidgetTester tester) async {
+      bool readyCalled = false;
+      ProviderContainer? readyContainer;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: LoadingScreen(
+            onBootstrap: () async {
+              throw Exception('Simulated network/Supabase socket stall');
+            },
+            onReady: (container) {
+              readyCalled = true;
+              readyContainer = container;
+            },
+          ),
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(readyCalled, isTrue);
+      expect(readyContainer, isNotNull);
+    });
   });
 }

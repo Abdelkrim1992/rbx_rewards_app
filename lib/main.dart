@@ -45,14 +45,17 @@ import 'presentation/screens/chest_screen.dart' deferred as chest_screen;
 import 'widgets/deferred_game_loader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/config/app_secrets.dart';
 
 Future<bool> _initSupabase() async {
-  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  // Keys come from AppSecrets — auto-generated from env.json before every build.
+  // No --dart-define flags needed. See tool/generate_secrets.dart.
+  final supabaseUrl = AppSecrets.SUPABASE_URL;
+  final supabaseAnonKey = AppSecrets.SUPABASE_ANON_KEY;
 
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
     debugPrint(
-        '⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not provided. Running in offline mode.');
+        '⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not set. Running in offline mode.');
     return false;
   }
 
@@ -60,12 +63,31 @@ Future<bool> _initSupabase() async {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
-    );
+    ).timeout(const Duration(milliseconds: 1500));
     debugPrint('✅ Supabase initialized: $supabaseUrl');
     return true;
   } catch (e) {
-    debugPrint('❌ Supabase initialization failed: $e');
+    debugPrint('⚠️ Supabase init timed out or failed ($e). Launching offline with background retry.');
+    unawaited(_retrySupabaseInitInBackground(supabaseUrl, supabaseAnonKey));
     return false;
+  }
+}
+
+Future<void> _retrySupabaseInitInBackground(
+    String supabaseUrl, String supabaseAnonKey) async {
+  try {
+    await Future.delayed(const Duration(seconds: 3));
+    try {
+      Supabase.instance.client;
+      return;
+    } catch (_) {}
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+    debugPrint('✅ Supabase background retry connected successfully');
+  } catch (e) {
+    debugPrint('ℹ️ Supabase background retry notice: $e');
   }
 }
 
@@ -121,6 +143,11 @@ void _initStartupAuthFast(ProviderContainer container) {
   }
 }
 
+/// true when running integration/E2E tests.
+/// Set via env.json: "INTEGRATION_TEST": "true"
+/// Generated automatically into AppSecrets by tool/generate_secrets.dart
+bool get kIsIntegrationTest => AppSecrets.isIntegrationTest;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -167,8 +194,8 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
   void initState() {
     super.initState();
     _container = widget.container ?? ProviderContainer();
-    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    if (widget.container != null && isTest) {
+    // Skip cold-boot LoadingScreen when a pre-built container is injected (E2E tests)
+    if (widget.container != null && kIsIntegrationTest) {
       _isInitComplete = true;
     }
   }
@@ -285,12 +312,13 @@ class _RbxRewardsAppState extends State<RbxRewardsApp> {
       return const AppNavigator(key: ValueKey('app_nav'));
     }
 
-    final isTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-    if (_isInitComplete) {
+    // E2E test path: skip LoadingScreen when container is pre-built
+    if (kIsIntegrationTest && widget.container != null) {
       return const AppNavigator(key: ValueKey('app_nav'));
     }
 
-    if (isTest && widget.container != null) {
+    // Production path: show AppNavigator once bootstrap completes
+    if (_isInitComplete) {
       return const AppNavigator(key: ValueKey('app_nav'));
     }
 
@@ -330,9 +358,7 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
     NotificationService.instance.selectNotificationPayload
         .addListener(_onNotificationPayload);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final isTest =
-          !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-      if (!isTest) {
+      if (!kIsIntegrationTest) {
         _initDeferredServices();
       }
     });
@@ -439,9 +465,7 @@ class _AppNavigatorState extends ConsumerState<AppNavigator>
     // Only allow entering the app if user has authenticated (or in testing environment)
     final auth = ref.read(authServiceProvider);
     if (auth.currentUser == null) {
-      final isTest =
-          !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
-      if (!isTest) {
+      if (!kIsIntegrationTest) {
         debugPrint('⚠️ Cannot complete onboarding without an authenticated account.');
         return;
       }
