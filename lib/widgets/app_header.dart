@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/reward_config.dart';
 import '../presentation/providers/coin_provider.dart';
 import '../presentation/providers/providers.dart';
-import '../presentation/providers/reward_provider.dart';
 import '../presentation/providers/user_provider.dart';
 import '../theme/app_theme.dart';
+import 'app_cached_image.dart';
 
 class RbxAppHeader extends ConsumerStatefulWidget implements PreferredSizeWidget {
   final ValueChanged<int>? onNavTap;
@@ -31,7 +30,7 @@ class RbxAppHeader extends ConsumerStatefulWidget implements PreferredSizeWidget
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(66);
+  Size get preferredSize => const Size.fromHeight(72);
 
   @override
   ConsumerState<RbxAppHeader> createState() => _RbxAppHeaderState();
@@ -422,293 +421,19 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
     );
   }
 
-  void _showStreakSheet(BuildContext context, int consecutiveDays) {
-    HapticFeedback.selectionClick();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final userProfile = ref.watch(userProfileProvider);
-            final currentDays = userProfile.consecutiveDays > 0 ? userProfile.consecutiveDays : consecutiveDays;
-            final dailyCooldown = ref.watch(dailyRewardCooldownProvider);
-            final isDailyClaimed = dailyCooldown.inSeconds > 0;
-
-            final cycleStreak = currentDays % 7;
-            final int claimedInCycle;
-            final int? activeDayToClaim;
-
-            if (isDailyClaimed) {
-              claimedInCycle = (currentDays > 0 && cycleStreak == 0) ? 7 : cycleStreak;
-              activeDayToClaim = null;
-            } else {
-              claimedInCycle = cycleStreak;
-              activeDayToClaim = cycleStreak + 1;
-            }
-
-            final displayDay = isDailyClaimed
-                ? ((currentDays > 0 && cycleStreak == 0) ? 7 : (cycleStreak == 0 ? 1 : cycleStreak))
-                : (activeDayToClaim ?? 1);
-
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: SafeArea(
-                top: false,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.of(ctx).size.height * 0.88,
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 38,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE2E8F0),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFFECACA)),
-                              ),
-                              child: const Text('🔥', style: TextStyle(fontSize: 24)),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '$currentDays Day Streak',
-                                    style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w800,
-                                      color: Color(0xFF0F172A),
-                                    ),
-                                  ),
-                                  Text(
-                                    isDailyClaimed
-                                        ? 'Cycle Day $displayDay of 7 Completed • Mega Chest on Day 7'
-                                        : 'Cycle Day $displayDay of 7 • Mega Chest on Day 7',
-                                    style: const TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // 7-Day Gamified Visual Roadmap Row
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 4, right: 4, bottom: 10),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Expanded(
-                                      child: Text(
-                                        '7-Day Streak Roadmap',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF475569),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFEF2F2),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: const Color(0xFFFECACA)),
-                                      ),
-                                      child: Text(
-                                        '$claimedInCycle/7 Claimed',
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          color: Color(0xFFDC2626),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Row(
-                                children: List.generate(7, (index) {
-                                  final dayNum = index + 1;
-                                  final isClaimed = dayNum <= claimedInCycle;
-                                  final isActive = dayNum == activeDayToClaim;
-                                  final isJackpot = dayNum == 7;
-                                  final reward = RewardConfig.getDailyStreakBaseReward(dayNum);
-
-                                  return Expanded(
-                                    child: Container(
-                                      margin: EdgeInsets.symmetric(horizontal: index == 0 || index == 6 ? 1 : 2),
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
-                                      decoration: BoxDecoration(
-                                        color: isClaimed
-                                            ? const Color(0xFFDCFCE7)
-                                            : (isActive
-                                                ? const Color(0xFFFEF2F2)
-                                                : (isJackpot ? const Color(0xFFFEF3C7) : Colors.white)),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: isClaimed
-                                              ? const Color(0xFF86EFAC)
-                                              : (isActive
-                                                  ? const Color(0xFFEF4444)
-                                                  : (isJackpot ? const Color(0xFFFDE68A) : const Color(0xFFE2E8F0))),
-                                          width: isActive ? 1.5 : 1.0,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            isJackpot ? 'D7' : 'D$dayNum',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: isClaimed
-                                                  ? const Color(0xFF16A34A)
-                                                  : (isActive
-                                                      ? const Color(0xFFDC2626)
-                                                      : (isJackpot ? const Color(0xFFB45309) : const Color(0xFF64748B))),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          if (isClaimed)
-                                            const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A))
-                                          else if (isActive)
-                                            const Text('🔥', style: TextStyle(fontSize: 13))
-                                          else if (isJackpot)
-                                            const Text('🎁', style: TextStyle(fontSize: 13))
-                                          else
-                                            const Icon(Icons.lock_outline_rounded, size: 15, color: Color(0xFF94A3B8)),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            '+$reward',
-                                            style: TextStyle(
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w800,
-                                              color: isClaimed
-                                                  ? const Color(0xFF15803D)
-                                                  : (isActive
-                                                      ? const Color(0xFFDC2626)
-                                                      : (isJackpot ? const Color(0xFFB45309) : const Color(0xFF475569))),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: const Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('💡', style: TextStyle(fontSize: 14)),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Log in every 24 hours to keep your multiplier alive and claim the weekly Mega Chest jackpot on Day 7!',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: Color(0xFF475569),
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFEF4444),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 0,
-                            ),
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text(
-                              'Keep It Up!',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final userProfile = ref.watch(userProfileProvider);
     final coins = ref.watch(coinProvider);
-    final consecutiveDays = userProfile.consecutiveDays;
 
     if (coins > _previousCoins) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) pulse();
       });
     }
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 360;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -734,71 +459,33 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
             : null,
       ),
       padding: EdgeInsets.only(
-        left: 13,
-        right: AppLayout.screenPadding,
-        top: widget.isScrolled ? 10 : 14,
+        left: isCompact ? 12 : AppLayout.screenPadding,
+        right: isCompact ? 12 : AppLayout.screenPadding,
+        top: widget.isScrolled ? 12 : (isCompact ? 16 : 20),
         bottom: widget.isScrolled ? 10 : 14,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Image.asset(
-            AppAssets.rbxLogo,
-            width: 120,
-            height: 46,
-            fit: BoxFit.contain,
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Daily Streak Pill (Interactive)
-              if (consecutiveDays > 0) ...[
-                GestureDetector(
-                  onTap: () => _showStreakSheet(context, consecutiveDays),
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 36,
-                    padding: const EdgeInsets.symmetric(horizontal: 9),
-                    margin: const EdgeInsets.only(right: 8),
+          Flexible(
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                widget.onNavTap?.call(3);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: isCompact ? 36 : 40,
+                    height: isCompact ? 36 : 40,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFFECACA), width: 1.1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('🔥', style: TextStyle(fontSize: 13)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$consecutiveDays',
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFDC2626),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-
-              // Live Coin Balance Badge (Target of Flying Coin Animations)
-              GestureDetector(
-                onTap: () => _showBalanceSheet(context, coins),
-                behavior: HitTestBehavior.opaque,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Container(
-                    key: _badgeKey,
-                    height: 36,
-                    padding: const EdgeInsets.only(left: 8, right: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: AppColors.cardBorder, width: 1.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        width: 2,
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x0A000000),
@@ -807,71 +494,164 @@ class _RbxAppHeaderState extends ConsumerState<RbxAppHeader>
                         ),
                       ],
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          AppAssets.goldCoin,
-                          width: 20,
-                          height: 20,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.monetization_on,
-                            color: Color(0xFFFFB000),
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        TweenAnimationBuilder<int>(
-                          tween: IntTween(
-                            begin: _previousCoins > coins ? coins : _previousCoins,
-                            end: coins,
-                          ),
-                          duration: const Duration(milliseconds: 600),
-                          curve: Curves.easeOutCubic,
-                          onEnd: () {
-                            _previousCoins = coins;
-                          },
-                          builder: (context, animatedValue, child) {
-                            return Text(
-                              _formatCoins(animatedValue),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primaryText,
-                                letterSpacing: 0.2,
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.35),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.add_rounded,
-                              size: 13,
-                              color: Colors.white,
+                    padding: const EdgeInsets.all(2),
+                    child: ClipOval(
+                      child: (userProfile.profilePhotoUrl != null &&
+                              userProfile.profilePhotoUrl!.isNotEmpty)
+                          ? AppCachedImage(
+                              imageUrl: userProfile.profilePhotoUrl!,
+                              fallbackAsset: AppAssets.profileAvatar,
+                              width: isCompact ? 36 : 40,
+                              height: isCompact ? 36 : 40,
+                              fit: BoxFit.cover,
+                            )
+                          : Image.asset(
+                              AppAssets.profileAvatar,
+                              width: isCompact ? 36 : 40,
+                              height: isCompact ? 36 : 40,
+                              fit: BoxFit.cover,
                             ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hi, ${userProfile.displayName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: isCompact ? 13 : 14.5,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.2,
                           ),
+                        ),
+                        const SizedBox(height: 1),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primarySoft,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Lvl ${(userProfile.totalEarned / 5000).floor() + 1}',
+                                style: const TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 14,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Live Coin Balance Badge (Target of Flying Coin Animations)
+          GestureDetector(
+            onTap: () => _showBalanceSheet(context, coins),
+            behavior: HitTestBehavior.opaque,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Container(
+                key: _badgeKey,
+                height: 36,
+                padding: const EdgeInsets.only(left: 8, right: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(20),
+                  border:
+                      Border.all(color: AppColors.cardBorder, width: 1.2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 4,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      AppAssets.goldCoin,
+                      width: 20,
+                      height: 20,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.monetization_on,
+                        color: Color(0xFFFFB000),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    TweenAnimationBuilder<int>(
+                      tween: IntTween(
+                        begin: _previousCoins > coins ? coins : _previousCoins,
+                        end: coins,
+                      ),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutCubic,
+                      onEnd: () {
+                        _previousCoins = coins;
+                      },
+                      builder: (context, animatedValue, child) {
+                        return Text(
+                          _formatCoins(animatedValue),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryText,
+                            letterSpacing: 0.2,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

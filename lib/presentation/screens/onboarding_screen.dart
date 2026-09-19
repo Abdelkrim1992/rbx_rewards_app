@@ -787,19 +787,18 @@ class _MiniFeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEBE9FE), width: 1.2),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0A5637E6),
-            blurRadius: 8,
-            offset: Offset(0, 2),
+            color: Color(0x0C101828),
+            blurRadius: 10,
+            offset: Offset(0, 3),
           ),
           BoxShadow(
-            color: Color(0x06000000),
+            color: Color(0x065637E6),
             blurRadius: 4,
             offset: Offset(0, 1),
           ),
@@ -812,29 +811,17 @@ class _MiniFeatureCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF6F5FD),
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(color: const Color(0x185637E6)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(11),
-                  child: Image.asset(
-                    imagePath,
-                    width: 36,
-                    height: 36,
-                    fit: BoxFit.cover,
-                    cacheWidth: 120,
-                    cacheHeight: 120,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.star_rounded,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
+              Image.asset(
+                imagePath,
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                cacheWidth: 120,
+                cacheHeight: 120,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.star_rounded,
+                  color: AppColors.primary,
+                  size: 24,
                 ),
               ),
               const SizedBox(height: 6),
@@ -845,8 +832,8 @@ class _MiniFeatureCard extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1D2939),
-                  letterSpacing: -0.1,
+                  color: Color(0xFF1E293B),
+                  letterSpacing: -0.2,
                 ),
               ),
             ],

@@ -26,7 +26,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
   bool _hapticsEnabled = true;
-  String _selectedLanguage = 'English';
 
   @override
   void initState() {
@@ -42,7 +41,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             prefs.getBool('pref_notifications_enabled') ?? true;
         _soundEnabled = prefs.getBool('pref_sound_enabled') ?? true;
         _hapticsEnabled = prefs.getBool('pref_haptics_enabled') ?? true;
-        _selectedLanguage = prefs.getString('pref_language') ?? 'English';
       });
     }
   }
@@ -55,113 +53,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showLanguagePicker() {
-    final languages = ['English', 'Spanish', 'Portuguese', 'French', 'German'];
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (ctx) {
-        final screenHeight = MediaQuery.sizeOf(ctx).height;
-        return Stack(
-          children: [
-            // Tap outside to dismiss
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  if (Navigator.of(ctx).canPop()) {
-                    Navigator.of(ctx).pop();
-                  }
-                },
-              ),
-            ),
 
-            // Sheet card
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 540),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {}, // Prevent taps inside sheet from dismissing
-                  child: Container(
-                    width: double.infinity,
-                    constraints: BoxConstraints(maxHeight: screenHeight * 0.75),
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      bottom: true,
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Center(
-                              child: Container(
-                                width: 36,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE2E8F0),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Select Language',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            ...languages.map((lang) {
-                              final isSelected = lang == _selectedLanguage;
-                              return ListTile(
-                                title: Text(
-                                  lang,
-                                  style: TextStyle(
-                                    fontWeight:
-                                        isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected
-                                        ? AppColors.primary
-                                        : const Color(0xFF0F172A),
-                                  ),
-                                ),
-                                trailing: isSelected
-                                    ? const Icon(Icons.check_circle_rounded,
-                                        color: AppColors.primary)
-                                    : null,
-                                onTap: () async {
-                                  setState(() => _selectedLanguage = lang);
-                                  final prefs = await SharedPreferences.getInstance();
-                                  await prefs.setString('pref_language', lang);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                },
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
 
 
@@ -335,13 +227,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         setState(() => _hapticsEnabled = val);
                         _updatePreference('pref_haptics_enabled', val);
                       },
-                      hasDivider: true,
-                    ),
-                    _SettingsNavigationTile(
-                      icon: Icons.language_rounded,
-                      title: 'Language',
-                      trailingText: _selectedLanguage,
-                      onTap: _showLanguagePicker,
                       hasDivider: false,
                     ),
                   ],

@@ -1,93 +1,6 @@
--- ============================================
--- Migration 026: Production Referral & Invite System
--- ============================================
+-- 035_update_referral_reward_to_200.sql
+-- Update referee welcome bonus reward to 200 RBX so both referrer and referee receive 200 RBX.
 
--- 1. Add referral columns to public.users
-ALTER TABLE public.users 
-ADD COLUMN IF NOT EXISTS referral_code VARCHAR(32),
-ADD COLUMN IF NOT EXISTS referred_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
-ADD COLUMN IF NOT EXISTS referral_count INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN IF NOT EXISTS referral_earnings INTEGER NOT NULL DEFAULT 0;
-
--- 2. Backfill referral_code for all existing users deterministically
-UPDATE public.users
-SET referral_code = 'RBX-' || UPPER(SUBSTRING(MD5('rbx_ref_' || id::text), 1, 5))
-WHERE referral_code IS NULL;
-
--- 3. Create unique index and constraints
-CREATE UNIQUE INDEX IF NOT EXISTS idx_users_referral_code ON public.users(referral_code);
-CREATE INDEX IF NOT EXISTS idx_users_referred_by ON public.users(referred_by);
-
--- 4. Create referrals ledger table
-CREATE TABLE IF NOT EXISTS public.referrals (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  referrer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  referee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  referral_code VARCHAR(32) NOT NULL,
-  referee_reward INTEGER NOT NULL DEFAULT 100,
-  referrer_reward INTEGER NOT NULL DEFAULT 200,
-  device_fingerprint TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT uq_referrals_referee UNIQUE (referee_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON public.referrals(referrer_id);
-CREATE INDEX IF NOT EXISTS idx_referrals_device ON public.referrals(device_fingerprint);
-
--- 5. Enable Row Level Security (RLS) on referrals
-ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can read own referrals" ON public.referrals;
-CREATE POLICY "Users can read own referrals" ON public.referrals
-  FOR SELECT USING (auth.uid() = referrer_id OR auth.uid() = referee_id);
-
--- 6. Update handle_new_user auth trigger to auto-assign deterministic referral_code
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  INSERT INTO public.users (
-    id,
-    balance,
-    total_earned,
-    total_spent,
-    games_played,
-    offers_completed,
-    consecutive_days,
-    spin_free_spins,
-    level,
-    display_name,
-    profile_photo_url,
-    referral_code
-  )
-  VALUES (
-    NEW.id,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    3,
-    1,
-    COALESCE(NEW.raw_user_meta_data->>'display_name', 'Player'),
-    NEW.raw_user_meta_data->>'profile_photo_url',
-    'RBX-' || UPPER(SUBSTRING(MD5('rbx_ref_' || NEW.id::text), 1, 5))
-  )
-  ON CONFLICT (id) DO UPDATE
-  SET referral_code = EXCLUDED.referral_code
-  WHERE public.users.referral_code IS NULL;
-  
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  RAISE WARNING 'handle_new_user failed: %', SQLERRM;
-  RETURN NEW;
-END;
-$$;
-
--- 7. Atomic RPC to redeem referral code with full anti-fraud validations
 CREATE OR REPLACE FUNCTION public.redeem_referral_code(
   p_code TEXT,
   p_device_fingerprint TEXT DEFAULT NULL
@@ -181,7 +94,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Circular referral loop detected.');
   END IF;
 
-  -- 1. Credit referee (+100 RBX) and bind referred_by
+  -- 1. Credit referee (+200 RBX) and bind referred_by
   UPDATE public.users
   SET
     balance = balance + v_referee_reward,
@@ -246,5 +159,4 @@ BEGIN
 END;
 $$;
 
--- 8. Grant execution privilege to authenticated users
 GRANT EXECUTE ON FUNCTION public.redeem_referral_code(TEXT, TEXT) TO authenticated;

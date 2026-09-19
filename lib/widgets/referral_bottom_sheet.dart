@@ -184,7 +184,7 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Give a friend +100 RBX, and get +200 RBX for yourself!',
+          'Give a friend +200 RBX, and get +200 RBX for yourself!',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 13,
@@ -334,7 +334,7 @@ class _ReferralBottomSheetState extends ConsumerState<ReferralBottomSheet> {
             SizedBox(
               width: isSmallScreen ? 102 : 115,
               child: InteractiveButton(
-                text: 'Claim +100',
+                text: 'Claim +200',
                 height: isSmallScreen ? 44 : 48,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 borderRadius: 12,

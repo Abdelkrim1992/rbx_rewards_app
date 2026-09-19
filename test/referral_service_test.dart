@@ -162,7 +162,7 @@ void main() {
     test('buildShareMessage contains invite code and promotion', () {
       final msg = service.buildShareMessage('RBX-99999');
       expect(msg, contains('RBX-99999'));
-      expect(msg, contains('+100 RBX bonus'));
+      expect(msg, contains('+200 RBX bonus'));
     });
   });
 
@@ -232,18 +232,18 @@ void main() {
     test('Valid referral code from another user is accepted and credits rewards', () async {
       remote.mockRedeemResponse = {
         'success': true,
-        'coins_awarded': 100,
+        'coins_awarded': 200,
         'referrer_name': 'AlexDeveloper',
-        'balance': 350,
+        'balance': 450,
       };
 
       final result = await service.redeemCode('RBX-ALEX99');
 
       expect(result.isSuccess, isTrue);
-      expect(result.coinsAwarded, equals(100));
+      expect(result.coinsAwarded, equals(200));
       expect(result.referrerName, equals('AlexDeveloper'));
-      expect(result.newBalance, equals(350));
-      expect(result.message, contains('+100 RBX Welcome Bonus'));
+      expect(result.newBalance, equals(450));
+      expect(result.message, contains('+200 RBX Welcome Bonus'));
 
       // Verify encrypted storage was updated
       final savedCode = await storage.read(key: 'referral_referred_by');
@@ -310,7 +310,7 @@ void main() {
       final fakeSecure = FakeSecureRepository()..balance = 250;
       remote.mockRedeemResponse = {
         'success': true,
-        'coins_awarded': 100,
+        'coins_awarded': 200,
         'referrer_name': 'FriendAlice',
       };
 
@@ -330,11 +330,11 @@ void main() {
       final result = await container.read(referralStateProvider.notifier).redeemCode('RBX-ALICE1');
 
       expect(result.isSuccess, isTrue);
-      expect(result.coinsAwarded, equals(100));
+      expect(result.coinsAwarded, equals(200));
 
-      // Verify balance increased by 100 instantly to 350, NOT reset to 0
-      expect(container.read(coinProvider), equals(350));
-      expect(fakeSecure.balance, equals(350));
+      // Verify balance increased by 200 instantly to 450, NOT reset to 0
+      expect(container.read(coinProvider), equals(450));
+      expect(fakeSecure.balance, equals(450));
     });
   });
 }

@@ -9,7 +9,6 @@ import '../../../theme/app_theme.dart';
 import '../../../widgets/interactive_button.dart';
 import '../../providers/coin_provider.dart';
 import '../../providers/data_providers.dart';
-import '../../providers/reward_catalog_provider.dart';
 import '../../providers/providers.dart';
 import '../../providers/user_provider.dart';
 
@@ -38,87 +37,116 @@ void showVipPerksModal(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (ctx) => Container(
-      padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Row(
+    builder: (ctx) => SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.workspace_premium_rounded,
-                  color: AppColors.primary, size: 28),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  const Text(
-                    'VIP Loyalty Tiers',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: AppColors.primary,
+                      size: 22,
                     ),
                   ),
-                  Text(
-                    'Current Tier: $tierTitle (Level $level)',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'VIP Loyalty Tiers',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          'Current Tier: $tierTitle (Level $level)',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 14),
+              _VipTierCard(
+                title: 'Bronze Rookie (Level 1–5)',
+                tierIcon: Icons.shield_rounded,
+                perks: const [
+                  'Base coin rewards on all mini-games',
+                  'Standard 24–48h gift card verification',
+                ],
+                isActive: level <= 5,
+                color: const Color(0xFFB45309),
+              ),
+              const SizedBox(height: 8),
+              _VipTierCard(
+                title: 'Silver Pro (Level 6–15)',
+                tierIcon: Icons.workspace_premium_rounded,
+                perks: const [
+                  '+5% bonus coins on all mini-games',
+                  'Priority claim queue',
+                  'Exclusive Silver community badge',
+                ],
+                isActive: level >= 6 && level <= 15,
+                color: const Color(0xFF475569),
+              ),
+              const SizedBox(height: 8),
+              _VipTierCard(
+                title: 'Gold Legend (Level 16+)',
+                tierIcon: Icons.military_tech_rounded,
+                perks: const [
+                  '+10% bonus coins on all mini-games',
+                  'Rapid 12-hour express cashout verification',
+                  'Exclusive Mega Chest multiplier',
+                ],
+                isActive: level >= 16,
+                color: const Color(0xFFD97706),
+              ),
+              const SizedBox(height: 16),
+              InteractiveButton(
+                text: 'Got It',
+                height: 46,
+                borderRadius: 14,
+                onTap: () => Navigator.pop(ctx),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          _VipTierCard(
-            title: 'Bronze Rookie (Level 1–5)',
-            perks:
-                '• Base coin rewards on all mini-games\n• Standard 24–48h gift card verification',
-            isActive: level <= 5,
-            color: const Color(0xFFB45309),
-          ),
-          const SizedBox(height: 10),
-          _VipTierCard(
-            title: 'Silver Pro (Level 6–15)',
-            perks:
-                '• +5% bonus coins on all mini-games\n• Priority claim queue\n• Exclusive Silver community badge',
-            isActive: level >= 6 && level <= 15,
-            color: const Color(0xFF475569),
-          ),
-          const SizedBox(height: 10),
-          _VipTierCard(
-            title: 'Gold Legend (Level 16+)',
-            perks:
-                '• +10% bonus coins on all mini-games\n• Rapid 12-hour express cashout verification\n• Exclusive Mega Chest multiplier',
-            isActive: level >= 16,
-            color: const Color(0xFFD97706),
-          ),
-          const SizedBox(height: 24),
-          InteractiveButton(
-            text: 'Got It',
-            height: 48,
-            borderRadius: 16,
-            onTap: () => Navigator.pop(ctx),
-          ),
-        ],
+        ),
       ),
     ),
   );
@@ -126,12 +154,14 @@ void showVipPerksModal(
 
 class _VipTierCard extends StatelessWidget {
   final String title;
-  final String perks;
+  final IconData tierIcon;
+  final List<String> perks;
   final bool isActive;
   final Color color;
 
   const _VipTierCard({
     required this.title,
+    required this.tierIcon,
     required this.perks,
     required this.isActive,
     required this.color,
@@ -140,9 +170,9 @@ class _VipTierCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isActive ? color.withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+        color: isActive ? color.withValues(alpha: 0.07) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isActive ? color : const Color(0xFFE2E8F0),
@@ -154,15 +184,18 @@ class _VipTierCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? color : const Color(0xFF0F172A),
+              Icon(tierIcon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: isActive ? color : const Color(0xFF0F172A),
+                  ),
                 ),
               ),
-              const Spacer(),
               if (isActive)
                 Container(
                   padding:
@@ -183,12 +216,34 @@ class _VipTierCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            perks,
-            style: TextStyle(
-              fontSize: 11.5,
-              color: isActive ? const Color(0xFF1E293B) : const Color(0xFF64748B),
-              height: 1.4,
+          ...perks.map(
+            (perk) => Padding(
+              padding: const EdgeInsets.only(bottom: 2.5),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '• ',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: isActive ? color : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      perk,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isActive
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFF64748B),
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1000,16 +1055,28 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
                             await ref.read(secureRepositoryProvider).clearAll();
                           } catch (_) {}
 
-                          ref.read(coinProvider.notifier).forceReset();
-                          ref.read(dailyCapServiceProvider).resetAllEarnings();
+                          try {
+                            ref.read(coinProvider.notifier).forceReset();
+                          } catch (_) {}
+                          try {
+                            ref.read(dailyCapServiceProvider).resetAllEarnings();
+                          } catch (_) {}
 
-                          ref.invalidate(userProfileStreamProvider);
-                          ref.invalidate(userProfileProvider);
-                          ref.invalidate(rewardHistoryProvider);
+                          try {
+                            ref.invalidate(userProfileStreamProvider);
+                          } catch (_) {}
+                          try {
+                            ref.invalidate(userProfileProvider);
+                          } catch (_) {}
+                          try {
+                            ref.invalidate(rewardHistoryProvider);
+                          } catch (_) {}
 
-                          await ref
-                              .read(onboardingCompletedProvider.notifier)
-                              .setCompleted(false);
+                          try {
+                            await ref
+                                .read(onboardingCompletedProvider.notifier)
+                                .setCompleted(false);
+                          } catch (_) {}
 
                           // Return directly to the root Onboarding screen, closing all dialogs and pushed settings screens
                           rootNav.popUntil((route) => route.isFirst);
@@ -1021,14 +1088,26 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
                           try {
                             await ref.read(secureRepositoryProvider).clearAll();
                           } catch (_) {}
-                          ref.read(coinProvider.notifier).forceReset();
-                          ref.read(dailyCapServiceProvider).resetAllEarnings();
-                          ref.invalidate(userProfileStreamProvider);
-                          ref.invalidate(userProfileProvider);
-                          ref.invalidate(rewardHistoryProvider);
-                          await ref
-                              .read(onboardingCompletedProvider.notifier)
-                              .setCompleted(false);
+                          try {
+                            ref.read(coinProvider.notifier).forceReset();
+                          } catch (_) {}
+                          try {
+                            ref.read(dailyCapServiceProvider).resetAllEarnings();
+                          } catch (_) {}
+                          try {
+                            ref.invalidate(userProfileStreamProvider);
+                          } catch (_) {}
+                          try {
+                            ref.invalidate(userProfileProvider);
+                          } catch (_) {}
+                          try {
+                            ref.invalidate(rewardHistoryProvider);
+                          } catch (_) {}
+                          try {
+                            await ref
+                                .read(onboardingCompletedProvider.notifier)
+                                .setCompleted(false);
+                          } catch (_) {}
 
                           rootNav.popUntil((route) => route.isFirst);
                         }
@@ -1057,102 +1136,6 @@ void showDeleteAccountDialog(BuildContext context, WidgetRef ref) {
             ],
           );
         },
-      );
-    },
-  );
-}
-
-// ─── Redeem Promo Code Dialog ────────────────────────────────────────────────
-
-void showRedeemPromoDialog(BuildContext context, WidgetRef ref) {
-  final controller = TextEditingController();
-  showDialog(
-    context: context,
-    builder: (ctx) {
-      bool isLoading = false;
-      return StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.confirmation_number_outlined,
-                  color: AppColors.primary, size: 24),
-              SizedBox(width: 10),
-              Text(
-                'Redeem Promo Code',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Enter creator or community promo codes to claim free bonus coins.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: controller,
-                textCapitalization: TextCapitalization.characters,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'e.g. RBXBOOST',
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  filled: true,
-                  fillColor: const Color(0xFFF8F9FF),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE8EAFF)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: isLoading ? null : () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
-            ),
-            InteractiveButton(
-              text: 'Apply Code',
-              width: 110,
-              height: 40,
-              borderRadius: 12,
-              isLoading: isLoading,
-              onTap: () async {
-                final code = controller.text.trim();
-                if (code.isEmpty) return;
-
-                setModalState(() => isLoading = true);
-                final res = await ref.read(promoCodeServiceProvider).redeem(code);
-                setModalState(() => isLoading = false);
-
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(res.message),
-                      backgroundColor: res.success
-                          ? const Color(0xFF16A34A)
-                          : Colors.redAccent,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                  if (res.success) {
-                    ref.invalidate(userProfileStreamProvider);
-                  }
-                }
-              },
-            ),
-          ],
-        ),
       );
     },
   );

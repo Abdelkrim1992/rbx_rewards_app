@@ -13,7 +13,6 @@ import '../../models/ad_models.dart';
 import '../../models/reward_config.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_header.dart';
-import '../../widgets/screen_title.dart';
 import '../../widgets/streak_saver_sheet.dart';
 import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
@@ -502,10 +501,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           ),
 
-                        // Welcome greeting
-                        const RbxScreenTitle(
-                          title: 'Welcome back',
-                          subtitle: 'Earn coins & redeem for Roblox rewards',
+                        // Target Reward Section Heading
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: AppLayout.screenPadding,
+                            right: AppLayout.screenPadding,
+                            top: 8,
+                            bottom: AppLayout.elementSpacing,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Target Reward',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF131326),
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => widget.onNavTap(2),
+                                behavior: HitTestBehavior.opaque,
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Change',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.purple,
+                                      ),
+                                    ),
+                                    SizedBox(width: 2),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 16,
+                                      color: AppColors.purple,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
 
                         // Goal-Gradient Balance Progress Card

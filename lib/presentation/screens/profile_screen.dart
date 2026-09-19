@@ -9,7 +9,6 @@ import '../../widgets/bottom_nav.dart';
 import '../../widgets/refreshable_scroll.dart';
 import '../../widgets/screen_title.dart';
 import '../providers/data_providers.dart';
-import '../providers/providers.dart';
 import '../providers/user_provider.dart';
 import 'home/widgets/home_referral_card.dart';
 import 'profile/profile_dialogs.dart';
@@ -546,12 +545,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               title: 'Transaction History',
                               onTap: () => showTransactionHistoryBottomSheet(
                                   context, ref),
-                              hasDivider: true,
-                            ),
-                            _ProfileMenuTile(
-                              icon: Icons.confirmation_number_outlined,
-                              title: 'Redeem Promo Code',
-                              onTap: () => showRedeemPromoDialog(context, ref),
                               hasDivider: true,
                             ),
                             _ProfileMenuTile(

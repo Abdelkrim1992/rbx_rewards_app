@@ -223,6 +223,6 @@ class ReferralService {
 
   /// Generates a friendly share message for social media / WhatsApp
   String buildShareMessage(String code) {
-    return '🎁 Join me on RBX Rewards! Use my invite code $code to get an instant +100 RBX bonus! Download now: https://rbxrewards.page.link/invite';
+    return '🎁 Join me on RBX Rewards! Use my invite code $code to get an instant +200 RBX bonus! Download now: https://rbxrewards.page.link/invite';
   }
 }

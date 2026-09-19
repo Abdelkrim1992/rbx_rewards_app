@@ -122,154 +122,151 @@ class _FeatureTopBarState extends ConsumerState<FeatureTopBar>
       ),
       child: SizedBox(
         height: 44,
-        child: Stack(
-          alignment: Alignment.center,
+        child: Row(
           children: [
             // Left: Back button
-            if (widget.onBack != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: GestureDetector(
-                  onTap: widget.isBackEnabled ? widget.onBack : null,
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 150),
-                    opacity: widget.isBackEnabled ? 1.0 : 0.35,
-                    child: Container(
-                      width: isCompact ? 38 : 42,
-                      height: isCompact ? 38 : 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.cardBorder.withValues(alpha: 0.6),
-                          width: 1,
-                        ),
+            if (widget.onBack != null) ...[
+              GestureDetector(
+                onTap: widget.isBackEnabled ? widget.onBack : null,
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: widget.isBackEnabled ? 1.0 : 0.35,
+                  child: Container(
+                    width: isCompact ? 38 : 42,
+                    height: isCompact ? 38 : 42,
+                    decoration: BoxDecoration(
+                      color: AppColors.primarySoft,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.cardBorder.withValues(alpha: 0.6),
+                        width: 1,
                       ),
-                      child: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: AppColors.primary,
-                        size: isCompact ? 16 : 18,
-                      ),
+                    ),
+                    child: Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: AppColors.primary,
+                      size: isCompact ? 16 : 18,
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+            ],
 
             // Center: Title or custom widget
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isCompact ? 46 : 60,
-              ),
-              child: widget.centerWidget ??
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: isCompact ? 18 : 20,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
-                        letterSpacing: -0.3,
+            Expanded(
+              child: Center(
+                child: widget.centerWidget ??
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        widget.title,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: isCompact ? 17 : 19,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: -0.3,
+                        ),
                       ),
                     ),
-                  ),
+              ),
             ),
 
+            const SizedBox(width: 8),
+
             // Right: Balance Pill (Target for coin animations) or Trailing
-            Align(
-              alignment: Alignment.centerRight,
-              child: widget.trailing ??
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.onInfoTap != null) ...[
-                        GestureDetector(
-                          onTap: widget.onInfoTap,
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            width: isCompact ? 30 : 34,
-                            height: isCompact ? 30 : 34,
-                            decoration: BoxDecoration(
-                              color: AppColors.primarySoft,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.cardBorder.withValues(alpha: 0.6),
-                                width: 1,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.help_outline_rounded,
-                              color: AppColors.primary,
-                              size: isCompact ? 16 : 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                      ScaleTransition(
-                        scale: _scaleAnimation,
+            widget.trailing ??
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.onInfoTap != null) ...[
+                      GestureDetector(
+                        onTap: widget.onInfoTap,
+                        behavior: HitTestBehavior.opaque,
                         child: Container(
-                          key: _badgeKey,
-                          height: 34,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          width: isCompact ? 30 : 34,
+                          height: isCompact ? 30 : 34,
                           decoration: BoxDecoration(
                             color: AppColors.primarySoft,
-                            borderRadius: BorderRadius.circular(18),
+                            shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.cardBorder,
-                              width: 1.2,
+                              color: AppColors.cardBorder.withValues(alpha: 0.6),
+                              width: 1,
                             ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x06000000),
-                                blurRadius: 4,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                AppAssets.goldCoin,
-                                width: 18,
-                                height: 18,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.monetization_on_rounded,
-                                  color: Color(0xFFFFB000),
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              TweenAnimationBuilder<int>(
-                                tween: IntTween(
-                                  begin: _previousCoins > coins ? coins : _previousCoins,
-                                  end: coins,
-                                ),
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeOutCubic,
-                                onEnd: () {
-                                  _previousCoins = coins;
-                                },
-                                builder: (context, animatedVal, child) {
-                                  return Text(
-                                    _formatCoins(animatedVal),
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.primaryText,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
+                          child: Icon(
+                            Icons.help_outline_rounded,
+                            color: AppColors.primary,
+                            size: isCompact ? 16 : 18,
                           ),
                         ),
                       ),
+                      const SizedBox(width: 6),
                     ],
-                  ),
-            ),
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        key: _badgeKey,
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: AppColors.cardBorder,
+                            width: 1.2,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x06000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              AppAssets.goldCoin,
+                              width: 18,
+                              height: 18,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.monetization_on_rounded,
+                                color: Color(0xFFFFB000),
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            TweenAnimationBuilder<int>(
+                              tween: IntTween(
+                                begin: _previousCoins > coins ? coins : _previousCoins,
+                                end: coins,
+                              ),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutCubic,
+                              onEnd: () {
+                                _previousCoins = coins;
+                              },
+                              builder: (context, animatedVal, child) {
+                                return Text(
+                                  _formatCoins(animatedVal),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primaryText,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
           ],
         ),
       ),

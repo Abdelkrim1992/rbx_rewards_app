@@ -6,7 +6,7 @@ class ReferralState {
   final int totalFriendsInvited;
   final int totalCoinsEarned;
 
-  static const int welcomeBonusCoins = 100;
+  static const int welcomeBonusCoins = 200;
   static const int inviterBonusCoins = 200;
 
   const ReferralState({

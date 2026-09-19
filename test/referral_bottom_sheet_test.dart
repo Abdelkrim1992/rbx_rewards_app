@@ -13,8 +13,8 @@ class MockReferralNotifier extends StateNotifier<AsyncValue<ReferralState>>
   String? lastRedeemedCode;
   ReferralRedeemResult nextResult = const ReferralRedeemResult(
     isSuccess: true,
-    message: 'Success! You received +100 RBX Welcome Bonus! 🎉',
-    coinsAwarded: 100,
+    message: 'Success! You received +200 RBX Welcome Bonus! 🎉',
+    coinsAwarded: 200,
   );
 
   @override
@@ -68,7 +68,7 @@ void main() {
 
       // Check Header
       expect(find.text('Invite Friends & Earn'), findsOneWidget);
-      expect(find.textContaining('Give a friend +100 RBX'), findsOneWidget);
+      expect(find.textContaining('Give a friend +200 RBX'), findsOneWidget);
 
       // Check User's Invite Code
       expect(find.text('YOUR INVITE CODE'), findsOneWidget);
@@ -78,7 +78,7 @@ void main() {
       // Check Redeem Section (unredeemed)
       expect(find.text("Have a Friend's Invite Code?"), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Claim +100'), findsOneWidget);
+      expect(find.text('Claim +200'), findsOneWidget);
 
       // Check Stats
       expect(find.text('Friends Invited'), findsOneWidget);
@@ -108,8 +108,8 @@ void main() {
       await tester.pumpWidget(createTestWidget(notifier));
       await tester.pumpAndSettle();
 
-      // Tap Claim +100 with empty input
-      await tester.tap(find.text('Claim +100'));
+      // Tap Claim +200 with empty input
+      await tester.tap(find.text('Claim +200'));
       await tester.pumpAndSettle();
 
       expect(find.text('Please enter an invite code.'), findsOneWidget);
@@ -126,12 +126,12 @@ void main() {
       await tester.enterText(find.byType(TextField), 'RBX-SUPER1');
       await tester.pumpAndSettle();
 
-      // Tap Claim +100
-      await tester.tap(find.text('Claim +100'));
+      // Tap Claim +200
+      await tester.tap(find.text('Claim +200'));
       await tester.pumpAndSettle();
 
       expect(notifier.lastRedeemedCode, equals('RBX-SUPER1'));
-      expect(find.text('Success! You received +100 RBX Welcome Bonus! 🎉'), findsOneWidget);
+      expect(find.text('Success! You received +200 RBX Welcome Bonus! 🎉'), findsOneWidget);
     });
 
     testWidgets('Submitting invalid code displays error message from backend', (tester) async {
@@ -147,7 +147,7 @@ void main() {
       await tester.enterText(find.byType(TextField), 'RBX-FAKE99');
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Claim +100'));
+      await tester.tap(find.text('Claim +200'));
       await tester.pumpAndSettle();
 
       expect(find.text('Invalid invite code. No user found with this code.'), findsOneWidget);
@@ -183,7 +183,7 @@ void main() {
       expect(find.text('Copy Invite Code'), findsOneWidget);
       expect(find.text("Have a Friend's Invite Code?"), findsOneWidget);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Claim +100'), findsOneWidget);
+      expect(find.text('Claim +200'), findsOneWidget);
       expect(find.text('Friends Invited'), findsOneWidget);
       expect(find.text('Total Earned'), findsOneWidget);
     });

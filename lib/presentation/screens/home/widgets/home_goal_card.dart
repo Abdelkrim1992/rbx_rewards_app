@@ -84,22 +84,38 @@ class _GoalCardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompleted = remainingCoins == 0;
+
     return Container(
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder, width: 1.2),
+        border: Border.all(
+          color: AppColors.cardBorder,
+          width: 1.2,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0C0F172A),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
+          BoxShadow(
+            color: Color(0x040F172A),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 _GoalIconBadge(targetTitle: targetTitle),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _GoalProgressInfo(
                     targetTitle: targetTitle,
@@ -110,11 +126,17 @@ class _GoalCardContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _RedeemButton(isCompleted: remainingCoins == 0),
+                _GoalActionBadge(
+                  percent: percent,
+                  isCompleted: isCompleted,
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            _GoalProgressBar(progress: progress),
+            const SizedBox(height: 10),
+            _GoalProgressBar(
+              progress: progress,
+              isCompleted: isCompleted,
+            ),
           ],
         ),
       ),
@@ -138,19 +160,25 @@ class _GoalIconBadge extends StatelessWidget {
                 : AppAssets.roblox5UsdCard));
 
     return Container(
-      width: 38,
-      height: 28,
+      width: 42,
+      height: 30,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.cardBorder, width: 1.0),
+        borderRadius: BorderRadius.circular(7),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(7),
         child: Image.asset(
           cardAsset,
           fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => Container(
-            color: const Color(0xFFECFDF5),
+            color: const Color(0xFFEEF2FF),
             child: const Center(
               child: Icon(
                 Icons.card_giftcard_rounded,
@@ -187,51 +215,47 @@ class _GoalProgressInfo extends StatelessWidget {
     );
   }
 
+  String _cleanTitle(String raw) {
+    if (raw.startsWith(r'$0.50 Starter Robux')) {
+      return 'Starter Robux (40 R\$)';
+    }
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCompleted = remainingCoins == 0;
-    final isStarterOr40 = targetCoins == 4500 ||
-        targetTitle.contains('40') ||
-        targetTitle.toLowerCase().contains('starter');
     final formattedRemaining = _formatCoins(remainingCoins);
+    final displayTitle = _cleanTitle(targetTitle);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                targetTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF131326),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            _PercentBadge(percent: percent, isCompleted: isCompleted),
-          ],
+        Text(
+          displayTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF0F172A),
+            letterSpacing: -0.2,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           isCompleted
-              ? '$coins / $targetCoins RBX • Ready to Claim! 🎉'
-              : isStarterOr40
-                  ? '🎯 Only $formattedRemaining coins left to claim your 40 Robux!'
-                  : '🎯 Only $formattedRemaining coins left to claim your $targetTitle!',
+              ? 'Ready to claim! 🎉'
+              : '$formattedRemaining coins left',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 11.5,
             fontWeight: isCompleted ? FontWeight.w700 : FontWeight.w600,
             color: isCompleted
                 ? const Color(0xFF16A34A)
-                : (isStarterOr40 ? const Color(0xFF6366F1) : const Color(0xFF868A9F)),
+                : const Color(0xFF64748B),
           ),
         ),
       ],
@@ -239,57 +263,30 @@ class _GoalProgressInfo extends StatelessWidget {
   }
 }
 
-class _PercentBadge extends StatelessWidget {
+class _GoalActionBadge extends StatelessWidget {
   final int percent;
   final bool isCompleted;
 
-  const _PercentBadge({
+  const _GoalActionBadge({
     required this.percent,
     required this.isCompleted,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-      decoration: BoxDecoration(
-        color: isCompleted
-            ? const Color(0xFFDCFCE7)
-            : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        '$percent%',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: isCompleted
-              ? const Color(0xFF15803D)
-              : const Color(0xFF475569),
-        ),
-      ),
-    );
-  }
-}
-
-class _RedeemButton extends StatelessWidget {
-  final bool isCompleted;
-
-  const _RedeemButton({required this.isCompleted});
-
-  @override
-  Widget build(BuildContext context) {
     if (isCompleted) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+          ),
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
+              color: Color(0x3310B981),
               blurRadius: 6,
-              offset: const Offset(0, 2),
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -304,7 +301,7 @@ class _RedeemButton extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            SizedBox(width: 2),
+            SizedBox(width: 3),
             Icon(
               Icons.celebration_rounded,
               size: 13,
@@ -316,27 +313,27 @@ class _RedeemButton extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.primarySoft,
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'View Goal',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+            '$percent%',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF334155),
             ),
           ),
-          SizedBox(width: 2),
-          Icon(
-            Icons.chevron_right,
+          const SizedBox(width: 2),
+          const Icon(
+            Icons.chevron_right_rounded,
             size: 14,
-            color: AppColors.primary,
+            color: Color(0xFF94A3B8),
           ),
         ],
       ),
@@ -346,8 +343,12 @@ class _RedeemButton extends StatelessWidget {
 
 class _GoalProgressBar extends StatelessWidget {
   final double progress;
+  final bool isCompleted;
 
-  const _GoalProgressBar({required this.progress});
+  const _GoalProgressBar({
+    required this.progress,
+    this.isCompleted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -356,13 +357,26 @@ class _GoalProgressBar extends StatelessWidget {
       duration: const Duration(milliseconds: 650),
       curve: Curves.easeOutCubic,
       builder: (context, animatedProgress, _) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: animatedProgress,
-            minHeight: 4.5,
-            backgroundColor: const Color(0xFFF1F5F9),
-            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+        return Container(
+          height: 5.5,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: animatedProgress.clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isCompleted
+                      ? const [Color(0xFF34D399), Color(0xFF10B981)]
+                      : const [Color(0xFF6366F1), Color(0xFF4F46E5)],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
           ),
         );
       },

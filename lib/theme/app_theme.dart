@@ -137,7 +137,7 @@ class AppAssets {
       'assets/images/thirty_feature_card.webp';
 
   // App Icon & Logos
-  static const String appIcon = 'assets/images/logo_image.webp';
+  static const String appIcon = 'assets/images/app_icon.webp';
   static const String rbxLogo = 'assets/images/logo_image.webp';
   static const String goldRbxCoin = 'assets/images/robux_coins.webp';
   static const String balanceWidgetImage =
@@ -215,9 +215,9 @@ class AppAssets {
 
   /// Critical assets to precache on app boot (kept under 3 items for <30ms cold boot)
   static const List<String> bootPrecacheAssets = [
+    bootImage,
     rbxLogo,
     appIcon,
-    onboardingHero,
   ];
 
   /// Secondary assets to pre-warm in the background after home screen is mounted

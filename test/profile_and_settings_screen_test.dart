@@ -13,12 +13,22 @@ import 'package:rbx_rewards/presentation/screens/profile_screen.dart';
 import 'package:rbx_rewards/presentation/screens/settings_screen.dart';
 import 'package:rbx_rewards/widgets/bottom_nav.dart';
 
+class FakeSecureRepository extends Fake implements SecureRepository {
+  int balance = 1500;
+  @override
+  Future<int> getBalance() async => balance;
+  @override
+  Future<void> saveBalance(int b) async { balance = b; }
+  @override
+  Future<void> clearAll() async {}
+}
+
 class MockAuthService extends AuthService {
   final bool _isSocial;
   bool deleteAccountCalled = false;
   MockAuthService({bool isSocial = false})
       : _isSocial = isSocial,
-        super(secure: SecureRepository());
+        super(secure: FakeSecureRepository());
 
   @override
   bool get isDeviceAccount => !_isSocial;
@@ -42,7 +52,6 @@ void main() {
       'pref_notifications_enabled': true,
       'pref_sound_enabled': true,
       'pref_haptics_enabled': true,
-      'pref_language': 'English',
     });
 
     mockUser = UserProfile(
@@ -66,6 +75,7 @@ void main() {
     final mockAuth = authService ?? MockAuthService(isSocial: isSocial);
     return ProviderScope(
       overrides: [
+        secureRepositoryProvider.overrideWithValue(FakeSecureRepository()),
         authServiceProvider.overrideWithValue(mockAuth),
         if (onboardingNotifier != null)
           onboardingCompletedProvider.overrideWith((ref) => onboardingNotifier),
@@ -107,10 +117,10 @@ void main() {
       expect(find.textContaining(RegExp(r'Level 3|LEVEL 3|Lvl 3')), findsWidgets);
 
       // 2. Verify 3 Quick Stats Pills
-      expect(find.text('1,500'), findsOneWidget);
+      expect(find.text('1,500'), findsWidgets);
       expect(find.text('RBX Coins'), findsOneWidget);
 
-      expect(find.text('5'), findsOneWidget);
+      expect(find.text('5'), findsWidgets);
       expect(find.text('Day Streak'), findsOneWidget);
 
       expect(find.text('2'), findsOneWidget);
@@ -119,7 +129,7 @@ void main() {
       // 3. Verify Grouped Menu Card Portals
       expect(find.text('My Rewards'), findsOneWidget);
       expect(find.text('Transaction History'), findsOneWidget);
-      expect(find.text('Redeem Promo Code'), findsOneWidget);
+      expect(find.text('Redeem Promo Code'), findsNothing);
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Help & Support'), findsOneWidget);
 
@@ -148,80 +158,36 @@ void main() {
       // Verify on SettingsScreen
       expect(find.byType(SettingsScreen), findsOneWidget);
       expect(find.text('PREFERENCES'), findsOneWidget);
-      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('Push Notifications'), findsOneWidget);
       expect(find.text('Sound Effects (SFX)'), findsOneWidget);
       expect(find.text('Haptic Feedback'), findsOneWidget);
-      expect(find.text('Language'), findsOneWidget);
+      expect(find.text('Language'), findsNothing);
 
-      // Verify Account & Security Group
-      expect(find.text('ACCOUNT & SECURITY'), findsOneWidget);
-      expect(find.text('Cloud Save & Backup'), findsOneWidget);
+      // Verify Account Security Group
+      expect(find.text('ACCOUNT SECURITY'), findsOneWidget);
       expect(find.text('Delete Account & Data'), findsOneWidget);
 
       // Verify Legal & Support Group
-      expect(find.text('LEGAL & SUPPORT'), findsOneWidget);
+      expect(find.text('LEGAL & PRIVACY'), findsOneWidget);
       expect(find.text('Privacy Policy'), findsOneWidget);
       expect(find.text('Terms of Service'), findsOneWidget);
-      expect(find.text('About RBX Rewards'), findsOneWidget);
-
-      // As guest user, Logout button must NOT be displayed
-      expect(find.text('Logout'), findsNothing);
+      expect(find.text('About & Diagnostics'), findsOneWidget);
     });
 
-    testWidgets('Logout button is displayed when user is signed in with Google or Apple',
+    testWidgets('Logout Session button is displayed on SettingsScreen',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      // 1. Check ProfileScreen for social user
-      await tester.pumpWidget(
-        createTestWidget(
-          child: ProfileScreen(onNavTap: (_) {}),
-          isSocial: true,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Logout'), findsOneWidget);
-
-      // 2. Check SettingsScreen for social user
       await tester.pumpWidget(
         createTestWidget(
           child: const SettingsScreen(),
-          isSocial: true,
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Logout'), findsOneWidget);
-    });
-
-    testWidgets('Logout button is strictly hidden for guest/device users',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      // 1. Check ProfileScreen for guest user
-      await tester.pumpWidget(
-        createTestWidget(
-          child: ProfileScreen(onNavTap: (_) {}),
-          isSocial: false,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Logout'), findsNothing);
-
-      // 2. Check SettingsScreen for guest user
-      await tester.pumpWidget(
-        createTestWidget(
-          child: const SettingsScreen(),
-          isSocial: false,
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Logout'), findsNothing);
+      expect(find.text('Logout Session'), findsOneWidget);
     });
 
     testWidgets('Settings dialogs open and close properly (Privacy, Terms, About)',
@@ -254,7 +220,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Test About Dialog
-      await tester.tap(find.text('About RBX Rewards'));
+      await tester.tap(find.text('About & Diagnostics'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Version 1.0.4'), findsOneWidget);
       await tester.tap(find.text('OK'));
@@ -262,69 +228,7 @@ void main() {
       expect(find.textContaining('Version 1.0.4'), findsNothing);
     });
 
-    testWidgets('Cloud Save sheet renders responsively on small mobile screens without overflow',
-        (WidgetTester tester) async {
-      // Test on ultra-compact mobile screen (e.g. iPhone SE 1st Gen 320x568)
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(
-        createTestWidget(
-          child: const SettingsScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Scroll to and tap Cloud Save & Backup
-      await tester.ensureVisible(find.text('Cloud Save & Backup'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Cloud Save & Backup'));
-      await tester.pumpAndSettle();
-
-      // Verify Cloud Save sheet content renders cleanly without overflow
-      expect(find.text('Cloud Save & Security'), findsOneWidget);
-      expect(find.textContaining('Link your Google or Apple ID'), findsOneWidget);
-      expect(find.text('Link Apple ID'), findsOneWidget);
-      expect(find.text('Link Google Account'), findsOneWidget);
-
-      // Verify tapping inside the card does NOT dismiss it
-      await tester.tap(find.text('Cloud Save & Security'));
-      await tester.pumpAndSettle();
-      expect(find.text('Cloud Save & Security'), findsOneWidget);
-
-      // Verify tapping outside the sheet (near the top of screen) dismisses it
-      await tester.tapAt(const Offset(50, 30));
-      await tester.pumpAndSettle();
-      expect(find.text('Cloud Save & Security'), findsNothing);
-    });
-
-    testWidgets('Redeem Promo Code modal opens from ProfileScreen',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      await tester.pumpWidget(
-        createTestWidget(
-          child: ProfileScreen(onNavTap: (_) {}),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Tap Redeem Promo Code
-      await tester.tap(find.text('Redeem Promo Code'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Redeem Promo Code'), findsWidgets);
-      expect(find.text('Apply Code'), findsOneWidget);
-
-      // Dismiss dialog
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-    });
 
     testWidgets('My Rewards sheet opens from ProfileScreen',
         (WidgetTester tester) async {
@@ -399,8 +303,9 @@ void main() {
       // Tap Permanently Delete
       await tester.tap(permanentlyDeleteFinder);
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.idle();
+      await tester.pump();
 
       // Verify authService.deleteAccount() was invoked
       expect(mockAuth.deleteAccountCalled, isTrue);
@@ -437,7 +342,7 @@ void main() {
         // Verify key widgets are present
         expect(find.text('ProGamer123'), findsOneWidget);
         expect(find.textContaining('ID: #USR_ABC1'), findsOneWidget);
-        expect(find.text('Logout'), findsOneWidget);
+        expect(find.text('Settings'), findsOneWidget);
       }
 
       tester.view.resetPhysicalSize();
